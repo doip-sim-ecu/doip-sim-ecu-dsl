@@ -22,9 +22,16 @@ class StoragePropertyDelegate<T>(
 open class DataStorage {
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
+    /**
+     * Create a persistent property by means of delegation, with an initival value
+     * calculated by initialValue
+     */
     fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
         StoragePropertyDelegate(this.internalDataStorage, initialValue)
 
+    /**
+     * Clear all stored properties
+     */
     fun clearStoredProperties() =
         internalDataStorage.clear()
 }

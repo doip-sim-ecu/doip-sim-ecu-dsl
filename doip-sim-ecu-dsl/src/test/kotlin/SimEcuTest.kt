@@ -149,11 +149,11 @@ class SimEcuTest {
 
         data.requests.add(RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
             ack()
-            var storedValue: Boolean by caller.storedProperty { false }
-            assertThat(storedValue).isEqualTo(counter > 0)
-            storedValue = true
+            var requestCounter by caller.storedProperty { 0 }
+            assertThat(requestCounter).isEqualTo(counter)
+            requestCounter++
             counter++
-            assertThat(storedValue).isTrue()
+            assertThat(requestCounter).isEqualTo(requestCounter)
         })
 
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
@@ -172,23 +172,30 @@ class SimEcuTest {
 
         data.requests.add(RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
             ack()
-            var storedValue: Boolean by this.ecu.storedProperty { false }
-            assertThat(storedValue).isEqualTo(false)
+            var firstRequestCalled: Boolean by this.ecu.storedProperty { false }
+            assertThat(firstRequestCalled).isEqualTo(false)
             @Suppress("UNUSED_VALUE")
-            storedValue = true
+            firstRequestCalled = true
         })
 
         data.requests.add(RequestMatcher("TEST", byteArrayOf(0x3E, 0x01), null) {
             ack()
-            val storedValue: Boolean by this.ecu.storedProperty { false }
-            assertThat(storedValue).isEqualTo(true)
+            val firstRequestCalled: Boolean by this.ecu.storedProperty { false }
+            assertThat(firstRequestCalled).isEqualTo(true)
         })
 
+        val firstRequestCalled: Boolean by ecu.storedProperty { false }
+        assertThat(firstRequestCalled).isFalse()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
+        assertThat(firstRequestCalled).isTrue()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x01)))
+        assertThat(firstRequestCalled).isTrue()
         ecu.clearStoredProperties()
+        assertThat(firstRequestCalled).isFalse()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
+        assertThat(firstRequestCalled).isTrue()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x01)))
+        assertThat(firstRequestCalled).isTrue()
     }
 
     private fun ecuData(name: String, physicalAddress: Int = 0x0001, functionalAddress: Int = 0x0002): EcuData {

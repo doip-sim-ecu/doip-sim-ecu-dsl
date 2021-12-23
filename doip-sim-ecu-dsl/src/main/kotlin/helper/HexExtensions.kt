@@ -1,43 +1,69 @@
 package helper
-// These functions are certainly not optimized for performance. If this proves to be an issue, it shall be done
+
+import java.nio.ByteBuffer
+import kotlin.math.min
 
 fun String.decodeHex(): ByteArray {
-    val s = this.replace(" ", "")
-    check(s.length % 2 == 0) { "String must have an even length" }
-    return s.chunked(2)
-        .map { it.toInt(16).toByte() }
-        .toByteArray()
+    val bb = ByteBuffer.allocate(this.length)
+
+    var nibble: Int
+    var b = 0
+    var counter = 0
+    for (i in 0 until this.length) {
+        val c = this[i]
+        nibble = if (c in '0'..'9') {
+            c - '0'
+        } else if (c in 'A'..'F') {
+            c - 'A' + 10
+        } else if (c in 'a'..'f') {
+            c - 'a' + 10
+        } else {
+            // Non-hex character, ignore
+            continue
+        }
+
+        if (counter % 2 == 0) {
+            // msb
+            b = nibble shl 4
+        } else {
+            b = b or nibble
+            bb.put(b.toByte())
+        }
+        counter++
+    }
+
+    if (counter % 2 != 0) {
+        throw IllegalArgumentException("Length of hex chars isn't even in string '$this'")
+    }
+
+    bb.flip()
+    val buf = ByteArray(bb.limit())
+    bb.get(buf)
+    return buf
+// Simple yet bad performing version
+//    val s = this.replace(" ", "")
+//    check(s.length % 2 == 0) { "String must have an even length" }
+//    return s.chunked(2)
+//        .map { it.toInt(16).toByte() }
+//        .toByteArray()
 }
 
-fun String.toHexString(separator: String = " "): String =
-    this.encodeToByteArray()
-        .joinToString(separator = separator) { it.toUByte().toString(16).padStart(2, '0').uppercase() }
+fun String.encodedAsHexString(separator: String = " "): String =
+    this.encodeToByteArray().toHexString(separator)
+
+val nibbleToHex = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
 fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE): String {
-    // Replace byte to string conversion with a performant version if necessary
-    return this.take(limit)
-        .joinToString(separator = separator) { it.toUByte().toString(16).padStart(2, '0').uppercase() }
-// Maybe this, optimize single byte to string?
-//    if (this.isEmpty() || limit == 0) {
-//        return ""
-//    } else if (this.size == 1) {
-//        return this[0].toUByte().toString(16).padStart(2, '0').uppercase()
-//    }
-//
-//    val sb = StringBuilder()
-//    if (separator.isEmpty()) {
-//        sb.append(this[0].toUByte().toString(16).padStart(2, '0').uppercase())
-//        for (i in 1 until Integer.min(this.size, limit)) {
-//            sb.append(this[i].toUByte().toString(16).padStart(2, '0').uppercase())
-//        }
-//    } else {
-//        sb.append(this[0].toUByte().toString(16).padStart(2, '0').uppercase())
-//        for (i in 1 until Integer.min(this.size, limit)) {
-//            sb.append(separator)
-//            sb.append(this[i].toUByte().toString(16).padStart(2, '0').uppercase())
-//        }
-//    }
-//    return sb.toString()
+    val len = min(limit, this.size)
+    val sb = StringBuilder((len * 2) + ((len - 1) * separator.length))
+    for (i in 0 until len) {
+        if (separator.isNotEmpty() && i > 0) {
+            sb.append(separator)
+        }
+        sb.append(nibbleToHex[(this[i].toInt() and 0xF0) shr 4])
+        sb.append(nibbleToHex[this[i].toInt() and 0x0F])
+    }
+    return sb.toString()
 }
 
 

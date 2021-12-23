@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.github.froks.exampleproject"
-version = "0.0-SNAPSHOT"
+version = "0.1-SNAPSHOT"
 
 repositories {
     mavenCentral()

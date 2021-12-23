@@ -102,7 +102,7 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
 
         // State checking could also be done with an extension function that uses the state, now every limited response
         // can just the extension function to save you from writing plenty of redundant code
-        fun ResponseData<RequestMatcher>.respondIfProgramming(response: RequestResponseHandler) {
+        fun RequestResponseData.respondIfProgramming(response: RequestResponseHandler) {
             if (ecuSession == SessionState.PROGRAMMING) {
                 response.invoke(this)
             } else {
@@ -114,7 +114,7 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
 
         // And now for some regex examples
         //
-        // Now, we can also do generic matching with regular expressions, either bei using a string
+        // we can also do generic matching with regular expressions, either by using a string
         // which will be converted into a (hopefully correct) regular expression, or by specifying a Regex
         // directly
 
@@ -146,12 +146,14 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
         }
 
         // Remember the session state example earlier?
-        // If we do it that way, we actually have a hard time resetting the ecu into an initial state,
-        // so you can also save state in a storage associated with the ecu or request
+        // If we do it that way, we actually have a hard time resetting the ecu into a defined initial state.
+        // To get around this, you can save state in a storage container associated with the ecu or request, which are
+        // persistent across different requests (ecu), or within multiple consecutive requests (request)
+        //
         // These storages are reset, when the reset() method is called on the ecu or request
         @Suppress("UNUSED_CHANGED_VALUE", "UNUSED_VALUE")
         request("10 02") {
-            var sessionState: SessionState by ecu.storedProperty { SessionState.DEFAULT } // {} contains the initial value that'll be used when the property is initialized
+            var sessionState by ecu.storedProperty { SessionState.DEFAULT } // {} contains the initial value that'll be used when the property is initialized
             if (sessionState != SessionState.PROGRAMMING) {
                 sessionState = SessionState.PROGRAMMING
             }

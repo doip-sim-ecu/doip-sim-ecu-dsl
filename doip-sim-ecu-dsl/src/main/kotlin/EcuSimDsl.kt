@@ -6,7 +6,7 @@ import kotlin.time.Duration
 
 typealias RequestResponseData = ResponseData<RequestMatcher>
 typealias RequestResponseHandler = RequestResponseData.() -> Unit
-typealias InterceptorResponseData = ResponseData<InterceptorWrapper>
+typealias InterceptorResponseData = ResponseData<InterceptorData>
 typealias InterceptorResponseHandler = InterceptorResponseData.(request: UdsMessage) -> Boolean
 typealias EcuDataHandler = EcuData.() -> Unit
 typealias GatewayDataHandler = GatewayData.() -> Unit
@@ -56,7 +56,7 @@ object NrcError {
  */
 open class ResponseData<out T : DataStorage>(
     /**
-     * The object that called this response handler (e.g. [RequestMatcher] or [InterceptorWrapper])
+     * The object that called this response handler (e.g. [RequestMatcher] or [InterceptorData])
      */
     val caller: T,
     /**
@@ -89,15 +89,24 @@ open class ResponseData<out T : DataStorage>(
     private var _response: ByteArray = ByteArray(0)
     private var _continueMatching: Boolean = false
 
+    /**
+     * See [SimEcu.addOrReplaceTimer]
+     */
     fun addOrReplaceEcuTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
         ecu.addOrReplaceTimer(name, delay, handler)
     }
 
+    /**
+     * See [SimEcu.addInterceptor]
+     */
     fun addEcuInterceptor(name: String = UUID.randomUUID().toString(),
                           duration: Duration = Duration.INFINITE,
-                          interceptor: ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean) =
+                          interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean) =
         ecu.addInterceptor(name, duration, interceptor)
 
+    /**
+     * See [SimEcu.removeInterceptor]
+     */
     fun removeEcuInterceptor(name: String) =
         ecu.removeInterceptor(name)
 
@@ -155,6 +164,9 @@ class RequestMatcher(
         }
     }
 
+    /**
+     * Reset persistent storage for this request
+     */
     fun reset() {
         clearStoredProperties()
     }

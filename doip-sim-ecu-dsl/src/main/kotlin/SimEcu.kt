@@ -19,7 +19,7 @@ fun EcuConfig.addressByType(message: UdsMessage): Int =
         else -> throw IllegalStateException("Unknown targetAddressType ${message.targetAddressType}")
     }
 
-class InterceptorWrapper(
+class InterceptorData(
     val name: String,
     val interceptor: InterceptorResponseHandler,
     val isExpired: () -> Boolean
@@ -41,7 +41,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     val name
         get() = data.name
 
-    private val interceptors = Collections.synchronizedMap(LinkedHashMap<String, InterceptorWrapper>())
+    private val interceptors = Collections.synchronizedMap(LinkedHashMap<String, InterceptorData>())
 
     private val mainTimer: Timer by lazy { Timer("$name-Timer", true) }
     private val timers = ConcurrentHashMap<String, EcuTimerTask>()
@@ -75,7 +75,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             if (it.value.isExpired()) {
                 this.interceptors.remove(it.key)
             } else {
-                val responseData = ResponseData<InterceptorWrapper>(
+                val responseData = ResponseData<InterceptorData>(
                     caller = it.value,
                     request = request,
                     ecu = this
@@ -139,15 +139,20 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         }
     }
 
+    /**
+     * Adds an interceptor to the ecu.
+     *
+     * Interceptors are executed before request matching
+     */
     fun addInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
-        interceptor: ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean
+        interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean
     ): String {
         // expires at expirationTime
         val expirationTime = System.nanoTime() + duration.inWholeNanoseconds
 
-        interceptors[name] = InterceptorWrapper(
+        interceptors[name] = InterceptorData(
             name = name,
             interceptor = interceptor,
             isExpired = { System.nanoTime() >= expirationTime })
@@ -155,6 +160,9 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         return name
     }
 
+    /**
+     * Remove an interceptor by name
+     */
     fun removeInterceptor(name: String) =
         interceptors.remove(name)
 
