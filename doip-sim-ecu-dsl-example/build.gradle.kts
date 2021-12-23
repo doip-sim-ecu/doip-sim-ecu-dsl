@@ -11,9 +11,9 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation(project(":doip-sim-ecu-dsl"))
+//    implementation(project(":doip-sim-ecu-dsl"))
     // Standalone:
-    // implementation("com.github.froks:doip-sim-ecu-dsl:main-SNAPSHOT")
+    implementation("com.github.froks:doip-sim-ecu-dsl:main-SNAPSHOT")
 }
 
 tasks {

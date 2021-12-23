@@ -5,6 +5,7 @@ version = "0.1-SNAPSHOT"
 
 plugins {
     kotlin("jvm")
+    `maven-publish`
 }
 
 repositories {

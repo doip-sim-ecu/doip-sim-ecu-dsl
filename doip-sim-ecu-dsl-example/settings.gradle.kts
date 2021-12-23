@@ -7,7 +7,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "doip-sim-ecu-dsl"
-include("doip-sim-ecu-dsl")
-//include("doip-sim-ecu-dsl-example")
-//include("doip-sim-ecu-dsl-test")
+rootProject.name = "doip-sim-ecu-dsl-example"

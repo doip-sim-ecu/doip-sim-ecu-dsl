@@ -130,7 +130,7 @@ class SimDslEcuTest {
         assertThat(timerCalled).isFalse()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
         assertThat(timerCalled).isFalse()
-        Thread.sleep(190)
+        Thread.sleep(150)
         assertThat(timerCalled).isFalse()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
         assertThat(timerCalled).isFalse()

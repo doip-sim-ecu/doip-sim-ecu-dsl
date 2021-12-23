@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.allopen")
+    `maven-publish`
     `java-library`
 }
 
