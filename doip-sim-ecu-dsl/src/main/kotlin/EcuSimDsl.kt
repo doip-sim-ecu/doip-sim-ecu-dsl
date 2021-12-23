@@ -4,8 +4,10 @@ import java.util.*
 import kotlin.IllegalArgumentException
 import kotlin.time.Duration
 
-typealias RequestResponseHandler = ResponseData<RequestMatcher>.() -> Unit
-typealias InterceptorResponseHandler = ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean
+typealias RequestResponseData = ResponseData<RequestMatcher>
+typealias RequestResponseHandler = RequestResponseData.() -> Unit
+typealias InterceptorResponseData = ResponseData<InterceptorWrapper>
+typealias InterceptorResponseHandler = InterceptorResponseData.(request: UdsMessage) -> Boolean
 typealias EcuDataHandler = EcuData.() -> Unit
 typealias GatewayDataHandler = GatewayData.() -> Unit
 typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
