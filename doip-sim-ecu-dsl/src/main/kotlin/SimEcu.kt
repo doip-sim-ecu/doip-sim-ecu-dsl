@@ -41,6 +41,9 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     val name
         get() = data.name
 
+    val requests: List<RequestMatcher>
+        get() = data.requests
+
     private val interceptors = Collections.synchronizedMap(LinkedHashMap<String, InterceptorData>())
 
     private val mainTimer: Timer by lazy { Timer("$name-Timer", true) }

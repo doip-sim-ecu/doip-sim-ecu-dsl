@@ -93,13 +93,21 @@ private fun GatewayData.toGatewayConfig(): GatewayConfig {
 }
 
 class SimGateway(private val data: GatewayData) : StandardGateway(data.toGatewayConfig()) {
+    val name: String
+        get() = data.name
+
+    val requests: List<RequestMatcher>
+        get() = data.requests
+
     override fun createEcu(config: EcuConfig): Ecu {
         // To be able to handle requests for the gateway itself, insert a dummy ecu with the gateways logicalAddress
         if (config.name == data.name) {
-            val ecu = EcuData(data.name)
-            ecu.physicalAddress = data.logicalAddress
-            ecu.functionalAddress = data.functionalAddress
-            ecu.requests = data.requests
+            val ecu = EcuData(
+                name = data.name,
+                physicalAddress = data.logicalAddress,
+                functionalAddress = data.functionalAddress,
+                requests = data.requests,
+            )
             return SimEcu(ecu)
         }
 
@@ -110,7 +118,7 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
     }
 
     fun reset(recursiveEcus: Boolean = true) {
-        this.data.requests.forEach { it.reset() }
+        this.requests.forEach { it.reset() }
         if (recursiveEcus) {
             this.ecuList.forEach { (it as SimEcu).reset() }
         }

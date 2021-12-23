@@ -13,6 +13,7 @@ typealias GatewayDataHandler = GatewayData.() -> Unit
 typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
 typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
 
+@Suppress("unused")
 object NrcError {
     // Common Response Codes
     const val GeneralReject: Byte = 0x10
@@ -66,7 +67,8 @@ open class ResponseData<out T : DataStorage>(
     /**
      * Represents the simulated ecu, allows you to modify data on it
      */
-    val ecu: SimEcu) {
+    val ecu: SimEcu
+) {
     /**
      * The request as a byte-array for easier access
      */
@@ -99,9 +101,11 @@ open class ResponseData<out T : DataStorage>(
     /**
      * See [SimEcu.addInterceptor]
      */
-    fun addEcuInterceptor(name: String = UUID.randomUUID().toString(),
-                          duration: Duration = Duration.INFINITE,
-                          interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean) =
+    fun addEcuInterceptor(
+        name: String = UUID.randomUUID().toString(),
+        duration: Duration = Duration.INFINITE,
+        interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean
+    ) =
         ecu.addInterceptor(name, duration, interceptor)
 
     /**
@@ -155,7 +159,7 @@ class RequestMatcher(
     val requestBytes: ByteArray?,
     val requestRegex: Regex?,
     val responseHandler: RequestResponseHandler
-): DataStorage() {
+) : DataStorage() {
     init {
         if (requestBytes == null && requestRegex == null) {
             throw IllegalArgumentException("requestBytes or requestRegex must be not null")
@@ -172,11 +176,11 @@ class RequestMatcher(
     }
 }
 
-open class RequestsData {
+open class RequestsData(requests: List<RequestMatcher> = emptyList()) {
     /**
      * List of all defined requests in the order they were defined
      */
-    var requests: MutableList<RequestMatcher> = mutableListOf()
+    var requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
 
     /**
      * Maximum length of data converted into a hex-string for incoming requests
@@ -244,11 +248,13 @@ open class RequestsData {
 /**
  * Define the data associated with the ecu
  */
-open class EcuData(val name: String) : RequestsData() {
-    var physicalAddress: Int = 0
-    var functionalAddress: Int = 0
-    var nrcOnNoMatch = true
-}
+open class EcuData(
+    val name: String,
+    var physicalAddress: Int = 0,
+    var functionalAddress: Int = 0,
+    var nrcOnNoMatch: Boolean = true,
+    requests: List<RequestMatcher> = emptyList()
+) : RequestsData(requests)
 
 val gateways: MutableList<GatewayData> = mutableListOf()
 val gatewayInstances: MutableList<SimGateway> = mutableListOf()
