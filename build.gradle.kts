@@ -1,11 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-group = "de.debugco"
-version = "0.1-SNAPSHOT"
+group = "com.github.froks"
+version = "0.1.0-SNAPSHOT"
 
 plugins {
     kotlin("jvm")
-    `maven-publish`
 }
 
 repositories {

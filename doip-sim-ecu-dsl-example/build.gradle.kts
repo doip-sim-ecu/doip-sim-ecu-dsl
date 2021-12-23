@@ -4,6 +4,9 @@ plugins {
     application
 }
 
+group = "com.github.froks.exampleproject"
+version = "0.0-SNAPSHOT"
+
 repositories {
     mavenCentral()
     maven("https://jitpack.io")

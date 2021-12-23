@@ -5,6 +5,9 @@ plugins {
     `java-library`
 }
 
+group = rootProject.group
+version = rootProject.version
+
 repositories {
     mavenCentral()
     maven("https://jitpack.io")
@@ -26,6 +29,18 @@ tasks.test {
     useJUnitPlatform()
 }
 
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+        }
+    }
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
@@ -33,3 +48,4 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 allOpen {
     annotation("helper.Open")
 }
+
