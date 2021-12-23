@@ -100,7 +100,7 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
             }
         }
 
-        // state checking could also be done with an extension function that uses the state, now every limited response
+        // State checking could also be done with an extension function that uses the state, now every limited response
         // can just the extension function to save you from writing plenty of redundant code
         fun ResponseData.respondIfProgramming(response: ResponseData.() -> Unit) {
             if (ecuSession == SessionState.PROGRAMMING) {
@@ -118,7 +118,10 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
         // which will be converted into a (hopefully correct) regular expression, or by specifying a Regex
         // directly
 
-        // The character [] will be replaced with .*, and the string will be uppercased
+        // The regular expression conversion will replace the characters [] with .*, convert the expression to uppercase
+        // and remove all spaces
+
+        // So this expression
         request("3e 00 []") { ack() }
         // is semantically the same as
         request(Regex("3E00.*")) { ack() }
