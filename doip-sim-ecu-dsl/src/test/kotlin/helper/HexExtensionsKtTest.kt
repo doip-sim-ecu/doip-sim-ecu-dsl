@@ -1,7 +1,5 @@
 package helper
 
-import assertk.assertThat
-import assertk.assertions.support.fail
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
