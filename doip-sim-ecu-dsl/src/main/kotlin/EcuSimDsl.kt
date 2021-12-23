@@ -1,17 +1,15 @@
 import doip.library.message.UdsMessage
 import helper.decodeHex
-import java.net.InetAddress
 import java.util.*
 import kotlin.IllegalArgumentException
-import kotlin.properties.Delegates
 import kotlin.time.Duration
 
-typealias ResponseHandler = ResponseData.() -> Unit
+typealias RequestResponseHandler = ResponseData<RequestMatcher>.() -> Unit
+typealias InterceptorResponseHandler = ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean
 typealias EcuDataHandler = EcuData.() -> Unit
 typealias GatewayDataHandler = GatewayData.() -> Unit
 typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
 typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
-typealias Interceptor = ResponseData.(request: UdsMessage) -> Boolean
 
 object NrcError {
     // Common Response Codes
@@ -54,13 +52,35 @@ object NrcError {
 /**
  * Define the response to be sent after the function returns
  */
-class ResponseData(val request: UdsMessage, val simEcu: SimDslEcu) {
+open class ResponseData<out T : DataStorage>(
+    /**
+     * The object that called this response handler (e.g. [RequestsData] or [InterceptorWrapper])
+     */
+    val caller: T,
+    /**
+     * The request as received for the ecu
+     */
+    val request: UdsMessage,
+    /**
+     * Represents the simulated ecu, allows you to modify data on it
+     */
+    val simEcu: SimEcu) {
+    /**
+     * The request as a byte-array for easier access
+     */
     val message: ByteArray
         get() = request.message
 
+    /**
+     * The response that's scheduled to be sent after the response handler
+     * finishes
+     */
     val response
         get() = _response
 
+    /**
+     * Continue matching with other request handlers
+     */
     val continueMatching
         get() = _continueMatching
 
@@ -73,7 +93,7 @@ class ResponseData(val request: UdsMessage, val simEcu: SimDslEcu) {
 
     fun addEcuInterceptor(name: String = UUID.randomUUID().toString(),
                           duration: Duration = Duration.INFINITE,
-                          interceptor: ResponseData.(request: UdsMessage) -> Boolean) =
+                          interceptor: ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean) =
         simEcu.addInterceptor(name, duration, interceptor)
 
     fun removeEcuInterceptor(name: String) =
@@ -86,12 +106,25 @@ class ResponseData(val request: UdsMessage, val simEcu: SimDslEcu) {
     fun respond(responseHex: String) =
         respond(responseHex.decodeHex())
 
+    /**
+     * Acknowledge a request with the given payload. The first two
+     * bytes (SID + 0x40, subfunction) are automatically preprended
+     */
     fun ack(payload: ByteArray = ByteArray(0)) =
         respond(byteArrayOf((message[0] + 0x40.toByte()).toByte(), message[1]) + payload)
 
+    /**
+     * Acknowledge a request with the given payload. The first two
+     * bytes (SID + 0x40, subfunction) are automatically preprended
+     *
+     * payload must be a hex-string.
+     */
     fun ack(payload: String) =
         ack(payload.decodeHex())
 
+    /**
+     * Send a negative response code (NRC) in response to the request
+     */
     fun nrc(code: Byte = NrcError.GeneralReject) =
         respond(byteArrayOf(0x7F, message[0], code))
 
@@ -106,12 +139,12 @@ class ResponseData(val request: UdsMessage, val simEcu: SimDslEcu) {
 /**
  * Defines a matcher for an incoming request and the lambdas to be executed when it matches
  */
-class Request(
+class RequestMatcher(
     val name: String?,
     val requestBytes: ByteArray?,
     val requestRegex: Regex?,
-    val responseHandler: ResponseHandler
-) {
+    val responseHandler: RequestResponseHandler
+): DataStorage() {
     init {
         if (requestBytes == null && requestRegex == null) {
             throw IllegalArgumentException("requestBytes or requestRegex must be not null")
@@ -119,10 +152,21 @@ class Request(
             throw IllegalArgumentException("Only requestBytes or requestRegex must be set")
         }
     }
+
+    fun reset() {
+        clearStoredProperties()
+    }
 }
 
 open class RequestsData {
-    var requests: MutableList<Request> = mutableListOf()
+    /**
+     * List of all defined requests in the order they were defined
+     */
+    var requests: MutableList<RequestMatcher> = mutableListOf()
+
+    /**
+     * Maximum length of data converted into a hex-string for incoming requests
+     */
     var requestRegexMatchBytes: Int = 10
 
     private fun regexifyRequestHex(requestHex: String) =
@@ -134,22 +178,44 @@ open class RequestsData {
 //            option = RegexOption.IGNORE_CASE
         )
 
-    fun request(request: ByteArray, name: String? = null, response: ResponseHandler = {}): Request {
-        val req = Request(name = name, requestBytes = request, requestRegex = null, responseHandler = response)
-        requests.add(req)
-        return req
-    }
-
-    fun request(reqRegex: Regex, name: String? = null, response: ResponseHandler = {}): Request {
-        val req = Request(name = name, requestBytes = null, requestRegex = reqRegex, responseHandler = response)
+    /**
+     * Define request-matcher & response-handler for a gateway or ecu by using an
+     * exact matching byte-array
+     */
+    fun request(request: ByteArray, name: String? = null, response: RequestResponseHandler = {}): RequestMatcher {
+        val req = RequestMatcher(name = name, requestBytes = request, requestRegex = null, responseHandler = response)
         requests.add(req)
         return req
     }
 
     /**
-     * reqHex is a hex string that
+     * Define request-matcher & response-handler for a gateway or ecu by using a
+     * regular expression. Incoming request are normalized into a string
+     * by converting the incoming data into uppercase hexadecimal
+     * without any spaces. The regular expression defined here is then
+     * used to match against this string
+     *
+     * Note: Take the maximal string length [requestRegexMatchBytes] into
+     * account
      */
-    fun request(reqHex: String, name: String = "", response: ResponseHandler = {}) {
+    fun request(reqRegex: Regex, name: String? = null, response: RequestResponseHandler = {}): RequestMatcher {
+        val req = RequestMatcher(name = name, requestBytes = null, requestRegex = reqRegex, responseHandler = response)
+        requests.add(req)
+        return req
+    }
+
+    /**
+     * Define request/response pair for a gateway or ecu by using a best guess
+     * for the type of string that's used.
+     *
+     * A static request is only hexadecimal digits and whitespaces, and will be converted
+     * into a call to the [request]-Method that takes an ByteArray
+     *
+     * A dynamic match is detected when the string includes "[", "." or "|". The string
+     * is automatically converted into a regular expression by replacing all "[]" with ".*",
+     * turning it into uppercase, and removing all spaces.
+     */
+    fun request(reqHex: String, name: String = "", response: RequestResponseHandler = {}) {
         if (isRegex(reqHex)) {
             request(regexifyRequestHex(reqHex), name, response)
         } else {
@@ -170,7 +236,8 @@ open class EcuData(val name: String) : RequestsData() {
     var nrcOnNoMatch = true
 }
 
-private val gateways: MutableList<GatewayData> = mutableListOf()
+val gateways: MutableList<GatewayData> = mutableListOf()
+val gatewayInstances: MutableList<SimGateway> = mutableListOf()
 
 /**
  * Defines a DoIP-Gateway and the ECUs behind it
@@ -182,70 +249,17 @@ fun gateway(name: String, receiver: GatewayDataHandler) {
 }
 
 
-open class GatewayData(val name: String) : RequestsData() {
-    /**
-     * Network address this gateway should bind on (default: 0.0.0.0)
-     */
-    var localAddress: InetAddress = InetAddress.getByName("0.0.0.0")
+fun reset() {
+    gatewayInstances.forEach { it.reset() }
+}
 
-    /**
-     * Network port this gateway should bind on (default: 13400)
-     */
-    var localPort: Int = 13400
-
-    /**
-     * Default broadcast address for VAM messages (default: 255.255.255.255)
-     */
-    var broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255")
-
-    /**
-     * Whether VAM broadcasts shall be sent on startup (default: true)
-     */
-    var broadcastEnable: Boolean = true
-
-    /**
-     * The logical address under which the gateway shall be reachable
-     */
-    var logicalAddress by Delegates.notNull<Int>()
-
-    /**
-     * The functional address under which the gateway (and other ecus) shall be reachable
-     */
-    var functionalAddress by Delegates.notNull<Int>()
-
-
-    /**
-     * Vehicle identifier, 17 chars, will be filled with '0`, or if left null, set to 0xFF
-     */
-    var vin: String? = null // 17 byte VIN
-
-    /**
-     * Group ID of the gateway
-     */
-    var gid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte group identification (used before mac is set)
-    /**
-     * Entity ID of the gateway
-     */
-    var eid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte entity identification (usually MAC)
-
-    private val _ecus: MutableList<EcuData> = mutableListOf()
-
-    val ecus: List<EcuData>
-        get() = this._ecus.toList()
-
-
-    /**
-     * Defines an ecu and its properties as behind this gateway
-     */
-    fun ecu(name: String, receiver: EcuData.() -> Unit) {
-        val ecuData = EcuData(name)
-        receiver.invoke(ecuData)
-        _ecus.add(ecuData)
-    }
+fun stop() {
+    gatewayInstances.forEach { it.stop() }
+    gatewayInstances.clear()
 }
 
 fun start() {
-    gateways
-        .map { SimDslGateway(it) }
-        .forEach { it.start() }
+    gatewayInstances.addAll(gateways.map { SimGateway(it) })
+
+    gatewayInstances.forEach { it.start() }
 }

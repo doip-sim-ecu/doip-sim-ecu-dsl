@@ -15,6 +15,7 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
+
     api("com.github.doip:doip-simulation:1.4.3")
     api("com.github.doip:doip-library:1.1.5")
     api("com.github.doip:doip-logging:1.1.7")

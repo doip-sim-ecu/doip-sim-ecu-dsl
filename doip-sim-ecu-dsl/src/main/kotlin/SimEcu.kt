@@ -1,9 +1,6 @@
 import doip.library.message.UdsMessage
-import doip.simulation.nodes.Ecu
 import doip.simulation.nodes.EcuConfig
-import doip.simulation.nodes.GatewayConfig
 import doip.simulation.standard.StandardEcu
-import doip.simulation.standard.StandardGateway
 import helper.EcuTimerTask
 import helper.Open
 import helper.scheduleEcuTimerTask
@@ -11,57 +8,6 @@ import helper.toHexString
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
-
-fun GatewayData.toGatewayConfig(): GatewayConfig {
-    val config = GatewayConfig()
-    config.name = this.name
-    config.gid = this.gid
-    config.eid = this.eid
-    config.localAddress = this.localAddress
-    config.localPort = this.localPort
-    config.logicalAddress = this.logicalAddress
-    config.broadcastAddress = this.broadcastAddress
-    config.broadcastEnable = this.broadcastEnable
-    // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
-    config.vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it }
-
-    // Add the gateway itself as an ecu, so it too can receive requests
-    val gateway = EcuConfig()
-    gateway.name = this.name
-    gateway.physicalAddress = this.logicalAddress
-    gateway.functionalAddress = this.functionalAddress
-    config.ecuConfigList.add(gateway)
-
-    // Add all the ecus defined for the gateway to the ecuConfigList, so they can later be found and instantiated as SimDslEcu
-    config.ecuConfigList.addAll(this.ecus.map { it.toEcuConfig() })
-    return config
-}
-
-fun EcuData.toEcuConfig(): EcuConfig {
-    val config = EcuConfig()
-    config.name = this.name
-    config.physicalAddress = this.physicalAddress
-    config.functionalAddress = this.functionalAddress
-    return config
-}
-
-class SimDslGateway(private val data: GatewayData) : StandardGateway(data.toGatewayConfig()) {
-    override fun createEcu(config: EcuConfig): Ecu {
-        // To be able to handle requests for the gateway itself, insert a dummy ecu with the gateways logicalAddress
-        if (config.name == data.name) {
-            val ecu = EcuData(data.name)
-            ecu.physicalAddress = data.logicalAddress
-            ecu.functionalAddress = data.functionalAddress
-            ecu.requests = data.requests
-            return SimDslEcu(ecu)
-        }
-
-        // Match the other ecus by name, and create an SimDslEcu for them, since StandardEcu can't handle our
-        // requirements for handling requests
-        val ecuData = data.ecus.first { it.name == config.name }
-        return SimDslEcu(ecuData)
-    }
-}
 
 /**
  * Extension function to provide the address by the targetAddressType provided in the UdsMessage
@@ -73,11 +19,22 @@ fun EcuConfig.addressByType(message: UdsMessage): Int =
         else -> throw IllegalStateException("Unknown targetAddressType ${message.targetAddressType}")
     }
 
-class InterceptorWrapper(val name: String, val interceptor: Interceptor, val isExpired: () -> Boolean)
+class InterceptorWrapper(val name: String,
+                         val interceptor: InterceptorResponseHandler,
+                         val isExpired: () -> Boolean): DataStorage()
+
+fun EcuData.toEcuConfig(): EcuConfig {
+    val config = EcuConfig()
+    config.name = this.name
+    config.physicalAddress = this.physicalAddress
+    config.functionalAddress = this.functionalAddress
+    return config
+}
 
 @Open
-class SimDslEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
-    private val logger = doip.logging.LogManager.getLogger(SimDslEcu::class.java)
+class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
+    private val logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
+    private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
     val name
         get() = data.name
@@ -116,7 +73,11 @@ class SimDslEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             if (it.value.isExpired()) {
                 this.interceptors.remove(it.key)
             } else {
-                val responseData = ResponseData(request = request, simEcu = this)
+                val responseData = ResponseData<InterceptorWrapper>(
+                    caller = it.value,
+                    request = request,
+                    simEcu = this
+                )
                 if (it.value.interceptor.invoke(responseData, request)) {
                     if (responseData.continueMatching) {
                         return false
@@ -157,7 +118,7 @@ class SimDslEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
                 continue
             }
 
-            val responseData = ResponseData(request = request, simEcu = this)
+            val responseData = ResponseData(caller = requestIter, request = request, simEcu = this)
             requestIter.responseHandler.invoke(responseData)
             if (responseData.continueMatching) {
                 continue
@@ -179,11 +140,10 @@ class SimDslEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     fun addInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
-        interceptor: ResponseData.(request: UdsMessage) -> Boolean
+        interceptor: ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean
     ): String {
         // expires at expirationTime
         val expirationTime = System.nanoTime() + duration.inWholeNanoseconds
-
 
         interceptors[name] = InterceptorWrapper(
             name = name,
@@ -224,5 +184,16 @@ class SimDslEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             timers[name]?.cancel()
             timers.remove(name)
         }
+    }
+
+    fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
+        StoragePropertyDelegate(this.internalDataStorage, initialValue)
+
+    fun clearStoredProperties() =
+        internalDataStorage.clear()
+
+    fun reset() {
+        clearStoredProperties()
+        this.data.requests.forEach { it.reset() }
     }
 }
