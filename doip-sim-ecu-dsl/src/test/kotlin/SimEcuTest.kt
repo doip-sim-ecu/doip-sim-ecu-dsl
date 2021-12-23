@@ -172,7 +172,7 @@ class SimEcuTest {
 
         data.requests.add(RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
             ack()
-            var storedValue: Boolean by simEcu.storedProperty { false }
+            var storedValue: Boolean by this.ecu.storedProperty { false }
             assertThat(storedValue).isEqualTo(false)
             @Suppress("UNUSED_VALUE")
             storedValue = true
@@ -180,7 +180,7 @@ class SimEcuTest {
 
         data.requests.add(RequestMatcher("TEST", byteArrayOf(0x3E, 0x01), null) {
             ack()
-            val storedValue: Boolean by simEcu.storedProperty { false }
+            val storedValue: Boolean by this.ecu.storedProperty { false }
             assertThat(storedValue).isEqualTo(true)
         })
 

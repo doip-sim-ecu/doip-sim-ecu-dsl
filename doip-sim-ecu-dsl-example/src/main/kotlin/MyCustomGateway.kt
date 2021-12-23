@@ -102,7 +102,7 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
 
         // State checking could also be done with an extension function that uses the state, now every limited response
         // can just the extension function to save you from writing plenty of redundant code
-        fun ResponseData.respondIfProgramming(response: ResponseData.() -> Unit) {
+        fun ResponseData<RequestMatcher>.respondIfProgramming(response: RequestResponseHandler) {
             if (ecuSession == SessionState.PROGRAMMING) {
                 response.invoke(this)
             } else {
@@ -143,6 +143,33 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
             addOrReplaceEcuTimer("RESETSESSION", 5.seconds) {
                 ecuSession = SessionState.DEFAULT
             }
+        }
+
+        // Remember the session state example earlier?
+        // If we do it that way, we actually have a hard time resetting the ecu into an initial state,
+        // so you can also save state in a storage associated with the ecu or request
+        // These storages are reset, when the reset() method is called on the ecu or request
+        @Suppress("UNUSED_CHANGED_VALUE", "UNUSED_VALUE")
+        request("10 02") {
+            var sessionState: SessionState by ecu.storedProperty { SessionState.DEFAULT } // {} contains the initial value that'll be used when the property is initialized
+            if (sessionState != SessionState.PROGRAMMING) {
+                sessionState = SessionState.PROGRAMMING
+            }
+            ack()
+            // this session state is persisted for the ecu, so if you get it in another request, the last
+            // set value will be the current one (until reset is called)
+
+            // We can also do this on the request level by using caller instead of ecu
+            var requestCounter: Int by caller.storedProperty { 0 }
+            requestCounter++
+
+            // to reset the storage for the request
+//            caller.reset()
+
+            // to reset the storage for the ecu (and all its requests)
+            // this can be pretty nifty when you want to reset your state after each integration test
+            // with a custom write command
+//            ecu.reset()
         }
 
 

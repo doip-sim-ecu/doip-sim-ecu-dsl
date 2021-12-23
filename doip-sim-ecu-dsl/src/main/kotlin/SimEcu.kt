@@ -19,9 +19,11 @@ fun EcuConfig.addressByType(message: UdsMessage): Int =
         else -> throw IllegalStateException("Unknown targetAddressType ${message.targetAddressType}")
     }
 
-class InterceptorWrapper(val name: String,
-                         val interceptor: InterceptorResponseHandler,
-                         val isExpired: () -> Boolean): DataStorage()
+class InterceptorWrapper(
+    val name: String,
+    val interceptor: InterceptorResponseHandler,
+    val isExpired: () -> Boolean
+) : DataStorage()
 
 fun EcuData.toEcuConfig(): EcuConfig {
     val config = EcuConfig()
@@ -76,7 +78,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
                 val responseData = ResponseData<InterceptorWrapper>(
                     caller = it.value,
                     request = request,
-                    simEcu = this
+                    ecu = this
                 )
                 if (it.value.interceptor.invoke(responseData, request)) {
                     if (responseData.continueMatching) {
@@ -118,7 +120,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
                 continue
             }
 
-            val responseData = ResponseData(caller = requestIter, request = request, simEcu = this)
+            val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             requestIter.responseHandler.invoke(responseData)
             if (responseData.continueMatching) {
                 continue
@@ -193,6 +195,13 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         internalDataStorage.clear()
 
     fun reset() {
+        this.interceptors.clear()
+
+        synchronized(mainTimer) {
+            this.timers.forEach { it.value.cancel() }
+            this.timers.clear()
+        }
+
         clearStoredProperties()
         this.data.requests.forEach { it.reset() }
     }

@@ -54,7 +54,7 @@ object NrcError {
  */
 open class ResponseData<out T : DataStorage>(
     /**
-     * The object that called this response handler (e.g. [RequestsData] or [InterceptorWrapper])
+     * The object that called this response handler (e.g. [RequestMatcher] or [InterceptorWrapper])
      */
     val caller: T,
     /**
@@ -64,7 +64,7 @@ open class ResponseData<out T : DataStorage>(
     /**
      * Represents the simulated ecu, allows you to modify data on it
      */
-    val simEcu: SimEcu) {
+    val ecu: SimEcu) {
     /**
      * The request as a byte-array for easier access
      */
@@ -88,16 +88,16 @@ open class ResponseData<out T : DataStorage>(
     private var _continueMatching: Boolean = false
 
     fun addOrReplaceEcuTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
-        simEcu.addOrReplaceTimer(name, delay, handler)
+        ecu.addOrReplaceTimer(name, delay, handler)
     }
 
     fun addEcuInterceptor(name: String = UUID.randomUUID().toString(),
                           duration: Duration = Duration.INFINITE,
                           interceptor: ResponseData<InterceptorWrapper>.(request: UdsMessage) -> Boolean) =
-        simEcu.addInterceptor(name, duration, interceptor)
+        ecu.addInterceptor(name, duration, interceptor)
 
     fun removeEcuInterceptor(name: String) =
-        simEcu.removeInterceptor(name)
+        ecu.removeInterceptor(name)
 
     fun respond(responseHex: ByteArray) {
         _response = responseHex
