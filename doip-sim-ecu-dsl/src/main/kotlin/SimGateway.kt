@@ -1,7 +1,10 @@
+import doip.library.comm.DoipTcpConnection
+import doip.library.comm.DoipTcpStreamBuffer
 import doip.simulation.nodes.Ecu
 import doip.simulation.nodes.EcuConfig
 import doip.simulation.nodes.GatewayConfig
 import doip.simulation.standard.StandardGateway
+import doip.simulation.standard.StandardTcpConnectionGateway
 import java.net.InetAddress
 import kotlin.properties.Delegates
 
@@ -99,6 +102,16 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
     val requests: List<RequestMatcher>
         get() = data.requests
 
+    override fun createConnection(): StandardTcpConnectionGateway {
+        // Hacky way to increase stream buffer size -- there should be a setter in the connection
+        val con = super.createConnection()
+        val streamBufferField = DoipTcpConnection::class.java.getDeclaredField("streamBuffer")
+        streamBufferField.isAccessible = true
+        val streamBuffer = streamBufferField.get(con) as DoipTcpStreamBuffer
+        streamBuffer.maxPayloadLength = 70000
+        return con
+    }
+
     override fun createEcu(config: EcuConfig): Ecu {
         // To be able to handle requests for the gateway itself, insert a dummy ecu with the gateways logicalAddress
         if (config.name == data.name) {
@@ -124,3 +137,4 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
         }
     }
 }
+
