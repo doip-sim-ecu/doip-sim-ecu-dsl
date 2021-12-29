@@ -107,6 +107,28 @@ class SimEcuTest {
     }
 
     @Test
+    fun `test request matching regex long request`() {
+        var called = false
+        val ecu = SimEcu(
+            ecuData(
+                name = "TEST",
+                requests = listOf(
+                    RequestMatcher("TEST", null, Regex("1020.*")) { called = true },
+                )
+            )
+        )
+        val array = ByteArray(4096)
+        array[0] = 0x10
+        array[1] = 0x20
+        for (i in 2 until array.size) {
+            array[i] = 0xFF.toByte()
+        }
+        ecu.handleRequest(req(array))
+        assertThat(called).isTrue()
+
+    }
+
+    @Test
     fun `test request matching no match`() {
         val requests = listOf(
             RequestMatcher("TEST", byteArrayOf(0x10, 0x20), null) { },

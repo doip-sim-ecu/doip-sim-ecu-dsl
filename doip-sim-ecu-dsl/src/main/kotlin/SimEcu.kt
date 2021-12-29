@@ -1,10 +1,7 @@
 import doip.library.message.UdsMessage
 import doip.simulation.nodes.EcuConfig
 import doip.simulation.standard.StandardEcu
-import helper.EcuTimerTask
-import helper.Open
-import helper.scheduleEcuTimerTask
-import helper.toHexString
+import helper.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
@@ -106,18 +103,21 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             return
         }
 
-        val normalizedRequest by lazy { request.message.toHexString("", limit = data.requestRegexMatchBytes) }
+        val normalizedRequest by lazy { request.message.toHexString("", limit = data.requestRegexMatchBytes, limitExceededSuffix = "") }
 
         for (requestIter in data.requests) {
             val matches = try {
-                if (requestIter.requestBytes != null)
+                if (requestIter.requestBytes != null) {
                     request.message.contentEquals(requestIter.requestBytes)
-                else
+                } else {
                     requestIter.requestRegex!!.matches(normalizedRequest)
+                }
             } catch (e: Exception) {
                 logger.error("Error while matching requests ${e.message}")
                 throw e
             }
+
+            logger.traceIf { "Matching request '${request.message.toHexString(limit = 10)}' against '$requestIter' (result: $matches)" }
 
             if (!matches) {
                 continue
@@ -126,16 +126,20 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             requestIter.responseHandler.invoke(responseData)
             if (responseData.continueMatching) {
+                logger.traceIf { "Continue matching for $requestIter" }
                 continue
             } else if (responseData.response.isNotEmpty()) {
+                logger.traceIf { "Sending response matching for $requestIter: ${responseData.response.toHexString(limit = 10)}" }
                 sendResponse(request, responseData.response)
             } else {
+                logger.traceIf { "No response for $requestIter" }
                 clearCurrentRequest()
             }
             return
         }
 
         if (this.data.nrcOnNoMatch) {
+            logger.traceIf { "No matching request found for ${request.message.toHexString(limit = 10)}, sending NRC" }
             sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
         } else {
             clearCurrentRequest()

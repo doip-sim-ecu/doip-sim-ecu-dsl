@@ -1,5 +1,6 @@
 import doip.library.message.UdsMessage
 import helper.decodeHex
+import helper.toHexString
 import java.util.*
 import kotlin.IllegalArgumentException
 import kotlin.time.Duration
@@ -174,6 +175,22 @@ class RequestMatcher(
     fun reset() {
         clearStoredProperties()
     }
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        sb.append("RequestMatch: ")
+        if (name != null) {
+            sb.append("Name: $name")
+        }
+        if (requestBytes != null) {
+            sb.append("Bytes: ${requestBytes.toHexString(limit = 10)}")
+        } else if (requestRegex != null) {
+            sb.append("Pattern: ${requestRegex.pattern}")
+        }
+        return sb.toString()
+    }
+
+
 }
 
 open class RequestsData(requests: List<RequestMatcher> = emptyList()) {

@@ -52,7 +52,7 @@ fun String.encodedAsHexString(separator: String = " "): String =
 
 private val nibbleToHex = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
-fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE): String {
+fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE, limitExceededSuffix: String = "..."): String {
     val len = min(limit, this.size)
     val sb = StringBuilder((len * 2) + ((len - 1) * separator.length))
     for (i in 0 until len) {
@@ -61,6 +61,9 @@ fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALU
         }
         sb.append(nibbleToHex[(this[i].toInt() and 0xF0) shr 4])
         sb.append(nibbleToHex[this[i].toInt() and 0x0F])
+    }
+    if (this.size > limit) {
+        sb.append(limitExceededSuffix)
     }
     return sb.toString()
 }

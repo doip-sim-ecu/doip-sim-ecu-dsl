@@ -18,8 +18,10 @@ class HexExtensionsKtTest {
         assertEquals("00 10 20 FF 7F 99", ba.toHexString())
         assertEquals("00,10,20,FF,7F,99", ba.toHexString(","))
         assertEquals("001020FF7F99", ba.toHexString(""))
-        assertEquals("0010", ba.toHexString("", limit = 2))
-        assertEquals("", ba.toHexString("", limit = 0))
+        assertEquals("0010...", ba.toHexString("", limit = 2))
+        assertEquals("0010", ba.toHexString("", limit = 2, limitExceededSuffix = ""))
+        assertEquals("...", ba.toHexString("", limit = 0))
+        assertEquals("", ba.toHexString("", limit = 0, limitExceededSuffix = ""))
     }
 
     @Test
