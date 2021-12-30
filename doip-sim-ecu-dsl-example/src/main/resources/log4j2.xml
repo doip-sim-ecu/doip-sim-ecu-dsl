@@ -14,8 +14,12 @@
         </Console>
     </Appenders>
     <Loggers>
-        <!-- Every logger starting with "doip" will print trace level -->
-        <Logger name="doip" level="info" additivity="false">
+        <!-- Every logger starting with "doip" will print warn level -->
+        <Logger name="doip" level="warn" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        <!-- Logger for simulated ecu -->
+        <Logger name="SimEcu" level="debug" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
         <!--

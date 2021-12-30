@@ -100,10 +100,15 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
      */
     override fun handleRequest(request: UdsMessage) {
         if (handleInterceptors(request)) {
+            logger.debugIf { "Incoming request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
             return
         }
 
         val normalizedRequest by lazy { request.message.toHexString("", limit = data.requestRegexMatchBytes, limitExceededSuffix = "") }
+
+        logger.traceIf { "Incoming request: ${request.message.toHexString()}" }
+
+        // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
 
         for (requestIter in data.requests) {
             val matches = try {
@@ -113,11 +118,11 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
                     requestIter.requestRegex!!.matches(normalizedRequest)
                 }
             } catch (e: Exception) {
-                logger.error("Error while matching requests ${e.message}")
+                logger.error("Error while matching requests: ${e.message}")
                 throw e
             }
 
-            logger.traceIf { "Matching request '${request.message.toHexString(limit = 10)}' against '$requestIter' (result: $matches)" }
+            logger.traceIf { "Request: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
 
             if (!matches) {
                 continue
@@ -126,22 +131,23 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             requestIter.responseHandler.invoke(responseData)
             if (responseData.continueMatching) {
-                logger.traceIf { "Continue matching for $requestIter" }
+                logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
                 continue
             } else if (responseData.response.isNotEmpty()) {
-                logger.traceIf { "Sending response matching for $requestIter: ${responseData.response.toHexString(limit = 10)}" }
+                logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
                 sendResponse(request, responseData.response)
             } else {
-                logger.traceIf { "No response for $requestIter" }
+                logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
                 clearCurrentRequest()
             }
             return
         }
 
         if (this.data.nrcOnNoMatch) {
-            logger.traceIf { "No matching request found for ${request.message.toHexString(limit = 10)}, sending NRC" }
+            logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
             sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
         } else {
+            logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
             clearCurrentRequest()
         }
     }
@@ -156,6 +162,8 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         duration: Duration = Duration.INFINITE,
         interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean
     ): String {
+        logger.traceIf { "Adding interceptor '$name' for $duration"}
+
         // expires at expirationTime
         val expirationTime = System.nanoTime() + duration.inWholeNanoseconds
 
@@ -178,6 +186,8 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
      * Please note that the internal resolution for delay is milliseconds
      */
     fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
+        logger.traceIf { "Adding or replacing timer '$name' to be executed after $delay"}
+
         synchronized(mainTimer) {
             timers[name]?.cancel()
             timers[name] = mainTimer.scheduleEcuTimerTask(delay.inWholeMilliseconds, handler)
@@ -197,6 +207,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
      * Explicitly cancel an existing timer
      */
     fun cancelTimer(name: String) {
+        logger.traceIf { "Cancelling timer '$name'" }
         synchronized(mainTimer) {
             timers[name]?.cancel()
             timers.remove(name)
@@ -210,6 +221,8 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         internalDataStorage.clear()
 
     fun reset() {
+        logger.info("Resetting interceptors, timers and stored data for ECU")
+
         this.interceptors.clear()
 
         synchronized(mainTimer) {

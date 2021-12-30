@@ -131,7 +131,7 @@ class SimEcuTest {
     @Test
     fun `test request matching no match`() {
         val requests = listOf(
-            RequestMatcher("TEST", byteArrayOf(0x10, 0x20), null) { },
+            RequestMatcher(null, byteArrayOf(0x10, 0x20), null) { },
             RequestMatcher("TEST2", byteArrayOf(0x10, 0x30), null) { },
         )
         val ecuWithNrc = spy(SimEcu(

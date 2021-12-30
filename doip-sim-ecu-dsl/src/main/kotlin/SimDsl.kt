@@ -178,15 +178,16 @@ class RequestMatcher(
 
     override fun toString(): String {
         val sb = StringBuilder()
-        sb.append("RequestMatch: ")
-        if (name != null) {
-            sb.append("Name: $name")
+        sb.append("{ ")
+        if (!name.isNullOrEmpty()) {
+            sb.append("$name; ")
         }
         if (requestBytes != null) {
             sb.append("Bytes: ${requestBytes.toHexString(limit = 10)}")
         } else if (requestRegex != null) {
             sb.append("Pattern: ${requestRegex.pattern}")
         }
+        sb.append(" }")
         return sb.toString()
     }
 
@@ -250,7 +251,7 @@ open class RequestsData(requests: List<RequestMatcher> = emptyList()) {
      * is automatically converted into a regular expression by replacing all "[]" with ".*",
      * turning it into uppercase, and removing all spaces.
      */
-    fun request(reqHex: String, name: String = "", response: RequestResponseHandler = {}) {
+    fun request(reqHex: String, name: String? = null, response: RequestResponseHandler = {}) {
         if (isRegex(reqHex)) {
             request(regexifyRequestHex(reqHex), name, response)
         } else {
