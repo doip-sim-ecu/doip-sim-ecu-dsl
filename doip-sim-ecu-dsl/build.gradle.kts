@@ -20,7 +20,9 @@ dependencies {
     api("com.github.doip:doip-library:1.1.5")
     api("com.github.doip:doip-logging:1.1.7")
 
-    api("org.apache.logging.log4j:log4j-api:2.17.0") // Enforce secure log4j version
+    api("org.apache.logging.log4j:log4j-api:2.17.1") // Enforce secure log4j version
+    api("org.apache.logging.log4j:log4j-core:2.17.1") // Enforce secure log4j version
+
     testImplementation(kotlin("test"))
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.25")
