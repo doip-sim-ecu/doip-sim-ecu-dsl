@@ -47,9 +47,9 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
         // To start off, let's use a simple example, let's acknowledge the presence of a tester
         request("3E 00") { ack() }
         // This is semantically exactly the same as
-        request("3E 00") { respond("50 3E") }
+        request("3E 00") { respond("7E 3E") }
         // As well as
-        request(byteArrayOf(0x3E, 0x00)) { respond(byteArrayOf(0x50, 0x3E)) }
+        request(byteArrayOf(0x3E, 0x00)) { respond(byteArrayOf(0x7E, 0x3E)) }
 
         // We can also define a name for the request, which might be used in logging in the future
         request("3E 00", "TesterPresent") { ack() }
