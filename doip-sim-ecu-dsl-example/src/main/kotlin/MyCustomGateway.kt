@@ -100,8 +100,8 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
             }
         }
 
-        // State checking could also be done with an extension function that uses the state, now every limited response
-        // can just the extension function to save you from writing plenty of redundant code
+        // State checking could also be done with an extension function that uses the state, now every conditioned
+        // response can just use the extension function to save you time from writing plenty of redundant code
         fun RequestResponseData.respondIfProgramming(response: RequestResponseHandler) {
             if (ecuSession == SessionState.PROGRAMMING) {
                 response.invoke(this)
