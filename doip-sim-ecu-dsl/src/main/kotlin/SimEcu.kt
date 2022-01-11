@@ -32,7 +32,11 @@ fun EcuData.toEcuConfig(): EcuConfig {
 
 @Open
 class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
-    private val logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
+    val logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
+        private set(value) {
+            field = value
+        }
+        
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
     val name
