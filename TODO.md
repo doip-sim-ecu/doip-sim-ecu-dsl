@@ -1,9 +1,6 @@
 TODOs:
-- Sequencable responses
-  - ability to cycle through multiple (fixed) responses
-  - at end, either stay on last response, or restart at beginning
-  - Uses request data storage 
 
+- Nothing at the moment
 
 Maybe someday:
 - Converter to convert odx-d and/or cdd into typed concrete 
