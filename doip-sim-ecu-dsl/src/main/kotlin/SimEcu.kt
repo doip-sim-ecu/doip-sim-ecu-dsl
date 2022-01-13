@@ -222,7 +222,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         internalDataStorage.clear()
 
     fun reset() {
-        logger.info("Resetting interceptors, timers and stored data for ECU")
+        logger.debug("Resetting interceptors, timers and stored data for ECU $name")
 
         this.interceptors.clear()
 

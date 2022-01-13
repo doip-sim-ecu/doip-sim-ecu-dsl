@@ -96,6 +96,8 @@ private fun GatewayData.toGatewayConfig(): GatewayConfig {
 }
 
 class SimGateway(private val data: GatewayData) : StandardGateway(data.toGatewayConfig()) {
+    private val logger = doip.logging.LogManager.getLogger(SimGateway::class.java)
+
     val name: String
         get() = data.name
 
@@ -131,6 +133,7 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
     }
 
     fun reset(recursiveEcus: Boolean = true) {
+        logger.info("Resetting Gateway $name")
         this.requests.forEach { it.reset() }
         if (recursiveEcus) {
             this.ecuList.forEach { (it as SimEcu).reset() }

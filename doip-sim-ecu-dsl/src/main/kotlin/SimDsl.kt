@@ -286,7 +286,6 @@ fun gateway(name: String, receiver: GatewayDataHandler) {
     gateways.add(gatewayData)
 }
 
-
 fun reset() {
     gatewayInstances.forEach { it.reset() }
 }

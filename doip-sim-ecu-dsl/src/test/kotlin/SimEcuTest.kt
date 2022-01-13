@@ -1,13 +1,11 @@
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import doip.library.message.UdsMessage
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.spy
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
+import org.mockito.kotlin.*
 import kotlin.time.Duration.Companion.milliseconds
 
 class SimEcuTest {
@@ -302,6 +300,60 @@ class SimEcuTest {
         assertThat(firstRequestCalled).isTrue()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x01)))
         assertThat(firstRequestCalled).isTrue()
+    }
+
+    @Test
+    fun `test sequence stop at end`() {
+        val ecu = spy(SimEcu(ecuData(
+            name = "TEST",
+            requests = listOf(
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                  sequenceStopAtEnd(
+                      "7E 3E",
+                      "7F 10")
+                },
+            )
+        )))
+
+        for (i in 0 until 6) {
+            ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
+        }
+
+        val captor: KArgumentCaptor<ByteArray> = argumentCaptor()
+        verify(ecu, times(6)).sendResponse(any(), captor.capture())
+        assertThat(captor.firstValue).containsExactly(0x7E, 0x3E)
+        captor.allValues.subList(1, 5).forEach {
+            assertThat(it).containsExactly(0x7F, 0x10)
+        }
+    }
+
+    @Test
+    fun `test sequence wrap around`() {
+        val ecu = spy(SimEcu(ecuData(
+            name = "TEST",
+            requests = listOf(
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                    sequenceWrapAround(
+                        "7E 3E",
+                        "7F 10")
+                },
+            )
+        )))
+
+        for (i in 0 until 6) {
+            ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
+        }
+
+        val captor: KArgumentCaptor<ByteArray> = argumentCaptor()
+        verify(ecu, times(6)).sendResponse(any(), captor.capture())
+        assertThat(captor.firstValue).containsExactly(0x7E, 0x3E)
+        captor.allValues.forEachIndexed{ index, it ->
+            if (index % 2 == 0) {
+                assertThat(it).containsExactly(0x7E, 0x3E)
+            } else {
+                assertThat(it).containsExactly(0x7F, 0x10)
+            }
+        }
     }
 
     private fun ecuData(
