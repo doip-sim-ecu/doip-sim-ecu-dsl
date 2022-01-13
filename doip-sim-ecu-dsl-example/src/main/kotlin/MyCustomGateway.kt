@@ -174,6 +174,23 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
 //            ecu.reset()
         }
 
+        // You can also respond with a sequence, advancing in the list of responses with each matched request
+
+        // When the end of the responses-list is reached, either stop at the end and repeat the last answer until reset is called
+        request("3E 00") {
+            sequenceStopAtEnd(
+                "7E 00",
+                "7F 10"
+            )
+        }
+
+        // Or wrap around to the beginning when the end has been reached (reset will reset the sequence to the first entry)
+        request("3E 00") {
+            sequenceWrapAround(
+                "7E 00",
+                "7F 10"
+            )
+        }
 
         // Since usually there are other ECUs behind a gateway, we can define them too
 
