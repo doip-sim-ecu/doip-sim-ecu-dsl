@@ -94,6 +94,12 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
                     // be executed. When all interceptors return false, the normal request matching will
                     // commence afterwards
                     true
+
+                    // This is also a pretty powerful tool for testing - you could start an interceptor that records all
+                    // calls to an ecu with an uds request (or run REST-webservices on a different port for this),
+                    // return all recorded calls with another one and use a third one to delete the
+                    // data/stop the interceptor. This enables you to text the exact commands/messages sent to the ecu
+                    // in an integration test.
                 }
             } else {
                 nrc(NrcError.SecurityAccessDenied)
@@ -148,7 +154,7 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
         // Remember the session state example earlier?
         // If we do it that way, we actually have a hard time resetting the ecu into a defined initial state.
         // To get around this, you can save state in a storage container associated with the ecu or request, which are
-        // persistent across different requests (ecu), or within multiple consecutive requests (request)
+        // persistent across different requests (ecu), or within multiple consecutive requests (caller)
         //
         // These storages are reset, when the reset() method is called on the ecu or request
         @Suppress("UNUSED_CHANGED_VALUE", "UNUSED_VALUE")
@@ -164,6 +170,7 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
             // We can also do this on the request level by using caller instead of ecu
             var requestCounter: Int by caller.storedProperty { 0 }
             requestCounter++
+            // It's named "caller", because the exact same concept also applies to interceptors
 
             // to reset the storage for the request
 //            caller.reset()
