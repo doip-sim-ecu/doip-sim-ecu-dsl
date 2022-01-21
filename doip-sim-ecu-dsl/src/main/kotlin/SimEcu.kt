@@ -33,7 +33,7 @@ fun EcuData.toEcuConfig(): EcuConfig {
 @Open
 class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     val logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
-        
+
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
     val name
@@ -73,9 +73,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             }
 
         this.interceptors.forEach {
-            if (it.value.isExpired()) {
-                this.interceptors.remove(it.key)
-            } else {
+            if (!it.value.isExpired()) {
                 val responseData = ResponseData<InterceptorData>(
                     caller = it.value,
                     request = request,

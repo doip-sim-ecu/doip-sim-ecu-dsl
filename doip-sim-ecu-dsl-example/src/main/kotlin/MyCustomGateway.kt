@@ -63,7 +63,23 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
         // As well as
         request(byteArrayOf(0x3E, 0x00)) { respond(byteArrayOf(0x7F, 0x3E, 0x10)) }
 
-        // This means you could also programmatically open a csv-file instead of defining each request, and
+        // The matching can also be done with regular expressions, by either using a string which will be
+        // converted into a (hopefully correct) regular expression, or by specifying a Regex
+        // directly
+
+        // The regular expression conversion will replace the characters [] with .*, convert the expression to
+        // uppercase and remove all spaces
+
+        // So this expression
+        request("3e 00 []") { ack() }
+        // is semantically the same as
+        request(Regex("3E00.*")) { ack() }
+
+        // For more complex matching you'd typically use a Regex-object, but for most cases in practice the string
+        // with the [] placeholder work well enough.
+
+
+        // At this point you could also programmatically open a csv-file, instead of defining each request,
         // read in a list of requests and responses, to transform them into request(..) { respond(...) } pairs.
 
         // But since csv-files are static, where's the fun in that?
@@ -79,28 +95,6 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
         request("11 01", "HardReset") {
             if (ecuSession == SessionState.PROGRAMMING) {
                 ack()
-                // ... but there's more - since an ecu can't respond if it's rebooting, let's simulate that
-                addEcuInterceptor("WaitWhileRebooting", 4000.milliseconds) { req ->
-                    // We could access the request and respond
-                    if (req.message[0] == 0xFF.toByte() || // Multiple ways to access the request message
-                        this.message[0] == 0xFF.toByte() ||
-                        this.request.message[0] == 0xFF.toByte()) {
-                        // This case won't ever happen, just to show what's possible in this context
-                        ack()
-                        // You could respond in the same ways as shown in the gateway examples
-                    }
-
-                    // When true is returned, all request matching is forfeited, and no matching will
-                    // be executed. When all interceptors return false, the normal request matching will
-                    // commence afterwards
-                    true
-
-                    // This is also a pretty powerful tool for testing - you could start an interceptor that records all
-                    // calls to an ecu with an uds request (or run REST-webservices on a different port for this),
-                    // return all recorded calls with another one and use a third one to delete the
-                    // data/stop the interceptor. This enables you to text the exact commands/messages sent to the ecu
-                    // in an integration test.
-                }
             } else {
                 nrc(NrcError.SecurityAccessDenied)
             }
@@ -115,23 +109,36 @@ fun myCustomGateway(gateway: CreateGatewayFunc) {
                 nrc(NrcError.SecurityAccessDenied)
             }
         }
-        // Let's do this for the soft reset
+        // Let's do this for the soft reset, as well as the key off on reset
         request("11 03") { respondIfProgramming { ack() } }
+        request("11 02") { respondIfProgramming { ack() } }
 
-        // And now for some regex examples
-        //
-        // we can also do generic matching with regular expressions, either by using a string
-        // which will be converted into a (hopefully correct) regular expression, or by specifying a Regex
-        // directly
+        // Now we all know that an ecu doesn't respond while rebooting, that's something we can simulate too,
+        // by using an interceptor. Interceptors run before all request matching and are described below
+        request("11 01", "HardReset") {
+            ack()
+            addEcuInterceptor("WaitWhileRebooting", 4000.milliseconds) { req ->
+                // We could access the request and respond
+                if (req.message[0] == 0xFF.toByte() || // Multiple ways to access the request message
+                    this.message[0] == 0xFF.toByte() ||
+                    this.request.message[0] == 0xFF.toByte()) {
+                    // This case won't ever happen, just to show what's possible in this context
+                    ack()
+                    // You could respond in the same ways as shown in the gateway examples
+                }
 
-        // The regular expression conversion will replace the characters [] with .*, convert the expression to uppercase
-        // and remove all spaces
+                // When true is returned, all request matching is forfeited, and no matching will
+                // be executed. When all interceptors return false, the normal request matching will
+                // commence afterwards
+                true
 
-        // So this expression
-        request("3e 00 []") { ack() }
-        // is semantically the same as
-        request(Regex("3E00.*")) { ack() }
-
+                // This is also a pretty powerful tool for testing - you could start an interceptor that records all
+                // calls to an ecu with an uds request (or run REST-webservices on a different port for this),
+                // return all recorded calls with another one and use a third one to delete the
+                // data/stop the interceptor. This enables you to text the exact commands/messages sent to the ecu
+                // in an integration test.
+            }
+        }
 
         // To integration-test code that uses this simulated ecu, we could define a custom write-service with
         // a parameter, which could introduce specific error conditions through state, until reset by a
