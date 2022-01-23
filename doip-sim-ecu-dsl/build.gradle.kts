@@ -16,12 +16,9 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
 
-    api("com.github.doip:doip-simulation:1.4.3")
-    api("com.github.doip:doip-library:1.1.5")
-    api("com.github.doip:doip-logging:1.1.7")
-
-    api("org.apache.logging.log4j:log4j-api:2.17.1") // Enforce secure log4j version
-    api("org.apache.logging.log4j:log4j-core:2.17.1") // Enforce secure log4j version
+    api("com.github.doip-sim-ecu:doip-simulation:1.4.5")
+    api("com.github.doip-sim-ecu:doip-library:1.1.8")
+    api("com.github.doip-sim-ecu:doip-logging:1.1.9")
 
     testImplementation(kotlin("test"))
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
