@@ -2,11 +2,20 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import doip.library.message.UdsMessage
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class SimDslTest {
+    @AfterEach
+    fun tearDown() {
+        gateways.clear()
+        gatewayInstances.clear()
+    }
+
     @Test
     fun `test dsl`() {
         gateway("GW") {
@@ -36,7 +45,31 @@ class SimDslTest {
         assertThat(gateways[0].ecus[0].requests.size).isEqualTo(4)
 
         assertThat(gatewayInstances.size).isEqualTo(0)
-        gateways.clear()
+    }
+
+    @Test
+    fun `test multibyte ack`() {
+        gateway("GW") {
+            ecu("ECU") {
+                ackBytesLengthMap = mapOf(0x22.toByte() to 3)
+                request(byteArrayOf(0x22, 0x10, 0x20), "REQ2") { ack() }
+            }
+        }
+
+        assertThat(gateways.size).isEqualTo(1)
+        val ecuData = gateways[0].ecus[0]
+        val msg = UdsMessage(0x1, 0x2, byteArrayOf(0x22, 0x10, 0x20))
+        val simEcu = SimEcu(ecuData)
+        val responseData = RequestResponseData(ecuData.requests[0], msg, simEcu)
+        ecuData.requests[0].responseHandler.invoke(responseData)
+        assertThat(responseData.response.size).isEqualTo(3)
+
+        ecuData.ackBytesLengthMap = mapOf(0x22.toByte() to 4)
+        assertThrows<IndexOutOfBoundsException> { ecuData.requests[0].responseHandler.invoke(responseData) }
+
+        ecuData.ackBytesLengthMap = mapOf()
+        ecuData.requests[0].responseHandler.invoke(responseData)
+        assertThat(responseData.response.size).isEqualTo(2)
     }
 
     @Test

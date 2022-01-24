@@ -18,5 +18,5 @@ Maybe someday:
     ack()
   }
   ```
-- Scope would be create the files for simulated ecu (in concrete projects)#
+- Scope would be to create the files for a simulated ecu (in concrete projects)
   using automatically generated extension functions 
