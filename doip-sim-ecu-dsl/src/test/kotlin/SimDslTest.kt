@@ -1,6 +1,7 @@
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -52,5 +53,24 @@ class SimDslTest {
         }
 
         createGwFunc(::gateway)
+    }
+
+    @Test
+    fun `test request matcher list extensions`() {
+        val list = listOf(
+            RequestMatcher("TEST1", byteArrayOf(11), null) { },
+            RequestMatcher("TEST2", byteArrayOf(12), null) { },
+            RequestMatcher("TEST3", byteArrayOf(13), null) { },
+            RequestMatcher("TEST4", byteArrayOf(14), null) { },
+            RequestMatcher("TEST5", byteArrayOf(15), null) { }
+        )
+        assertThat(list.size).isEqualTo(5)
+        assertThat(list.findByName("TEST3")?.name).isEqualTo("TEST3")
+        assertThat(list.findByName("TEST99")).isNull()
+        val mutableList = list.toMutableList()
+        assertThat(mutableList.removeByName("TEST3")?.name).isEqualTo("TEST3")
+        assertThat(mutableList.removeByName("TEST1")?.name).isEqualTo("TEST1")
+        assertThat(mutableList.removeByName("TEST98")).isNull()
+        assertThat(mutableList.size).isEqualTo(3)
     }
 }

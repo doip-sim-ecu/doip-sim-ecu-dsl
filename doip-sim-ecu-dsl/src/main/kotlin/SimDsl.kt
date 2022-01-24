@@ -100,6 +100,13 @@ open class ResponseData<out T : DataStorage>(
     }
 
     /**
+     * See [SimEcu.cancelTimer]
+     */
+    fun cancelEcuTimer(name: String) {
+        ecu.cancelTimer(name)
+    }
+
+    /**
      * See [SimEcu.addInterceptor]
      */
     fun addEcuInterceptor(
@@ -190,9 +197,19 @@ class RequestMatcher(
         sb.append(" }")
         return sb.toString()
     }
-
-
 }
+
+fun List<RequestMatcher>.findByName(name: String) =
+    this.firstOrNull { it.name == name }
+
+fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
+    val index = this.indexOfFirst { it.name == name }
+    if (index >= 0) {
+        return this.removeAt(index)
+    }
+    return null
+}
+
 
 open class RequestsData(requests: List<RequestMatcher> = emptyList()) {
     /**

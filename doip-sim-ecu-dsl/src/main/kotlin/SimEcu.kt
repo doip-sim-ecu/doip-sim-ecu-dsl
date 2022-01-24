@@ -1,4 +1,5 @@
 import doip.library.message.UdsMessage
+import doip.logging.Logger
 import doip.simulation.nodes.EcuConfig
 import doip.simulation.standard.StandardEcu
 import helper.*
@@ -32,14 +33,14 @@ fun EcuData.toEcuConfig(): EcuConfig {
 
 @Open
 class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
-    val logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
+    val logger: Logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
 
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
     val name
         get() = data.name
 
-    val requests: List<RequestMatcher>
+    val requests
         get() = data.requests
 
     private val interceptors = Collections.synchronizedMap(LinkedHashMap<String, InterceptorData>())
@@ -203,7 +204,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     }
 
     /**
-     * Explicitly cancel an existing timer
+     * Explicitly cancel a running timer
      */
     fun cancelTimer(name: String) {
         logger.traceIf { "Cancelling timer '$name'" }
@@ -213,12 +214,18 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         }
     }
 
+    /**
+     * StoredProperties can be retrieved by using delegates. They are only stored until [reset] is called
+     */
     fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
         StoragePropertyDelegate(this.internalDataStorage, initialValue)
 
     fun clearStoredProperties() =
         internalDataStorage.clear()
 
+    /**
+     * Resets all the ECUs stored properties, timers, interceptors and requests
+     */
     fun reset() {
         logger.debug("Resetting interceptors, timers and stored data for ECU $name")
 
