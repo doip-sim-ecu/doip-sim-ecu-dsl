@@ -168,7 +168,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         logger.traceIf { "Adding interceptor '$name' for $duration"}
 
         // expires at expirationTime
-        val expirationTime = if (Duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
+        val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
 
         interceptors[name] = InterceptorData(
             name = name,
