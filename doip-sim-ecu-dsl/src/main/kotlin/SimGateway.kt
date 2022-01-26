@@ -8,7 +8,7 @@ import doip.simulation.standard.StandardTcpConnectionGateway
 import java.net.InetAddress
 import kotlin.properties.Delegates
 
-open class GatewayData(val name: String) : RequestsData() {
+open class GatewayData(name: String) : RequestsData(name) {
     /**
      * Network address this gateway should bind on (default: 0.0.0.0)
      */

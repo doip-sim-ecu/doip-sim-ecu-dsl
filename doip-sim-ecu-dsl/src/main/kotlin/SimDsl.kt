@@ -233,7 +233,7 @@ fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
 
 data class ResetHandler(val name: String?, val handler: (SimEcu) -> Unit)
 
-open class RequestsData(requests: List<RequestMatcher> = emptyList(), resetHandler: List<ResetHandler> = emptyList()) {
+open class RequestsData(val name: String, requests: List<RequestMatcher> = emptyList(), resetHandler: List<ResetHandler> = emptyList()) {
     /**
      * List of all defined requests in the order they were defined
      */
@@ -317,13 +317,13 @@ open class RequestsData(requests: List<RequestMatcher> = emptyList(), resetHandl
  * Define the data associated with the ecu
  */
 open class EcuData(
-    val name: String,
+    name: String,
     var physicalAddress: Int = 0,
     var functionalAddress: Int = 0,
     var nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList()
-) : RequestsData(requests, resetHandler)
+) : RequestsData(name, requests, resetHandler)
 
 val gateways: MutableList<GatewayData> = mutableListOf()
 val gatewayInstances: MutableList<SimGateway> = mutableListOf()
