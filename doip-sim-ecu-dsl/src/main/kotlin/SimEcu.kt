@@ -20,6 +20,7 @@ fun EcuConfig.addressByType(message: UdsMessage): Int =
 class InterceptorData(
     val name: String,
     val interceptor: InterceptorResponseHandler,
+    val alsoCallWhenEcuIsBusy: Boolean,
     val isExpired: () -> Boolean
 ) : DataStorage()
 
@@ -66,7 +67,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         onSendUdsMessage(udsResponse)
     }
 
-    private fun handleInterceptors(request: UdsMessage): Boolean {
+    private fun handleInterceptors(request: UdsMessage, busy: Boolean): Boolean {
         if (this.interceptors.isEmpty()) {
             return false
         }
@@ -77,13 +78,13 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             }
 
         this.interceptors.forEach {
-            if (!it.value.isExpired()) {
+            if (!it.value.isExpired() && (!busy || it.value.alsoCallWhenEcuIsBusy)) {
                 val responseData = ResponseData<InterceptorData>(
                     caller = it.value,
                     request = request,
                     ecu = this
                 )
-                if (it.value.interceptor.invoke(responseData, request)) {
+                if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
                     if (responseData.continueMatching) {
                         return false
                     } else if (responseData.response.isNotEmpty()) {
@@ -98,11 +99,19 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         return false
     }
 
+    override fun handleRequestIfBusy(request: UdsMessage) {
+        if (handleInterceptors(request, true)) {
+            logger.debugIf { "Incoming busy request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
+            return
+        }
+        super.handleRequestIfBusy(request)
+    }
+
     /**
      * Normalizes an incoming request into hexadecimal
      */
     override fun handleRequest(request: UdsMessage) {
-        if (handleInterceptors(request)) {
+        if (handleInterceptors(request, false)) {
             logger.debugIf { "Incoming request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
             return
         }
@@ -163,9 +172,10 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     fun addInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
-        interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean
+        alsoCallWhenEcuIsBusy: Boolean = false,
+        interceptor: InterceptorResponseHandler
     ): String {
-        logger.traceIf { "Adding interceptor '$name' for $duration"}
+        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy)"}
 
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
@@ -173,6 +183,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         interceptors[name] = InterceptorData(
             name = name,
             interceptor = interceptor,
+            alsoCallWhenEcuIsBusy = alsoCallWhenEcuIsBusy,
             isExpired = { System.nanoTime() >= expirationTime })
 
         return name

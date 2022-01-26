@@ -8,7 +8,7 @@ import kotlin.time.Duration
 typealias RequestResponseData = ResponseData<RequestMatcher>
 typealias RequestResponseHandler = RequestResponseData.() -> Unit
 typealias InterceptorResponseData = ResponseData<InterceptorData>
-typealias InterceptorResponseHandler = InterceptorResponseData.(request: UdsMessage) -> Boolean
+typealias InterceptorResponseHandler = InterceptorResponseData.(request: RequestMessage) -> Boolean
 typealias EcuDataHandler = EcuData.() -> Unit
 typealias GatewayDataHandler = GatewayData.() -> Unit
 typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
@@ -52,6 +52,13 @@ object NrcError {
     const val VoltageTooHigh: Byte = 0x92.toByte()
     const val VoltageTooLow: Byte = 0x93.toByte()
 }
+
+open class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
+    UdsMessage(
+        udsMessage.sourceAdrress,
+        udsMessage.targetAddress,
+        udsMessage.targetAddressType,
+        udsMessage.message)
 
 /**
  * Define the response to be sent after the function returns
@@ -112,9 +119,10 @@ open class ResponseData<out T : DataStorage>(
     fun addEcuInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
-        interceptor: ResponseData<InterceptorData>.(request: UdsMessage) -> Boolean
+        alsoCallWhenEcuIsBusy: Boolean = false,
+        interceptor: InterceptorResponseHandler
     ) =
-        ecu.addInterceptor(name, duration, interceptor)
+        ecu.addInterceptor(name, duration, alsoCallWhenEcuIsBusy, interceptor)
 
     /**
      * See [SimEcu.removeInterceptor]

@@ -194,6 +194,31 @@ class SimEcuTest {
     }
 
     @Test
+    fun `test busy interceptor`() {
+        val ecu = SimEcu(ecuData(name = "TEST"))
+        var noBusyCalled = false
+        var busyCalled = false
+        ecu.requests.add(RequestMatcher("TEST", byteArrayOf(0x10, 0x03), null) { println("WAITING"); Thread.sleep(400); println("DONE") })
+        ecu.addInterceptor("NOBUSY", 1500.milliseconds) { println("NOTBUSY"); noBusyCalled = true; false; }
+        ecu.addInterceptor("BUSY", 1500.milliseconds, true) { println("BUSY ${it.isBusy}"); if (it.isBusy) busyCalled = true; false; }
+
+        ecu.start()
+        try {
+            ecu.putRequest(req(byteArrayOf(0x10, 0x03)))
+            Thread.sleep(100)
+            assertThat(noBusyCalled).isTrue()
+            assertThat(busyCalled).isFalse()
+            noBusyCalled = false
+            ecu.putRequest(req(byteArrayOf(0x10, 0x03)))
+            Thread.sleep(100)
+            assertThat(noBusyCalled).isFalse()
+            assertThat(busyCalled).isTrue()
+        } finally {
+            ecu.stop()
+        }
+    }
+
+    @Test
     fun `test continue matching`() {
         var first = false
         var second = false
