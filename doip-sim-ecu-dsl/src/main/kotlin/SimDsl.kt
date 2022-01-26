@@ -233,23 +233,34 @@ fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
 
 data class ResetHandler(val name: String?, val handler: (SimEcu) -> Unit)
 
-open class RequestsData(val name: String, requests: List<RequestMatcher> = emptyList(), resetHandler: List<ResetHandler> = emptyList()) {
+open class RequestsData(
+    val name: String,
+    /**
+     * Return a nrc when no request could be matched
+     */
+    var nrcOnNoMatch: Boolean = true,
+    requests: List<RequestMatcher> = emptyList(),
+    resetHandler: List<ResetHandler> = emptyList(),
+    /**
+     * Maximum length of data converted into a hex-string for incoming requests
+     */
+    var requestRegexMatchBytes: Int = 10,
+
+    /**
+     * Map of Request SID to number of ack response byte count
+     */
+    var ackBytesLengthMap: Map<Byte, Int> = mapOf(),
+) {
     /**
      * List of all defined requests in the order they were defined
      */
     val requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
 
+    /**
+     * List of defined reset handlers
+     */
     val resetHandler: MutableList<ResetHandler> = mutableListOf(*resetHandler.toTypedArray())
 
-    /**
-     * Maximum length of data converted into a hex-string for incoming requests
-     */
-    var requestRegexMatchBytes: Int = 10
-
-    /**
-     * Map of Request SID to number of ack response byte count
-     */
-    var ackBytesLengthMap: Map<Byte, Int> = mapOf()
 
     private fun regexifyRequestHex(requestHex: String) =
         Regex(
@@ -320,10 +331,19 @@ open class EcuData(
     name: String,
     var physicalAddress: Int = 0,
     var functionalAddress: Int = 0,
-    var nrcOnNoMatch: Boolean = true,
+    nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
-    resetHandler: List<ResetHandler> = emptyList()
-) : RequestsData(name, requests, resetHandler)
+    resetHandler: List<ResetHandler> = emptyList(),
+    requestRegexMatchBytes: Int = 10,
+    ackBytesLengthMap: Map<Byte, Int> = mapOf(),
+) : RequestsData(
+    name = name,
+    nrcOnNoMatch = nrcOnNoMatch,
+    requests = requests,
+    resetHandler = resetHandler,
+    requestRegexMatchBytes = requestRegexMatchBytes,
+    ackBytesLengthMap = ackBytesLengthMap,
+)
 
 val gateways: MutableList<GatewayData> = mutableListOf()
 val gatewayInstances: MutableList<SimGateway> = mutableListOf()

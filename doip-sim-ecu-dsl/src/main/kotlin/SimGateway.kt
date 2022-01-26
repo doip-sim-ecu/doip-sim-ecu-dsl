@@ -122,6 +122,10 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
                 physicalAddress = data.logicalAddress,
                 functionalAddress = data.functionalAddress,
                 requests = data.requests,
+                nrcOnNoMatch =  data.nrcOnNoMatch,
+                resetHandler = data.resetHandler,
+                requestRegexMatchBytes = data.requestRegexMatchBytes,
+                ackBytesLengthMap = data.ackBytesLengthMap,
             )
             return SimEcu(ecu)
         }
