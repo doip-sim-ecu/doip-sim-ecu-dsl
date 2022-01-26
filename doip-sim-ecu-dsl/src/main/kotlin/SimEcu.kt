@@ -241,5 +241,11 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
 
         clearStoredProperties()
         this.data.requests.forEach { it.reset() }
+        this.data.resetHandler.forEach {
+            if (it.name != null) {
+                logger.trace("Calling onReset-Handler ${it.name}")
+            }
+            it.handler(this)
+        }
     }
 }

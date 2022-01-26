@@ -231,12 +231,15 @@ fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
     return null
 }
 
+data class ResetHandler(val name: String?, val handler: (SimEcu) -> Unit)
 
-open class RequestsData(requests: List<RequestMatcher> = emptyList()) {
+open class RequestsData(requests: List<RequestMatcher> = emptyList(), resetHandler: List<ResetHandler> = emptyList()) {
     /**
      * List of all defined requests in the order they were defined
      */
-    var requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
+    val requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
+
+    val resetHandler: MutableList<ResetHandler> = mutableListOf(*resetHandler.toTypedArray())
 
     /**
      * Maximum length of data converted into a hex-string for incoming requests
@@ -302,6 +305,10 @@ open class RequestsData(requests: List<RequestMatcher> = emptyList()) {
         }
     }
 
+    fun onReset(name: String? = null, handler: (SimEcu) -> Unit) {
+        resetHandler.add(ResetHandler(name, handler))
+    }
+
     private fun isRegex(value: String) =
         value.contains("[") || value.contains(".") || value.contains("|")
 }
@@ -314,8 +321,9 @@ open class EcuData(
     var physicalAddress: Int = 0,
     var functionalAddress: Int = 0,
     var nrcOnNoMatch: Boolean = true,
-    requests: List<RequestMatcher> = emptyList()
-) : RequestsData(requests)
+    requests: List<RequestMatcher> = emptyList(),
+    resetHandler: List<ResetHandler> = emptyList()
+) : RequestsData(requests, resetHandler)
 
 val gateways: MutableList<GatewayData> = mutableListOf()
 val gatewayInstances: MutableList<SimGateway> = mutableListOf()

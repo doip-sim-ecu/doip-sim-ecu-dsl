@@ -29,6 +29,9 @@ class SimDslTest {
                 }
             }
 
+            onReset("RESETIT") {
+            }
+
             ecu("ECU1") {
                 request(byteArrayOf(0x10), "REQ1") { ack() }
                 request("10", "REQ2") { ack() }
@@ -39,6 +42,7 @@ class SimDslTest {
         assertThat(gateways.size).isEqualTo(1)
         assertThat(gateways[0].name).isEqualTo("GW")
         assertThat(gateways[0].requests.size).isEqualTo(4)
+        assertThat(gateways[0].resetHandler.size).isEqualTo(1)
 
         assertThat(gateways[0].ecus.size).isEqualTo(1)
         assertThat(gateways[0].ecus[0].name).isEqualTo("ECU1")
