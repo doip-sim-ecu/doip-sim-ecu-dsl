@@ -167,10 +167,10 @@ class SimEcuTest {
         var intercepted = false
         var afterInterceptor = false
         var removeInterceptor = false
-        ecu.addInterceptor("TESTREMOVE", 500.milliseconds) { removeInterceptor = true; false; }
-        ecu.addInterceptor("TESTBEFORE", 500.milliseconds) { beforeInterceptor = true; false; }
-        ecu.addInterceptor("TEST", 200.milliseconds) { intercepted = true; true }
-        ecu.addInterceptor("TESTAFTER", 500.milliseconds) { afterInterceptor = true; false }
+        ecu.addOrReplaceEcuInterceptor("TESTREMOVE", 500.milliseconds) { removeInterceptor = true; false; }
+        ecu.addOrReplaceEcuInterceptor("TESTBEFORE", 500.milliseconds) { beforeInterceptor = true; false; }
+        ecu.addOrReplaceEcuInterceptor("TEST", 200.milliseconds) { intercepted = true; true }
+        ecu.addOrReplaceEcuInterceptor("TESTAFTER", 500.milliseconds) { afterInterceptor = true; false }
 
         ecu.handleRequest(UdsMessage(0x0000, 0x0001, byteArrayOf(0x11, 0x03)))
         // sendResponse didn't get called again, because there's one true interceptor, therefore no response was sent
@@ -199,8 +199,8 @@ class SimEcuTest {
         var noBusyCalled = false
         var busyCalled = false
         ecu.requests.add(RequestMatcher("TEST", byteArrayOf(0x10, 0x03), null) { println("WAITING"); Thread.sleep(400); println("DONE") })
-        ecu.addInterceptor("NOBUSY", 1500.milliseconds) { println("NOTBUSY"); noBusyCalled = true; false; }
-        ecu.addInterceptor("BUSY", 1500.milliseconds, true) { println("BUSY ${it.isBusy}"); if (it.isBusy) busyCalled = true; false; }
+        ecu.addOrReplaceEcuInterceptor("NOBUSY", 1500.milliseconds) { println("NOTBUSY"); noBusyCalled = true; false; }
+        ecu.addOrReplaceEcuInterceptor("BUSY", 1500.milliseconds, true) { println("BUSY ${it.isBusy}"); if (it.isBusy) busyCalled = true; false; }
 
         ecu.start()
         try {

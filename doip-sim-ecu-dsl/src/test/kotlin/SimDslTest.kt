@@ -36,7 +36,7 @@ class SimDslTest {
                 request(byteArrayOf(0x10), "REQ1") { ack() }
                 request("10", "REQ2") { ack() }
                 request("10 []", "REQ3") { ack() }
-                request(Regex("10.*"), "REQ4") { nrc(); addEcuInterceptor(duration = 1.seconds) { false } }
+                request(Regex("10.*"), "REQ4") { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
             }
         }
         assertThat(gateways.size).isEqualTo(1)

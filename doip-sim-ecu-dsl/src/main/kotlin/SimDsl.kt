@@ -114,15 +114,15 @@ open class ResponseData<out T : DataStorage>(
     }
 
     /**
-     * See [SimEcu.addInterceptor]
+     * See [SimEcu.addOrReplaceEcuInterceptor]
      */
-    fun addEcuInterceptor(
+    fun addOrReplaceEcuInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
         alsoCallWhenEcuIsBusy: Boolean = false,
         interceptor: InterceptorResponseHandler
     ) =
-        ecu.addInterceptor(name, duration, alsoCallWhenEcuIsBusy, interceptor)
+        ecu.addOrReplaceEcuInterceptor(name, duration, alsoCallWhenEcuIsBusy, interceptor)
 
     /**
      * See [SimEcu.removeInterceptor]

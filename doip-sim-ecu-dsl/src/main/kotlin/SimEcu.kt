@@ -71,29 +71,31 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         if (this.interceptors.isEmpty()) {
             return false
         }
-        this.interceptors
-            .filterValues { it.isExpired() }
-            .forEach {
-                this.interceptors.remove(it.key)
-            }
 
-        this.interceptors.forEach {
-            if (!it.value.isExpired() && (!busy || it.value.alsoCallWhenEcuIsBusy)) {
-                val responseData = ResponseData<InterceptorData>(
-                    caller = it.value,
-                    request = request,
-                    ecu = this
-                )
-                if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
-                    if (responseData.continueMatching) {
-                        return false
-                    } else if (responseData.response.isNotEmpty()) {
-                        sendResponse(request, responseData.response)
+        synchronized (this.interceptors) {
+            this.interceptors
+                .filterValues { it.isExpired() }
+                .forEach {
+                    this.interceptors.remove(it.key)
+                }
+
+            this.interceptors.forEach {
+                if (!it.value.isExpired() && (!busy || it.value.alsoCallWhenEcuIsBusy)) {
+                    val responseData = ResponseData<InterceptorData>(
+                        caller = it.value,
+                        request = request,
+                        ecu = this
+                    )
+                    if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
+                        if (responseData.continueMatching) {
+                            return false
+                        } else if (responseData.response.isNotEmpty()) {
+                            sendResponse(request, responseData.response)
+                        }
+                        return true
                     }
-                    return true
                 }
             }
-
         }
 
         return false
@@ -169,7 +171,7 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
      *
      * Interceptors are executed before request matching
      */
-    fun addInterceptor(
+    fun addOrReplaceEcuInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
         alsoCallWhenEcuIsBusy: Boolean = false,
@@ -180,11 +182,13 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
 
-        interceptors[name] = InterceptorData(
-            name = name,
-            interceptor = interceptor,
-            alsoCallWhenEcuIsBusy = alsoCallWhenEcuIsBusy,
-            isExpired = { System.nanoTime() >= expirationTime })
+        synchronized (interceptors) {
+            interceptors[name] = InterceptorData(
+                name = name,
+                interceptor = interceptor,
+                alsoCallWhenEcuIsBusy = alsoCallWhenEcuIsBusy,
+                isExpired = { System.nanoTime() >= expirationTime })
+        }
 
         return name
     }
