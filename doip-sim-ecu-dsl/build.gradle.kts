@@ -16,8 +16,8 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
 
-    api("com.github.doip-sim-ecu:doip-simulation:1.4.6")
-    api("com.github.doip-sim-ecu:doip-library:1.1.8")
+    api("com.github.doip-sim-ecu:doip-simulation:1.4.8")
+    api("com.github.doip-sim-ecu:doip-library:1.1.11")
     api("com.github.doip-sim-ecu:doip-logging:1.1.9")
 
     testImplementation(kotlin("test"))

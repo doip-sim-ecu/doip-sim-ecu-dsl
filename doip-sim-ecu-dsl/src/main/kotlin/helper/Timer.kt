@@ -1,13 +1,22 @@
 package helper
 
+import doip.library.util.Helper
+import doip.logging.LogManager
 import java.util.*
+
+private val logger = LogManager.getLogger(EcuTimerTask::class.java)
 
 class EcuTimerTask(private val action: TimerTask.() -> Unit) : TimerTask() {
     private var _canBeRemoved = false
 
     override fun run() {
-        action()
-        _canBeRemoved = true
+        try {
+            action()
+        } catch (e: Exception) {
+            logger.error("Error while executing timer: " + Helper.getExceptionAsString(e))
+        } finally {
+            _canBeRemoved = true
+        }
     }
 
     override fun cancel(): Boolean {

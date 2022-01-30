@@ -107,10 +107,7 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
     override fun createConnection(): StandardTcpConnectionGateway {
         // Hacky way to increase stream buffer size -- there should be a setter in the connection
         val con = super.createConnection()
-        val streamBufferField = DoipTcpConnection::class.java.getDeclaredField("streamBuffer")
-        streamBufferField.isAccessible = true
-        val streamBuffer = streamBufferField.get(con) as DoipTcpStreamBuffer
-        streamBuffer.maxPayloadLength = 70000
+        con.streamBuffer.maxPayloadLength = 70000
         return con
     }
 

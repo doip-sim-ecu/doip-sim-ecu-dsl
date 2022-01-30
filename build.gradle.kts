@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "com.github.doip-sim-ecu"
-version = "0.2.4"
+version = "0.2.5"
 
 plugins {
     kotlin("jvm")
