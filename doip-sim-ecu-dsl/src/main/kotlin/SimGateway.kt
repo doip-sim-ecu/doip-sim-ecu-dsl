@@ -1,5 +1,3 @@
-import doip.library.comm.DoipTcpConnection
-import doip.library.comm.DoipTcpStreamBuffer
 import doip.simulation.nodes.Ecu
 import doip.simulation.nodes.EcuConfig
 import doip.simulation.nodes.GatewayConfig
@@ -20,14 +18,19 @@ open class GatewayData(name: String) : RequestsData(name) {
     var localPort: Int = 13400
 
     /**
-     * Default broadcast address for VAM messages (default: 255.255.255.255)
+     * Multicast address
      */
-    var broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255")
+    var multicastAddress: InetAddress? = null
 
     /**
      * Whether VAM broadcasts shall be sent on startup (default: true)
      */
     var broadcastEnable: Boolean = true
+
+    /**
+     * Default broadcast address for VAM messages (default: 255.255.255.255)
+     */
+    var broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255")
 
     /**
      * The logical address under which the gateway shall be reachable
@@ -39,7 +42,6 @@ open class GatewayData(name: String) : RequestsData(name) {
      */
     var functionalAddress by Delegates.notNull<Int>()
 
-
     /**
      * Vehicle identifier, 17 chars, will be filled with '0`, or if left null, set to 0xFF
      */
@@ -49,6 +51,7 @@ open class GatewayData(name: String) : RequestsData(name) {
      * Group ID of the gateway
      */
     var gid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte group identification (used before mac is set)
+
     /**
      * Entity ID of the gateway
      */
@@ -77,9 +80,12 @@ private fun GatewayData.toGatewayConfig(): GatewayConfig {
     config.eid = this.eid
     config.localAddress = this.localAddress
     config.localPort = this.localPort
-    config.logicalAddress = this.logicalAddress
-    config.broadcastAddress = this.broadcastAddress
+    config.multicastAddress = this.multicastAddress
     config.broadcastEnable = this.broadcastEnable
+    config.broadcastAddress = this.broadcastAddress
+
+    config.logicalAddress = this.logicalAddress
+
     // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
     config.vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it }
 
