@@ -9,4 +9,5 @@ pluginManagement {
 
 rootProject.name = "doip-sim-ecu-dsl"
 
+include("doip-library")
 include("doip-sim-ecu-dsl")

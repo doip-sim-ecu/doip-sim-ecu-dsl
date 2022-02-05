@@ -14,6 +14,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":doip-library"))
     implementation(kotlin("stdlib"))
 
     api("com.github.doip-sim-ecu:doip-simulation:1.4.8")
