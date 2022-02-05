@@ -14,7 +14,7 @@ dependencies {
 
 //    implementation("io.ktor:ktor-server-core:$ktorVersion")
 //    implementation("io.ktor:ktor-server-netty:$ktorVersion")
-    implementation("io.ktor:ktor-network:$ktorVersion")
+    api("io.ktor:ktor-network:$ktorVersion")
 //    implementation("ch.qos.logback:logback-classic:1.2.5")
 
     testImplementation(kotlin("test"))

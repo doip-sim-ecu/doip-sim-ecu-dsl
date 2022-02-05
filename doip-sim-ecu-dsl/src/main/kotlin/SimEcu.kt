@@ -1,21 +1,8 @@
-import doip.library.message.UdsMessage
-import doip.logging.Logger
-import doip.simulation.nodes.EcuConfig
-import doip.simulation.standard.StandardEcu
 import helper.*
+import kotlinx.coroutines.runBlocking
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
-
-/**
- * Extension function to provide the address by the targetAddressType provided in the UdsMessage
- */
-fun EcuConfig.addressByType(message: UdsMessage): Int =
-    when (message.targetAddressType) {
-        UdsMessage.PHYSICAL -> this.physicalAddress
-        UdsMessage.FUNCTIONAL -> this.functionalAddress
-        else -> throw IllegalStateException("Unknown targetAddressType ${message.targetAddressType}")
-    }
 
 class InterceptorData(
     val name: String,
@@ -24,18 +11,16 @@ class InterceptorData(
     val isExpired: () -> Boolean
 ) : DataStorage()
 
-fun EcuData.toEcuConfig(): EcuConfig {
-    val config = EcuConfig()
-    config.name = this.name
-    config.physicalAddress = this.physicalAddress
-    config.functionalAddress = this.functionalAddress
-    return config
-}
+fun EcuData.toEcuConfig(): EcuConfig =
+    EcuConfig(
+        name = name,
+        physicalAddress = physicalAddress,
+        functionalAddress = functionalAddress
+    )
+
 
 @Open
-class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
-    val logger: Logger = doip.logging.LogManager.getLogger(SimEcu::class.java)
-
+class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
     val name
@@ -52,19 +37,8 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
     private val mainTimer: Timer by lazy { Timer("$name-Timer", true) }
     private val timers = ConcurrentHashMap<String, EcuTimerTask>()
 
-
     fun sendResponse(request: UdsMessage, response: ByteArray) {
-        val sourceAddress = config.addressByType(request)
-
-        val udsResponse = UdsMessage(
-            sourceAddress,
-            request.sourceAdrress,
-            request.targetAddressType,
-            response
-        )
-
-        clearCurrentRequest()
-        onSendUdsMessage(udsResponse)
+        request.respond(response)
     }
 
     private fun handleInterceptors(request: UdsMessage, busy: Boolean): Boolean {
@@ -90,7 +64,9 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
                         if (responseData.continueMatching) {
                             return false
                         } else if (responseData.response.isNotEmpty()) {
-                            sendResponse(request, responseData.response)
+                            runBlocking {
+                                sendResponse(request, responseData.response)
+                            }
                         }
                         return true
                     }
@@ -101,10 +77,9 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
         return false
     }
 
-    override fun handleRequestIfBusy(request: UdsMessage) {
+    override fun handleRequestIfBusy(request: UdsMessage){
         if (handleInterceptors(request, true)) {
             logger.debugIf { "Incoming busy request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
-            return
         }
         super.handleRequestIfBusy(request)
     }
@@ -152,7 +127,6 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
                 sendResponse(request, responseData.response)
             } else {
                 logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
-                clearCurrentRequest()
             }
             return
         }
@@ -162,7 +136,6 @@ class SimEcu(private val data: EcuData) : StandardEcu(data.toEcuConfig()) {
             sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
         } else {
             logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
-            clearCurrentRequest()
         }
     }
 

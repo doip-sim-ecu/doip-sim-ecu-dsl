@@ -3,9 +3,12 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import doip.library.message.UdsMessage
+import io.ktor.utils.io.*
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.mockito.kotlin.*
+import java.lang.Thread.sleep
+import kotlin.concurrent.thread
 import kotlin.time.Duration.Companion.milliseconds
 
 class SimEcuTest {
@@ -53,7 +56,7 @@ class SimEcuTest {
         ecu.handleRequest(req(byteArrayOf(0x00, 0x10)))
         assertThat(first).isTrue()
         assertThat(second).isTrue()
-        verify(ecu, times(0)).onSendUdsMessage(any())
+        verify(ecu, times(0)).sendResponse(any(), any())
     }
 
     @Test
@@ -74,7 +77,7 @@ class SimEcuTest {
         ecu.handleRequest(req(byteArrayOf(0x00, 0x10)))
         assertThat(first).isTrue()
         assertThat(second).isFalse()
-        verify(ecu, times(1)).onSendUdsMessage(any())
+        verify(ecu, times(1)).sendResponse(any(), any())
     }
 
     @Test
@@ -150,15 +153,15 @@ class SimEcuTest {
 
         ecuWithNrc.handleRequest(req(byteArrayOf(0x10, 0x21)))
         ecuNoNrc.handleRequest(req(byteArrayOf(0x10, 0x21)))
-        verify(ecuWithNrc, times(1)).onSendUdsMessage(any())
-        verify(ecuNoNrc, times(0)).onSendUdsMessage(any())
+        verify(ecuWithNrc, times(1)).sendResponse(any(), any())
+        verify(ecuNoNrc, times(0)).sendResponse(any(), any())
     }
 
     @Test
     fun `test interceptor`() {
         val ecu = spy(SimEcu(ecuData(name = "TEST")))
         verify(ecu, times(0)).sendResponse(any(), any())
-        ecu.handleRequest(UdsMessage(0x0000, 0x0001, byteArrayOf(0x11, 0x03)))
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
 
         // sendResponse got called, because there's no interceptor and NRC was sent
         verify(ecu, times(1)).sendResponse(any(), any())
@@ -172,20 +175,20 @@ class SimEcuTest {
         ecu.addOrReplaceEcuInterceptor("TEST", 200.milliseconds) { intercepted = true; true }
         ecu.addOrReplaceEcuInterceptor("TESTAFTER", 500.milliseconds) { afterInterceptor = true; false }
 
-        ecu.handleRequest(UdsMessage(0x0000, 0x0001, byteArrayOf(0x11, 0x03)))
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
         // sendResponse didn't get called again, because there's one true interceptor, therefore no response was sent
         verify(ecu, times(1)).sendResponse(any(), any())
         assertThat(removeInterceptor).isTrue()
         assertThat(beforeInterceptor).isTrue()
         assertThat(intercepted).isTrue()
         assertThat(afterInterceptor).isFalse()
-        Thread.sleep(200)
+        sleep(200)
         removeInterceptor = false
         beforeInterceptor = false
         intercepted = false
         ecu.removeInterceptor("TESTREMOVE")
         // sendResponse did get called again, because there's no true-interceptor anymore
-        ecu.handleRequest(UdsMessage(0x0000, 0x0001, byteArrayOf(0x11, 0x03)))
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
         verify(ecu, times(2)).sendResponse(any(), any())
         assertThat(removeInterceptor).isFalse()
         assertThat(beforeInterceptor).isTrue()
@@ -198,24 +201,20 @@ class SimEcuTest {
         val ecu = SimEcu(ecuData(name = "TEST"))
         var noBusyCalled = false
         var busyCalled = false
-        ecu.requests.add(RequestMatcher("TEST", byteArrayOf(0x10, 0x03), null) { println("WAITING"); Thread.sleep(400); println("DONE") })
-        ecu.addOrReplaceEcuInterceptor("NOBUSY", 1500.milliseconds) { println("NOTBUSY"); noBusyCalled = true; false; }
-        ecu.addOrReplaceEcuInterceptor("BUSY", 1500.milliseconds, true) { println("BUSY ${it.isBusy}"); if (it.isBusy) busyCalled = true; false; }
+        ecu.requests.add(RequestMatcher("TEST", byteArrayOf(0x10, 0x03), null) { println("WAITING"); sleep(1500); println("DONE") })
+        ecu.addOrReplaceEcuInterceptor("NOBUSY", 3500.milliseconds) { println("NOTBUSY"); noBusyCalled = true; false; }
+        ecu.addOrReplaceEcuInterceptor("BUSY", 3500.milliseconds, true) { println("BUSY ${it.isBusy}"); if (it.isBusy) busyCalled = true; false; }
 
-        ecu.start()
-        try {
-            ecu.putRequest(req(byteArrayOf(0x10, 0x03)))
-            Thread.sleep(100)
-            assertThat(noBusyCalled).isTrue()
-            assertThat(busyCalled).isFalse()
-            noBusyCalled = false
-            ecu.putRequest(req(byteArrayOf(0x10, 0x03)))
-            Thread.sleep(100)
-            assertThat(noBusyCalled).isFalse()
-            assertThat(busyCalled).isTrue()
-        } finally {
-            ecu.stop()
+        thread {
+            ecu.onIncomingUdsMessage(req(byteArrayOf(0x10, 0x03)))
         }
+        sleep(600)
+        assertThat(noBusyCalled).isTrue()
+        assertThat(busyCalled).isFalse()
+        noBusyCalled = false
+        ecu.onIncomingUdsMessage(req(byteArrayOf(0x10, 0x03)))
+        assertThat(noBusyCalled).isFalse()
+        assertThat(busyCalled).isTrue()
     }
 
     @Test
@@ -255,15 +254,15 @@ class SimEcuTest {
 
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
         assertThat(timerCalled).isFalse()
-        Thread.sleep(20)
+        sleep(20)
         assertThat(timerCalled).isFalse()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
         assertThat(timerCalled).isFalse()
-        Thread.sleep(150)
+        sleep(150)
         assertThat(timerCalled).isFalse()
         ecu.handleRequest(req(byteArrayOf(0x3E, 0x00)))
         assertThat(timerCalled).isFalse()
-        Thread.sleep(220)
+        sleep(220)
         assertThat(timerCalled).isTrue()
     }
 
@@ -383,8 +382,8 @@ class SimEcuTest {
 
     private fun ecuData(
         name: String,
-        physicalAddress: Int = 0x0001,
-        functionalAddress: Int = 0x0002,
+        physicalAddress: Short = 0x0001,
+        functionalAddress: Short = 0x0002,
         nrcOnNoMatch: Boolean = true,
         requests: List<RequestMatcher> = emptyList()
     ): EcuData =
@@ -396,6 +395,17 @@ class SimEcuTest {
             requests = requests
         )
 
-    private fun req(data: ByteArray, sourceAddress: Int = 0x0000, targetAddress: Int = 0x0001): UdsMessage =
-        UdsMessage(sourceAddress, targetAddress, data)
+    private fun req(
+        data: ByteArray,
+        sourceAddress: Short = 0x0000,
+        targetAddress: Short = 0x0001,
+        targetAddressType: Int = UdsMessage.PHYSICAL
+    ): UdsMessage =
+        UdsMessage(
+            sourceAddress = sourceAddress,
+            targetAddress = targetAddress,
+            targetAddressType = targetAddressType,
+            message = data,
+            output = Mockito.mock(ByteWriteChannel::class.java)
+        )
 }

@@ -1,4 +1,3 @@
-import doip.library.message.UdsMessage
 import helper.decodeHex
 import helper.toHexString
 import java.util.*
@@ -55,10 +54,11 @@ object NrcError {
 
 open class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
     UdsMessage(
-        udsMessage.sourceAdrress,
+        udsMessage.sourceAddress,
         udsMessage.targetAddress,
         udsMessage.targetAddressType,
-        udsMessage.message)
+        udsMessage.message,
+        udsMessage.output)
 
 /**
  * Define the response to be sent after the function returns
@@ -337,8 +337,8 @@ open class RequestsData(
  */
 open class EcuData(
     name: String,
-    var physicalAddress: Int = 0,
-    var functionalAddress: Int = 0,
+    var physicalAddress: Short = 0,
+    var functionalAddress: Short = 0,
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
@@ -370,7 +370,7 @@ fun reset() {
 }
 
 fun stop() {
-    gatewayInstances.forEach { it.stop() }
+//    gatewayInstances.forEach { it.stop() }
     gatewayInstances.clear()
 }
 

@@ -17,10 +17,6 @@ dependencies {
     implementation(project(":doip-library"))
     implementation(kotlin("stdlib"))
 
-    api("com.github.doip-sim-ecu:doip-simulation:1.4.8")
-    api("com.github.doip-sim-ecu:doip-library:1.1.11")
-    api("com.github.doip-sim-ecu:doip-logging:1.1.9")
-
     testImplementation(kotlin("test"))
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.25")

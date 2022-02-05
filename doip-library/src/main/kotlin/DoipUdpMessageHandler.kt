@@ -1,5 +1,6 @@
 import io.ktor.network.sockets.*
 import io.ktor.util.network.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 
 interface DoipUdpMessageHandler {
@@ -117,4 +118,19 @@ interface DoipUdpMessageHandler {
 
     }
 
+    suspend fun respondHeaderNegAck(
+        sendChannel: SendChannel<Datagram>,
+        sourceAddress: NetworkAddress,
+        code: Byte
+    ) {
+        sendChannel.send(
+            Datagram(
+                packet = ByteReadPacket(DoipUdpHeaderNegAck(code).message),
+                address = sourceAddress
+            )
+        )
+    }
+
+    suspend fun parseMessage(datagram: Datagram): DoipUdpMessage =
+        DoipUdpMessageParser.parseUDP(datagram.packet)
 }

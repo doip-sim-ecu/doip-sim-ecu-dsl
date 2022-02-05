@@ -1,10 +1,9 @@
 package helper
 
-import doip.library.util.Helper
-import doip.logging.LogManager
+import org.slf4j.LoggerFactory
 import java.util.*
 
-private val logger = LogManager.getLogger(EcuTimerTask::class.java)
+private val logger = LoggerFactory.getLogger(EcuTimerTask::class.java)
 
 class EcuTimerTask(private val action: TimerTask.() -> Unit) : TimerTask() {
     private var _canBeRemoved = false
@@ -13,7 +12,7 @@ class EcuTimerTask(private val action: TimerTask.() -> Unit) : TimerTask() {
         try {
             action()
         } catch (e: Exception) {
-            logger.error("Error while executing timer: " + Helper.getExceptionAsString(e))
+            logger.error("Error while executing timer: " + e.stackTraceToString())
         } finally {
             _canBeRemoved = true
         }

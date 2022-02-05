@@ -1,12 +1,14 @@
 package helper
 
-fun doip.logging.Logger.traceIf(supplier: () -> String) {
+import org.slf4j.Logger
+
+fun Logger.traceIf(supplier: () -> String) {
     if (this.isTraceEnabled) {
         this.trace(supplier.invoke())
     }
 }
 
-fun doip.logging.Logger.debugIf(supplier: () -> String) {
+fun Logger.debugIf(supplier: () -> String) {
     if (this.isDebugEnabled) {
         this.debug(supplier.invoke())
     }

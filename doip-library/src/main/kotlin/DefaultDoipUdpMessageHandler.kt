@@ -4,11 +4,11 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 
 open class DefaultDoipUdpMessageHandler(
-    protected val config: DoipGatewayConfig
+    protected val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
 
     companion object {
-        fun generateVamByGatewayConfig(config: DoipGatewayConfig): DoipUdpVehicleAnnouncementMessage =
+        fun generateVamByEntityConfig(config: DoipEntityConfig): DoipUdpVehicleAnnouncementMessage =
             DoipUdpVehicleAnnouncementMessage(config.vin, config.logicalAddress, config.gid, config.eid, 0, 0)
     }
 
@@ -18,7 +18,7 @@ open class DefaultDoipUdpMessageHandler(
     ) {
         sendChannel.send(
             Datagram(
-                packet = ByteReadPacket(generateVamByGatewayConfig(config).message),
+                packet = ByteReadPacket(generateVamByEntityConfig(config).message),
                 address = sourceAddress
             )
         )
@@ -37,7 +37,9 @@ open class DefaultDoipUdpMessageHandler(
         sourceAddress: NetworkAddress,
         message: DoipUdpVehicleInformationRequestWithEid
     ) {
-        sendVamResponse(sendChannel, sourceAddress)
+        if (config.eid.contentEquals(message.eid)) {
+            sendVamResponse(sendChannel, sourceAddress)
+        }
     }
 
     override suspend fun handleUdpVehicleInformationRequestWithVIN(
@@ -45,7 +47,9 @@ open class DefaultDoipUdpMessageHandler(
         sourceAddress: NetworkAddress,
         message: DoipUdpVehicleInformationRequestWithVIN
     ) {
-        sendVamResponse(sendChannel, sourceAddress)
+        if (config.vin.contentEquals(message.vin)) {
+            sendVamResponse(sendChannel, sourceAddress)
+        }
     }
 
     override suspend fun handleUdpEntityStatusRequest(

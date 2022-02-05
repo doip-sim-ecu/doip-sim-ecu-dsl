@@ -1,13 +1,14 @@
 import io.ktor.utils.io.core.*
-import java.nio.ByteBuffer
 import kotlin.experimental.xor
 
-class IncorrectPatternFormat(message: String) : RuntimeException(message)
-class HeaderTooShort(message: String) : RuntimeException(message)
-class InvalidPayloadLength(message: String) : RuntimeException(message)
-class UnknownPayloadType(message: String) : RuntimeException(message)
+open class HeaderNegAckException(message: String) : RuntimeException(message)
 
-object DoipUDPMessageParser {
+class IncorrectPatternFormat(message: String) : HeaderNegAckException(message)
+class HeaderTooShort(message: String) : HeaderNegAckException(message)
+class InvalidPayloadLength(message: String) : HeaderNegAckException(message)
+class UnknownPayloadType(message: String) : HeaderNegAckException(message)
+
+object DoipUdpMessageParser {
     private fun checkSyncPattern(protocolVersion: Byte, inverseProtocolVersion: Byte): Boolean {
         if (protocolVersion != 0x02.toByte() ||
             inverseProtocolVersion != 0x02.toByte() xor 0xFF.toByte()
