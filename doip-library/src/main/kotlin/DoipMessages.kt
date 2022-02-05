@@ -49,7 +49,7 @@ class DoipUdpVehicleInformationRequestWithVIN(val vin: ByteArray) : DoipUdpMessa
     val message by lazy { doipMessage(TYPE_UDP_VIR_VIN, *vin) }
 }
 
-class DoipUdpVehicleVehicleAnnouncmentMessage(
+class DoipUdpVehicleAnnouncementMessage(
     val vin: ByteArray,
     val logicalAddress: Short,
     val gid: ByteArray,
@@ -111,6 +111,3 @@ class DoipUdpDiagnosticPowerModeRequest : DoipUdpMessage() {
 class DoipUdpDiagnosticPowerModeResponse(val diagPowerMode: Byte) : DoipUdpMessage() {
     val message by lazy { doipMessage(TYPE_UDP_DIAG_POWER_MODE_RES, diagPowerMode) }
 }
-
-fun Int.toByteArray(): ByteArray =
-    byteArrayOf((this and 0xFF000000.toInt() shr 24).toByte(), (this and 0xFF0000 shr 16).toByte(), (this and 0xFF00 shr 8).toByte(), (this and 0xFF).toByte())
