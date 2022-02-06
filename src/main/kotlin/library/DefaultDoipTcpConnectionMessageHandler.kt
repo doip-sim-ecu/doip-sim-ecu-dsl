@@ -5,9 +5,11 @@ import io.ktor.utils.io.*
 import library.DoipUdpMessageHandler.Companion.logger
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import kotlin.experimental.xor
 
 open class DefaultDoipTcpConnectionMessageHandler(
+    val doipEntity: DoipEntity?,
     val socket: Socket,
     val logicalAddress: Short,
     val maxPayloadLength: Int,
@@ -101,6 +103,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
     }
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
+        MDC.put("ecu", doipEntity?.name)
         logger.traceIf { "# handleTcpMessage $message" }
         when (message) {
             is DoipTcpHeaderNegAck -> handleTcpHeaderNegAck(message, output)

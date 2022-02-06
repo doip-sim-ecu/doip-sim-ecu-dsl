@@ -7,6 +7,7 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import kotlin.concurrent.fixedRateTimer
@@ -49,6 +50,9 @@ open class DoipEntityConfig(
 open class DoipEntity(
     val config: DoipEntityConfig,
 ) : DiagnosticMessageHandler {
+    val name: String =
+        config.name
+
     protected val logger = LoggerFactory.getLogger(DoipEntity::class.java)
 
     protected var targetEcusByPhysical: Map<Short, SimulatedEcu> = emptyMap()
@@ -66,6 +70,7 @@ open class DoipEntity(
 
     protected open fun createDoipTcpMessageHandler(socket: Socket): DoipTcpConnectionMessageHandler =
         DefaultDoipTcpConnectionMessageHandler(
+            doipEntity = this,
             socket = socket,
             logicalAddress = config.logicalAddress,
             maxPayloadLength = config.maxDataSize - 8,
@@ -74,11 +79,13 @@ open class DoipEntity(
 
     protected suspend fun startVamTimer(socket: BoundDatagramSocket) {
         if (config.broadcastEnabled) {
-            fixedRateTimer("${config.name}-VAM", daemon = true, initialDelay = 500, period = 500) {
+            fixedRateTimer("VAM-TIMER-${name}", daemon = true, initialDelay = 500, period = 500) {
+                MDC.put("ecu", name)
                 if (vamSentCounter >= 3) {
                     this.cancel()
                     return@fixedRateTimer
                 }
+                logger.info("[${name}] Sending VAM")
                 val vam = DefaultDoipUdpMessageHandler.generateVamByEntityConfig(config)
                 runBlocking(Dispatchers.IO) {
                     socket.send(
@@ -112,12 +119,14 @@ open class DoipEntity(
     override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel) {
         val ecu = targetEcusByPhysical[diagMessage.targetAddress]
         ecu?.run {
+            MDC.put("ecu", ecu.name)
             onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output))
             return
         }
 
         val ecus = targetEcusByFunctional[diagMessage.targetAddress]
         ecus?.forEach {
+            MDC.put("ecu", it.name)
             it.onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.FUNCTIONAL, output))
         }
     }
@@ -149,9 +158,9 @@ open class DoipEntity(
                 while (!socket.isClosed) {
                     val datagram = socket.receive()
                     try {
-                        logger.traceIf { "Incoming UDP message" }
+                        logger.traceIf { "[${name}] Incoming UDP message" }
                         val message = udpMessageHandler.parseMessage(datagram)
-                        logger.traceIf { "Message is of type $message" }
+                        logger.traceIf { "[${name}] Message is of type $message" }
                         udpMessageHandler.handleUdpMessage(socket.outgoing, datagram.address, message)
                     } catch (e: HeaderNegAckException) {
                         val code = when (e) {

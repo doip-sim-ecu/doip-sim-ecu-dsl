@@ -5,17 +5,20 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 
 open class SimulatedEcu(val config: EcuConfig) {
+    val name: String =
+        config.name
+
     protected val logger: Logger = LoggerFactory.getLogger(SimulatedEcu::class.java)
 
     private val isBusy: AtomicBoolean = AtomicBoolean(false)
 
     open fun handleRequest(request: UdsMessage) {
-        logger.debugIf { "${config.name}: Handle Request message: ${request.message.toHexString(limit = 20)}" }
+        logger.debugIf { "[${name}] Handle Request message: ${request.message.toHexString(limit = 20)}" }
     }
 
     open fun handleRequestIfBusy(request: UdsMessage) {
         // Busy NRC
-        logger.debugIf { "${config.name}: ECU is busy, sending busy-NRC" }
+        logger.debugIf { "[${name}] ECU is busy, sending busy-NRC" }
         request.respond(byteArrayOf(0x7f, request.message[0], 0x21))
     }
 

@@ -97,9 +97,6 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
 }
 
 class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfig()) {
-    val name: String
-        get() = data.name
-
     val requests: List<RequestMatcher>
         get() = data.requests
 
