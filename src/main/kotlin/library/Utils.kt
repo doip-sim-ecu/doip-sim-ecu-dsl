@@ -15,15 +15,6 @@ fun Short.toByteArray(): ByteArray =
     byteArrayOf((this.toInt() and 0xFF00 shr 8).toByte(), this.toByte())
 
 /**
- * Returns an array out of a bytebuffer, with absolute index position and length
- */
-fun ByteBuffer.sliceArray(index: Int, length: Int): ByteArray {
-    val ba = ByteArray(length)
-    this.get(index, ba, 0, length)
-    return ba
-}
-
-/**
  * Convenience function to create a doip message
  */
 fun doipMessage(payloadType: Short, vararg data: Byte): ByteArray {
