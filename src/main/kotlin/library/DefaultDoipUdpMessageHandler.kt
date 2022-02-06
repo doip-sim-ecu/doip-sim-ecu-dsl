@@ -6,7 +6,7 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 
 open class DefaultDoipUdpMessageHandler(
-    protected val config: DoipEntityConfig
+    val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
 
     companion object {

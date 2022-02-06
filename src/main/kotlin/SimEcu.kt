@@ -80,7 +80,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
 
     override fun handleRequestIfBusy(request: UdsMessage){
         if (handleInterceptors(request, true)) {
-            logger.debugIf { "Incoming busy request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
+            logger.debugIf { "${config.name}: Incoming busy request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
         }
         super.handleRequestIfBusy(request)
     }
@@ -90,13 +90,13 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      */
     override fun handleRequest(request: UdsMessage) {
         if (handleInterceptors(request, false)) {
-            logger.debugIf { "Incoming request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
+            logger.debugIf { "${config.name}: Incoming request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
             return
         }
 
         val normalizedRequest by lazy { request.message.toHexString("", limit = data.requestRegexMatchBytes, limitExceededSuffix = "") }
 
-        logger.traceIf { "Incoming request: ${request.message.toHexString()}" }
+        logger.traceIf { "${config.name}: Incoming request (${request.targetAddress}): ${request.message.toHexString()}" }
 
         // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
 
@@ -108,11 +108,11 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                     requestIter.requestRegex!!.matches(normalizedRequest)
                 }
             } catch (e: Exception) {
-                logger.error("Error while matching requests: ${e.message}")
+                logger.error("${config.name}: Error while matching requests: ${e.message}")
                 throw e
             }
 
-            logger.traceIf { "Request: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
+            logger.traceIf { "${config.name}: Request: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
 
             if (!matches) {
                 continue
@@ -121,22 +121,22 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
             val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             requestIter.responseHandler.invoke(responseData)
             if (responseData.continueMatching) {
-                logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
+                logger.debugIf { "${config.name}: Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
                 continue
             } else if (responseData.response.isNotEmpty()) {
-                logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
+                logger.debugIf { "${config.name}: Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
                 sendResponse(request, responseData.response)
             } else {
-                logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
+                logger.debugIf { "${config.name}: Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
             }
             return
         }
 
         if (this.data.nrcOnNoMatch) {
-            logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
+            logger.debugIf { "${config.name}: Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
             sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
         } else {
-            logger.debugIf { "Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
+            logger.debugIf { "${config.name}: Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
         }
     }
 
@@ -151,7 +151,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         alsoCallWhenEcuIsBusy: Boolean = false,
         interceptor: InterceptorResponseHandler
     ): String {
-        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy)"}
+        logger.traceIf { "${config.name}: Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy)"}
 
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
@@ -178,7 +178,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      * Please note that the internal resolution for delay is milliseconds
      */
     fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
-        logger.traceIf { "Adding or replacing timer '$name' to be executed after $delay"}
+        logger.traceIf { "${config.name}: Adding or replacing timer '$name' to be executed after $delay"}
 
         synchronized(mainTimer) {
             timers[name]?.cancel()
@@ -199,7 +199,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      * Explicitly cancel a running timer
      */
     fun cancelTimer(name: String) {
-        logger.traceIf { "Cancelling timer '$name'" }
+        logger.traceIf { "${config.name}: Cancelling timer '$name'" }
         synchronized(mainTimer) {
             timers[name]?.cancel()
             timers.remove(name)
@@ -232,7 +232,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         this.data.requests.forEach { it.reset() }
         this.data.resetHandler.forEach {
             if (it.name != null) {
-                logger.trace("Calling onReset-Handler ${it.name}")
+                logger.trace("${config.name}: Calling onReset-Handler ${it.name}")
             }
             it.handler(this)
         }

@@ -30,5 +30,5 @@ fun DoipTcpDiagMessage.toUdsMessage(addressType: Int, output: ByteWriteChannel):
         targetAddress = this.targetAddress,
         targetAddressType = addressType,
         message = this.payload,
-        output = output,
+        output = output
     )

@@ -19,20 +19,18 @@ class DoipTcpHeaderNegAck(
 class DoipTcpRoutingActivationRequest(
     val sourceAddress: Short,
     val activationType: Byte,
-    val oemData: Int = -1
+    val oemData: Int? = null
 ) : DoipTcpMessage() {
     val message by lazy {
-        if (oemData != -1)
-            doipMessage(TYPE_TCP_ROUTING_REQ, *sourceAddress.toByteArray(), activationType, *oemData.toByteArray())
-        else
-            doipMessage(TYPE_TCP_ROUTING_REQ, *sourceAddress.toByteArray(), activationType)
+        doipMessage(TYPE_TCP_ROUTING_REQ, *sourceAddress.toByteArray(), activationType, *(oemData?.toByteArray() ?: ByteArray(0)))
     }
 }
 
 class DoipTcpRoutingActivationResponse(
     val testerAddress: Short,
     val entityAddress: Short,
-    val responseCode: Byte
+    val responseCode: Byte,
+    val oemData: Int? = null
 ) : DoipTcpMessage() {
     @Suppress("unused")
     companion object {
@@ -48,7 +46,12 @@ class DoipTcpRoutingActivationResponse(
     }
     val message by lazy {
         doipMessage(
-            TYPE_TCP_ROUTING_RES, *testerAddress.toByteArray(), *entityAddress.toByteArray(), responseCode
+            TYPE_TCP_ROUTING_RES,
+            *testerAddress.toByteArray(),
+            *entityAddress.toByteArray(),
+            responseCode,
+            0, 0, 0, 0, // Reserved for standardization use.
+            *(oemData?.toByteArray() ?: ByteArray(0))
         )
     }
 }

@@ -2,6 +2,9 @@ package library
 
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
+import library.DoipUdpMessageHandler.Companion.logger
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.experimental.xor
 
 open class DefaultDoipTcpConnectionMessageHandler(
@@ -9,10 +12,11 @@ open class DefaultDoipTcpConnectionMessageHandler(
     val logicalAddress: Short,
     val maxPayloadLength: Int,
     val diagMessageHandler: DiagnosticMessageHandler
-) :
-    DoipTcpConnectionMessageHandler {
+) : DoipTcpConnectionMessageHandler {
+    private val logger: Logger = LoggerFactory.getLogger(DefaultDoipTcpConnectionMessageHandler::class.java)
 
     override suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage {
+        logger.traceIf { "# receiveTcpData" }
         val protocolVersion = brc.readByte()
         val inverseProtocolVersion = brc.readByte()
         if (protocolVersion != (inverseProtocolVersion xor 0xFF.toByte())) {
@@ -26,23 +30,28 @@ open class DefaultDoipTcpConnectionMessageHandler(
         when (payloadType) {
             TYPE_HEADER_NACK -> {
                 val code = brc.readByte()
-                brc.discardIf(payloadLength > 1, payloadLength - 1)
+                brc.discardIf(payloadLength > 1, payloadLength - 1, payloadType)
                 return DoipTcpHeaderNegAck(code)
             }
             TYPE_TCP_ROUTING_REQ -> {
                 val sourceAddress = brc.readShort()
                 val activationType = brc.readByte()
-                val oemData = if (payloadLength == 11) brc.readInt() else -1
-                brc.discardIf(payloadLength > 11, payloadLength - 11)
+                brc.readInt() // Reserved for future standardization use
+                val oemData = if (payloadLength > 7) brc.readInt() else null
+                brc.discardIf(payloadLength > 11, payloadLength - 11, payloadType)
                 return DoipTcpRoutingActivationRequest(sourceAddress, activationType, oemData)
             }
             TYPE_TCP_ROUTING_RES -> {
                 val testerAddress = brc.readShort()
                 val entityAddress = brc.readShort()
                 val responseCode = brc.readByte()
-                brc.discardIf(payloadLength > 5, payloadLength - 5)
+                brc.readInt() // Reserved for future standardization use
+                val oemData = if (payloadLength > 9) brc.readInt() else null
                 return DoipTcpRoutingActivationResponse(
-                    testerAddress = testerAddress, entityAddress = entityAddress, responseCode = responseCode
+                    testerAddress = testerAddress,
+                    entityAddress = entityAddress,
+                    responseCode = responseCode,
+                    oemData = oemData
                 )
             }
             TYPE_TCP_ALIVE_REQ -> {
@@ -92,6 +101,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
     }
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
+        logger.traceIf { "# handleTcpMessage $message" }
         when (message) {
             is DoipTcpHeaderNegAck -> handleTcpHeaderNegAck(message, output)
             is DoipTcpRoutingActivationRequest -> handleTcpRoutingActivationRequest(message, output)
@@ -108,10 +118,11 @@ open class DefaultDoipTcpConnectionMessageHandler(
     override suspend fun isAutoFlushEnabled(): Boolean = false
 
     protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: ByteWriteChannel) {
-        // No implementation
+        logger.traceIf { "# handleTcpHeaderNegAck $message" }
     }
 
     protected open suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: ByteWriteChannel) {
+        logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         if (message.activationType != 0x00.toByte() && message.activationType != 0x01.toByte()) {
             output.writeFully(
                 DoipTcpRoutingActivationResponse(
@@ -132,19 +143,22 @@ open class DefaultDoipTcpConnectionMessageHandler(
     }
 
     protected open suspend fun handleTcpRoutingActivationResponse(message: DoipTcpRoutingActivationResponse, output: ByteWriteChannel) {
-        // No implementation
+        logger.traceIf { "# handleTcpRoutingActivationResponse $message" }
     }
 
     protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: ByteWriteChannel) {
+        logger.traceIf { "# handleTcpAliveCheckRequest $message" }
         output.writeFully(DoipTcpAliveCheckResponse(logicalAddress).message)
     }
 
     protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: ByteWriteChannel) {
-        // No implementation
+        logger.traceIf { "# handleTcpAliveCheckResponse $message" }
     }
 
     protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
+        logger.traceIf { "# handleTcpDiagMessage $message for ${message.targetAddress}" }
         if (diagMessageHandler.existsTargetAddress(message.targetAddress)) {
+            logger.traceIf { "# targetAddress ${message.targetAddress} exists, sending positive ack" }
             // Acknowledge message
             val ack = DoipTcpDiagMessagePosAck(
                 message.targetAddress,
@@ -156,6 +170,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
             // Handle the UDS message
             diagMessageHandler.onIncomingDiagMessage(message, output)
         } else {
+            logger.traceIf { "# targetAddress ${message.targetAddress} exists, sending negative ack" }
             // Reject message with unknown target address
             val reject = DoipTcpDiagMessageNegAck(
                 message.targetAddress,
@@ -175,8 +190,9 @@ open class DefaultDoipTcpConnectionMessageHandler(
     }
 }
 
-private suspend fun ByteReadChannel.discardIf(condition: Boolean, n: Int) {
+private suspend fun ByteReadChannel.discardIf(condition: Boolean, n: Int, payloadType: Short) {
     if (condition) {
+        logger.error("Discarding $n bytes for payload-type $payloadType")
         this.discardExact(n.toLong())
     }
 }

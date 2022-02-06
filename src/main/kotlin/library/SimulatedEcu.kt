@@ -10,15 +10,16 @@ open class SimulatedEcu(val config: EcuConfig) {
     private val isBusy: AtomicBoolean = AtomicBoolean(false)
 
     open fun handleRequest(request: UdsMessage) {
+        logger.debugIf { "${config.name}: Handle Request message: ${request.message.toHexString(limit = 20)}" }
     }
 
     open fun handleRequestIfBusy(request: UdsMessage) {
         // Busy NRC
+        logger.debugIf { "${config.name}: ECU is busy, sending busy-NRC" }
         request.respond(byteArrayOf(0x7f, request.message[0], 0x21))
     }
 
     open fun onIncomingUdsMessage(request: UdsMessage) {
-        logger.debugIf { "Incoming UDS-Message: ${request.message.toHexString()}" }
         return if (isBusy.compareAndSet(false, true)) {
             try {
                 handleRequest(request)

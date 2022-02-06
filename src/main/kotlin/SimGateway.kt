@@ -1,7 +1,4 @@
-import library.DoipEntity
-import library.DoipEntityConfig
-import library.EcuConfig
-import library.SimulatedEcu
+import library.*
 import java.net.InetAddress
 import kotlin.properties.Delegates
 
@@ -129,7 +126,7 @@ class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfi
     }
 
     fun reset(recursiveEcus: Boolean = true) {
-        logger.info("Resetting Gateway $name")
+        logger.infoIf { "Resetting Gateway $name" }
         this.requests.forEach { it.reset() }
         if (recursiveEcus) {
             this.targetEcusByPhysical.forEach { (it.value as SimEcu).reset() }
