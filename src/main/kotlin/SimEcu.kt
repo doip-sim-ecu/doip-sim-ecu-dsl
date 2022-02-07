@@ -1,6 +1,9 @@
 import helper.*
 import kotlinx.coroutines.runBlocking
 import library.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
@@ -23,6 +26,8 @@ fun EcuData.toEcuConfig(): EcuConfig =
 @Open
 class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
+
+    val logger: Logger = LoggerFactory.getLogger(SimEcu::class.java)
 
     val requests
         get() = data.requests
@@ -216,7 +221,8 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      * Resets all the ECUs stored properties, timers, interceptors and requests
      */
     fun reset() {
-        logger.debug("Resetting interceptors, timers and stored data for ECU $name")
+        MDC.put("ecu", name)
+        logger.debug("Resetting interceptors, timers and stored data")
 
         this.interceptors.clear()
 
@@ -229,7 +235,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         this.data.requests.forEach { it.reset() }
         this.data.resetHandler.forEach {
             if (it.name != null) {
-                logger.traceIf { "[${this.name}] Calling onReset-Handler ${it.name}" }
+                logger.traceIf { "Calling onReset-Handler" }
             }
             it.handler(this)
         }

@@ -1,4 +1,5 @@
 import library.*
+import org.slf4j.MDC
 import java.net.InetAddress
 import kotlin.properties.Delegates
 
@@ -122,11 +123,16 @@ class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfi
         return SimEcu(ecuData)
     }
 
+    override fun findEcuByName(name: String): SimEcu? {
+        return super.findEcuByName(name) as SimEcu?
+    }
+
     fun reset(recursiveEcus: Boolean = true) {
-        logger.infoIf { "Resetting Gateway $name" }
+        MDC.put("ecu", name)
+        logger.infoIf { "Resetting gateway" }
         this.requests.forEach { it.reset() }
         if (recursiveEcus) {
-            this.targetEcusByPhysical.forEach { (it.value as SimEcu).reset() }
+            this.ecus.forEach { (it as SimEcu).reset() }
         }
     }
 }

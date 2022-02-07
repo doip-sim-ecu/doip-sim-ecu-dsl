@@ -8,7 +8,7 @@ open class SimulatedEcu(val config: EcuConfig) {
     val name: String =
         config.name
 
-    protected val logger: Logger = LoggerFactory.getLogger(SimulatedEcu::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(SimulatedEcu::class.java)
 
     private val isBusy: AtomicBoolean = AtomicBoolean(false)
 

@@ -60,6 +60,11 @@ open class DoipEntity(
 
     protected var vamSentCounter = 0
 
+    private val _ecus: MutableList<SimulatedEcu> = mutableListOf()
+
+    val ecus: List<SimulatedEcu>
+        get() = _ecus
+
     protected open fun createEcu(config: EcuConfig): SimulatedEcu =
         SimulatedEcu(config)
 
@@ -131,16 +136,21 @@ open class DoipEntity(
         }
     }
 
+    open fun findEcuByName(name: String): SimulatedEcu? =
+        this.ecus.firstOrNull { it.name == name }
+
     fun start() {
-        targetEcusByPhysical = this.config.ecuConfigList.associate { Pair(it.physicalAddress, createEcu(it)) }
+        this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
+
+        targetEcusByPhysical = this.ecus.associateBy { it.config.physicalAddress }
 
         targetEcusByFunctional = mutableMapOf()
-        targetEcusByPhysical.forEach {
-            val list = targetEcusByFunctional[it.value.config.functionalAddress]
+        _ecus.forEach {
+            val list = targetEcusByFunctional[it.config.functionalAddress]
             if (list == null) {
-                targetEcusByFunctional[it.value.config.functionalAddress] = mutableListOf(it.value)
+                targetEcusByFunctional[it.config.functionalAddress] = mutableListOf(it)
             } else {
-                list.add(it.value)
+                list.add(it)
             }
         }
 
