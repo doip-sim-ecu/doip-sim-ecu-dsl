@@ -17,6 +17,12 @@ typealias GID = ByteArray
 typealias EID = ByteArray
 typealias VIN = ByteArray
 
+
+enum class DoipNodeType(val value: Byte) {
+    GATEWAY(0),
+    NODE(1)
+}
+
 open class DoipEntityConfig(
     val name: String,
     val logicalAddress: Short,
@@ -29,7 +35,8 @@ open class DoipEntityConfig(
     val broadcastEnabled: Boolean = true,
     val broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255"),
     // TODO tlsEnabled, tlsPort, certificate chain?
-    val ecuConfigList: MutableList<EcuConfig> = mutableListOf()
+    val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
+    val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
 ) {
     init {
         if (name.isEmpty()) {
@@ -60,6 +67,8 @@ open class DoipEntity(
 
     protected var vamSentCounter = 0
 
+    val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
+
     private val _ecus: MutableList<SimulatedEcu> = mutableListOf()
 
     val ecus: List<SimulatedEcu>
@@ -70,7 +79,8 @@ open class DoipEntity(
 
     protected open fun createDoipUdpMessageHandler(): DoipUdpMessageHandler =
         DefaultDoipUdpMessageHandler(
-            config
+            doipEntity = this,
+            config = config
         )
 
     protected open fun createDoipTcpMessageHandler(socket: Socket): DoipTcpConnectionMessageHandler =
@@ -82,7 +92,7 @@ open class DoipEntity(
             diagMessageHandler = this
         )
 
-    protected suspend fun startVamTimer(socket: BoundDatagramSocket) {
+    protected open suspend fun startVamTimer(socket: BoundDatagramSocket) {
         if (config.broadcastEnabled) {
             fixedRateTimer("VAM-TIMER-${name}", daemon = true, initialDelay = 500, period = 500) {
                 MDC.put("ecu", name)
@@ -139,6 +149,90 @@ open class DoipEntity(
     open fun findEcuByName(name: String): SimulatedEcu? =
         this.ecus.firstOrNull { it.name == name }
 
+    protected open fun CoroutineScope.handleTcpSocket(socket: Socket) {
+        launch {
+            logger.debugIf { "New incoming TCP connection from ${socket.remoteAddress}" }
+            val tcpMessageReceiver = createDoipTcpMessageHandler(socket)
+            val input = socket.openReadChannel()
+            val output = socket.openWriteChannel(autoFlush = tcpMessageReceiver.isAutoFlushEnabled())
+            try {
+                connectionHandlers.add(tcpMessageReceiver)
+                while (!socket.isClosed) {
+                    try {
+                        val message = tcpMessageReceiver.receiveTcpData(input)
+                        tcpMessageReceiver.handleTcpMessage(message, output)
+                    } catch (e: ClosedReceiveChannelException) {
+                        // ignore - socket was closed
+                        logger.debug("Socket was closed by remote ${socket.remoteAddress}")
+                        withContext(Dispatchers.IO) {
+                            socket.close()
+                        }
+                    } catch (e: HeaderNegAckException) {
+                        if (!socket.isClosed) {
+                            logger.debug("Error in Header while parsing message, sending negative acknowledgment", e)
+                            val response =
+                                DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
+                            output.writeFully(response, 0, response.size)
+                            output.flush()
+                        }
+                    } catch (e: Exception) {
+                        if (!socket.isClosed) {
+                            logger.error("Unknown error parsing/handling message, sending negative acknowledgment", e)
+                            val response =
+                                DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
+                            output.writeFully(response, 0, response.size)
+                            output.flush()
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                logger.error("Unknown inside socket processing loop, closing socket", e)
+            } finally {
+                try {
+                    withContext(Dispatchers.IO) {
+                        socket.close()
+                    }
+                } finally {
+                    connectionHandlers.remove(tcpMessageReceiver)
+                }
+            }
+        }
+    }
+
+    protected open fun CoroutineScope.handleUdpMessage(
+        udpMessageHandler: DoipUdpMessageHandler,
+        datagram: Datagram,
+        socket: BoundDatagramSocket
+    ) {
+        launch {
+            MDC.put("ecu", name)
+            try {
+                logger.traceIf { "[${name}] Incoming UDP message" }
+                val message = udpMessageHandler.parseMessage(datagram)
+                logger.traceIf { "[${name}] Message is of type $message" }
+                udpMessageHandler.handleUdpMessage(socket.outgoing, datagram.address, message)
+            } catch (e: HeaderNegAckException) {
+                val code = when (e) {
+                    is IncorrectPatternFormat -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
+                    is HeaderTooShort -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
+                    is InvalidPayloadLength -> DoipUdpHeaderNegAck.NACK_INVALID_PAYLOAD_LENGTH
+                    is UnknownPayloadType -> DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
+                    else -> {
+                        DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
+                    }
+                }
+                logger.debug("Error in Message-Header, sending negative acknowledgement", e)
+                udpMessageHandler.respondHeaderNegAck(
+                    socket.outgoing,
+                    datagram.address,
+                    code
+                )
+            } catch (e: Exception) {
+                logger.error("Unknown error while processing message", e)
+            }
+        }
+    }
+
     fun start() {
         this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
 
@@ -167,30 +261,7 @@ open class DoipEntity(
                 val udpMessageHandler = createDoipUdpMessageHandler()
                 while (!socket.isClosed) {
                     val datagram = socket.receive()
-                    try {
-                        logger.traceIf { "[${name}] Incoming UDP message" }
-                        val message = udpMessageHandler.parseMessage(datagram)
-                        logger.traceIf { "[${name}] Message is of type $message" }
-                        udpMessageHandler.handleUdpMessage(socket.outgoing, datagram.address, message)
-                    } catch (e: HeaderNegAckException) {
-                        val code = when (e) {
-                            is IncorrectPatternFormat -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
-                            is HeaderTooShort -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
-                            is InvalidPayloadLength -> DoipUdpHeaderNegAck.NACK_INVALID_PAYLOAD_LENGTH
-                            is UnknownPayloadType -> DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
-                            else -> {
-                                DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
-                            }
-                        }
-                        logger.debug("Error in Message-Header, sending negative acknowledgement", e)
-                        udpMessageHandler.respondHeaderNegAck(
-                            socket.outgoing,
-                            datagram.address,
-                            code
-                        )
-                    } catch (e: Exception) {
-                        logger.error("Unknown error while processing message", e)
-                    }
+                    handleUdpMessage(udpMessageHandler, datagram, socket)
                 }
             }
         }
@@ -203,51 +274,23 @@ open class DoipEntity(
                         .bind(InetSocketAddress(config.localAddress, config.localPort))
                 while (!serverSocket.isClosed) {
                     val socket = serverSocket.accept()
-                    launch {
-                        logger.debugIf { "New incoming TCP connection from ${socket.remoteAddress}" }
-                        val tcpMessageReceiver = createDoipTcpMessageHandler(socket)
-                        val input = socket.openReadChannel()
-                        val output = socket.openWriteChannel(autoFlush = tcpMessageReceiver.isAutoFlushEnabled())
-                        try {
-                            while (!socket.isClosed) {
-                                try {
-                                    val message = tcpMessageReceiver.receiveTcpData(input)
-                                    tcpMessageReceiver.handleTcpMessage(message, output)
-                                } catch (e: ClosedReceiveChannelException) {
-                                    // ignore - socket was closed
-                                    logger.debug("Socket was closed by remote ${socket.remoteAddress}")
-                                    withContext(Dispatchers.IO) {
-                                        socket.close()
-                                    }
-                                } catch (e: HeaderNegAckException) {
-                                    if (!socket.isClosed) {
-                                        logger.debug("Error in Header while parsing message, sending negative acknowledgment", e)
-                                        val response =
-                                            DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
-                                        output.writeFully(response, 0, response.size)
-                                        output.flush()
-                                    }
-                                } catch (e: Exception) {
-                                    if (!socket.isClosed) {
-                                        logger.error("Unknown error parsing/handling message, sending negative acknowledgment", e)
-                                        val response =
-                                            DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
-                                        output.writeFully(response, 0, response.size)
-                                        output.flush()
-                                    }
-                                }
-                            }
-                        } catch (e: Throwable) {
-                            logger.error("Unknown inside socket processing loop, closing socket", e)
-                        } finally {
-                            withContext(Dispatchers.IO) {
-                                socket.close()
-                            }
-                        }
-                    }
+                    handleTcpSocket(socket)
                 }
-
             }
         }
+
+//        thread(name = "TLS") {
+//            runBlocking {
+//                val serverSocket =
+//                    aSocket(ActorSelectorManager(Dispatchers.IO))
+//                        .tcp()
+//                        .bind(InetSocketAddress(config.localAddress, config.localPort))
+//
+//                while (!serverSocket.isClosed) {
+//                    val socket = serverSocket.accept()
+//                    handleTcpSocket(socket)
+//                }
+//            }
+//        }
     }
 }

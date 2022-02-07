@@ -12,9 +12,14 @@ repositories {
     mavenCentral()
 }
 
+val ktorVersion = "1.6.7"
+
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    api("io.ktor:ktor-network:1.6.7")
+    api("io.ktor:ktor-network:$ktorVersion")
+//    implementation("io.ktor:ktor-network-sockets:$ktorVersion")
+//    implementation("io.ktor:ktor-network-tls:$ktorVersion")
+//    implementation("io.ktor:ktor-network-tls-certificates:$ktorVersion")
     api("ch.qos.logback:logback-classic:1.2.10")
 
     testImplementation(kotlin("test"))

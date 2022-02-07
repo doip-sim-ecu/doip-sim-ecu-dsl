@@ -4,8 +4,10 @@ import io.ktor.network.sockets.*
 import io.ktor.util.network.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
+import kotlin.math.max
 
 open class DefaultDoipUdpMessageHandler(
+    val doipEntity: DoipEntity,
     val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
 
@@ -62,7 +64,12 @@ open class DefaultDoipUdpMessageHandler(
         sendChannel.send(
             Datagram(
                 packet = ByteReadPacket(
-                    DoipUdpEntityStatusResponse(0, 255.toByte(), 0, 0xFFFF)
+                    DoipUdpEntityStatusResponse(
+                        config.nodeType.value,
+                        255.toByte(),
+                        max(doipEntity.connectionHandlers.size, 255).toByte(),
+                        config.maxDataSize
+                    )
                         .message
                 ),
                 address = sourceAddress

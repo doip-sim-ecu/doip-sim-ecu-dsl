@@ -8,6 +8,8 @@ interface DoipTcpConnectionMessageHandler {
     suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage
     suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel)
     suspend fun isAutoFlushEnabled(): Boolean
+
+    fun getRegisteredSourceAddress(): Short?
 }
 
 class DoipTcpHeaderNegAck(
