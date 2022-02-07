@@ -152,15 +152,15 @@ open class DoipEntity(
     protected open fun CoroutineScope.handleTcpSocket(socket: Socket) {
         launch {
             logger.debugIf { "New incoming TCP connection from ${socket.remoteAddress}" }
-            val tcpMessageReceiver = createDoipTcpMessageHandler(socket)
+            val tcpMessageHandler = createDoipTcpMessageHandler(socket)
             val input = socket.openReadChannel()
-            val output = socket.openWriteChannel(autoFlush = tcpMessageReceiver.isAutoFlushEnabled())
+            val output = socket.openWriteChannel(autoFlush = tcpMessageHandler.isAutoFlushEnabled())
             try {
-                connectionHandlers.add(tcpMessageReceiver)
+                connectionHandlers.add(tcpMessageHandler)
                 while (!socket.isClosed) {
                     try {
-                        val message = tcpMessageReceiver.receiveTcpData(input)
-                        tcpMessageReceiver.handleTcpMessage(message, output)
+                        val message = tcpMessageHandler.receiveTcpData(input)
+                        tcpMessageHandler.handleTcpMessage(message, output)
                     } catch (e: ClosedReceiveChannelException) {
                         // ignore - socket was closed
                         logger.debug("Socket was closed by remote ${socket.remoteAddress}")
@@ -193,7 +193,7 @@ open class DoipEntity(
                         socket.close()
                     }
                 } finally {
-                    connectionHandlers.remove(tcpMessageReceiver)
+                    connectionHandlers.remove(tcpMessageHandler)
                 }
             }
         }
