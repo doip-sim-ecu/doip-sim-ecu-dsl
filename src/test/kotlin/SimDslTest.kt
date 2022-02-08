@@ -2,10 +2,12 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import doip.library.message.UdsMessage
+import io.ktor.utils.io.*
+import library.UdsMessage
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -62,7 +64,13 @@ class SimDslTest {
 
         assertThat(gateways.size).isEqualTo(1)
         val ecuData = gateways[0].ecus[0]
-        val msg = UdsMessage(0x1, 0x2, byteArrayOf(0x22, 0x10, 0x20))
+        val msg = UdsMessage(
+            0x1,
+            0x2,
+            UdsMessage.PHYSICAL,
+            byteArrayOf(0x22, 0x10, 0x20),
+            Mockito.mock(ByteWriteChannel::class.java)
+        )
         val simEcu = SimEcu(ecuData)
         val responseData = RequestResponseData(ecuData.requests[0], msg, simEcu)
         ecuData.requests[0].responseHandler.invoke(responseData)

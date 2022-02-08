@@ -1,8 +1,5 @@
-import doip.simulation.nodes.Ecu
-import doip.simulation.nodes.EcuConfig
-import doip.simulation.nodes.GatewayConfig
-import doip.simulation.standard.StandardGateway
-import doip.simulation.standard.StandardTcpConnectionGateway
+import library.*
+import org.slf4j.MDC
 import java.net.InetAddress
 import kotlin.properties.Delegates
 
@@ -35,12 +32,12 @@ open class GatewayData(name: String) : RequestsData(name) {
     /**
      * The logical address under which the gateway shall be reachable
      */
-    var logicalAddress by Delegates.notNull<Int>()
+    var logicalAddress by Delegates.notNull<Short>()
 
     /**
      * The functional address under which the gateway (and other ecus) shall be reachable
      */
-    var functionalAddress by Delegates.notNull<Int>()
+    var functionalAddress by Delegates.notNull<Short>()
 
     /**
      * Vehicle identifier, 17 chars, will be filled with '0`, or if left null, set to 0xFF
@@ -73,51 +70,38 @@ open class GatewayData(name: String) : RequestsData(name) {
     }
 }
 
-private fun GatewayData.toGatewayConfig(): GatewayConfig {
-    val config = GatewayConfig()
-    config.name = this.name
-    config.gid = this.gid
-    config.eid = this.eid
-    config.localAddress = this.localAddress
-    config.localPort = this.localPort
-    config.multicastAddress = this.multicastAddress
-    config.broadcastEnable = this.broadcastEnable
-    config.broadcastAddress = this.broadcastAddress
-
-    config.logicalAddress = this.logicalAddress
-
-    // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
-    config.vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it }
+private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
+    val config = DoipEntityConfig(
+        name = this.name,
+        gid = this.gid,
+        eid = this.eid,
+        localAddress = this.localAddress,
+        localPort = this.localPort,
+        logicalAddress = this.logicalAddress,
+        broadcastEnabled = this.broadcastEnable,
+        broadcastAddress = this.broadcastAddress,
+        // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
+        vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it },
+    )
 
     // Add the gateway itself as an ecu, so it too can receive requests
-    val gateway = EcuConfig()
-    gateway.name = this.name
-    gateway.physicalAddress = this.logicalAddress
-    gateway.functionalAddress = this.functionalAddress
-    config.ecuConfigList.add(gateway)
+    val gatewayEcuConfig = EcuConfig(
+        name = this.name,
+        physicalAddress = this.logicalAddress,
+        functionalAddress = this.functionalAddress
+    )
+    config.ecuConfigList.add(gatewayEcuConfig)
 
     // Add all the ecus defined for the gateway to the ecuConfigList, so they can later be found and instantiated as SimDslEcu
     config.ecuConfigList.addAll(this.ecus.map { it.toEcuConfig() })
     return config
 }
 
-class SimGateway(private val data: GatewayData) : StandardGateway(data.toGatewayConfig()) {
-    private val logger = doip.logging.LogManager.getLogger(SimGateway::class.java)
-
-    val name: String
-        get() = data.name
-
+class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfig()) {
     val requests: List<RequestMatcher>
         get() = data.requests
 
-    override fun createConnection(): StandardTcpConnectionGateway {
-        // Hacky way to increase stream buffer size -- there should be a setter in the connection
-        val con = super.createConnection()
-        con.streamBuffer.maxPayloadLength = 70000
-        return con
-    }
-
-    override fun createEcu(config: EcuConfig): Ecu {
+    override fun createEcu(config: EcuConfig): SimulatedEcu {
         // To be able to handle requests for the gateway itself, insert a dummy ecu with the gateways logicalAddress
         if (config.name == data.name) {
             val ecu = EcuData(
@@ -139,11 +123,16 @@ class SimGateway(private val data: GatewayData) : StandardGateway(data.toGateway
         return SimEcu(ecuData)
     }
 
+    override fun findEcuByName(name: String): SimEcu? {
+        return super.findEcuByName(name) as SimEcu?
+    }
+
     fun reset(recursiveEcus: Boolean = true) {
-        logger.info("Resetting Gateway $name")
+        MDC.put("ecu", name)
+        logger.infoIf { "Resetting gateway" }
         this.requests.forEach { it.reset() }
         if (recursiveEcus) {
-            this.ecuList.forEach { (it as SimEcu).reset() }
+            this.ecus.forEach { (it as SimEcu).reset() }
         }
     }
 }

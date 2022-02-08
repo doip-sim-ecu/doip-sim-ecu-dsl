@@ -1,7 +1,8 @@
-package helper
+package library
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class HexExtensionsKtTest {
     @Test
@@ -42,6 +43,6 @@ class HexExtensionsKtTest {
                 0xfe.toByte()
             ), "AB CD EF 01 2E 1e 1f 00 fE".decodeHex()
         )
-        assertThrows(IllegalArgumentException::class.java) { "54 45 53 5".decodeHex() }
+        assertThrows<IllegalArgumentException> { "54 45 53 5".decodeHex() }
     }
 }
