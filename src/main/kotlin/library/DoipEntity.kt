@@ -54,6 +54,9 @@ open class DoipEntityConfig(
     }
 }
 
+/**
+ * DoIP-Entity
+ */
 open class DoipEntity(
     val config: DoipEntityConfig,
 ) : DiagnosticMessageHandler {
@@ -64,8 +67,6 @@ open class DoipEntity(
 
     protected var targetEcusByPhysical: Map<Short, SimulatedEcu> = emptyMap()
     protected var targetEcusByFunctional: MutableMap<Short, MutableList<SimulatedEcu>> = mutableMapOf()
-
-    protected var vamSentCounter = 0
 
     val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
 
@@ -92,27 +93,33 @@ open class DoipEntity(
             diagMessageHandler = this
         )
 
+    protected open suspend fun sendVams(vam: DoipUdpVehicleAnnouncementMessage, socket: BoundDatagramSocket) {
+        var vamSentCounter = 0
+
+        fixedRateTimer("VAM", daemon = true, initialDelay = 500, period = 500) {
+            MDC.put("ecu", name)
+            if (vamSentCounter >= 3) {
+                this.cancel()
+                return@fixedRateTimer
+            }
+            logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()}")
+            runBlocking(Dispatchers.IO) {
+                socket.send(
+                    Datagram(
+                        packet = ByteReadPacket(vam.message),
+                        address = InetSocketAddress(config.broadcastAddress, 13400)
+                    )
+                )
+            }
+
+            vamSentCounter++
+        }
+    }
+
     protected open suspend fun startVamTimer(socket: BoundDatagramSocket) {
         if (config.broadcastEnabled) {
-            fixedRateTimer("VAM-TIMER-${name}", daemon = true, initialDelay = 500, period = 500) {
-                MDC.put("ecu", name)
-                if (vamSentCounter >= 3) {
-                    this.cancel()
-                    return@fixedRateTimer
-                }
-                logger.info("Sending VAM for $name")
-                val vam = DefaultDoipUdpMessageHandler.generateVamByEntityConfig(config)
-                runBlocking(Dispatchers.IO) {
-                    socket.send(
-                        Datagram(
-                            packet = ByteReadPacket(vam.message),
-                            address = InetSocketAddress(config.broadcastAddress, 13400)
-                        )
-                    )
-                }
-
-                vamSentCounter++
-            }
+            val vam = DefaultDoipUdpMessageHandler.generateVamByEntityConfig(config)
+            sendVams(vam, socket)
         }
     }
 

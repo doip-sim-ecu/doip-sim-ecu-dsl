@@ -3,6 +3,10 @@ enum class SequenceMode {
     WRAP_AROUND
 }
 
+/**
+ * Returns the given responses, advancing by one after each request, either wrapping around to the beginning,
+ * or repeating the last one
+ */
 @Suppress("UNUSED_VALUE")
 fun RequestResponseData.sequence(vararg responses: String,
     mode: SequenceMode = SequenceMode.STOP_AT_END,
@@ -17,8 +21,14 @@ fun RequestResponseData.sequence(vararg responses: String,
     }
 }
 
+/**
+ * Returns the given responses, advancing by one after each request, starting at the beginning when the end is reached
+ */
 fun RequestResponseData.sequenceWrapAround(vararg responses: String) =
     sequence(*responses, mode = SequenceMode.WRAP_AROUND)
 
+/**
+ * Returns the given responses, advancing by one after each request, repeating the last one when the end is reached
+ */
 fun RequestResponseData.sequenceStopAtEnd(vararg responses: String) =
     sequence(*responses, mode = SequenceMode.STOP_AT_END)

@@ -292,7 +292,23 @@ open class RequestsData(
      * Define request-matcher & response-handler for a gateway or ecu by using an
      * exact matching byte-array
      */
-    fun request(request: ByteArray, name: String? = null, loglevel: LogLevel = LogLevel.DEBUG, response: RequestResponseHandler = {}): RequestMatcher {
+    fun request(
+        /**
+         * Byte-Array to exactly match the request
+         */
+        request: ByteArray,
+        /**
+         * Name of the expression to be shown in logs
+         */
+        name: String? = null,
+        /**
+         * The loglevel used to log when the request matches and its responses
+         */
+        loglevel: LogLevel = LogLevel.DEBUG,
+        /**
+         * Handler that is called when the request is matched
+         */
+        response: RequestResponseHandler = {}): RequestMatcher {
         val req = RequestMatcher(
             name = name,
             requestBytes = request,
@@ -313,8 +329,25 @@ open class RequestsData(
      *
      * Note: Take the maximal string length [requestRegexMatchBytes] into
      * account
+     *
      */
-    fun request(reqRegex: Regex, name: String? = null, loglevel: LogLevel = LogLevel.DEBUG, response: RequestResponseHandler = {}): RequestMatcher {
+    fun request(
+        /**
+         * Regular expression to match the request - see [requestRegexMatchBytes] and normalization
+         */
+        reqRegex: Regex,
+        /**
+         * Name of the expression to be shown in logs
+         */
+        name: String? = null,
+        /**
+         * The loglevel used to log when the request matches and its responses
+         */
+        loglevel: LogLevel = LogLevel.DEBUG,
+        /**
+         * Handler that is called when the request is matched
+         */
+        response: RequestResponseHandler = {}): RequestMatcher {
         val req = RequestMatcher(
             name = name,
             requestBytes = null,
@@ -337,7 +370,23 @@ open class RequestsData(
      * is automatically converted into a regular expression by replacing all "[]" with ".*",
      * turning it into uppercase, and removing all spaces.
      */
-    fun request(reqHex: String, name: String? = null, loglevel: LogLevel = LogLevel.DEBUG, response: RequestResponseHandler = {}) {
+    fun request(
+        /**
+         * Hex-String to exactly match the request
+         */
+        reqHex: String,
+        /**
+         * Name of the expression to be shown in logs
+         */
+        name: String? = null,
+        /**
+         * The loglevel used to log when the request matches and its responses
+         */
+        loglevel: LogLevel = LogLevel.DEBUG,
+        /**
+         * Handler that is called when the request is matched
+         */
+        response: RequestResponseHandler = {}) {
         if (isRegex(reqHex)) {
             request(regexifyRequestHex(reqHex), name, loglevel, response)
         } else {

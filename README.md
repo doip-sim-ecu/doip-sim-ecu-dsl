@@ -3,9 +3,9 @@
 This repository contains a kotlin based domain specific language (dsl) to quickly and intuitively write
 custom DoIP ECU simulations.
 
-Its main purpose is to enable programmers to be able to quickly write integration test for 
-their DoIP clients, and therefore to allow better testing of error- and edge cases, as well
-as creating regression tests.   
+Its main purpose is to enable programmers to quickly write integration tests for DoIP clients, 
+and therefore to allow better testing of error and edge cases, as well as creating 
+regression tests.   
 
 To see a fairly comprehensive example with explanations on how to use this library in a project,
 look at the example project [doip-sim-ecu-dsl-example](https://github.com/doip-sim-ecu/doip-sim-ecu-dsl-example).
@@ -50,7 +50,7 @@ dependencies {
 }
 ```
 
-#### 2. Define your DoIP-Entity and ECU topology and request-responses
+#### 2. Define your DoIP-Entity, ECU topology and request-responses
 See [MyCustomGateway.kt](https://github.com/doip-sim-ecu/doip-sim-ecu-dsl-example/blob/main/src/main/kotlin/MyCustomGateway.kt)
 in the example project for a detailed description of the syntax & semantics.
 

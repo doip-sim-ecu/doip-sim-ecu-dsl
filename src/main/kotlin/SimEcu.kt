@@ -80,6 +80,9 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         return false
     }
 
+    /**
+     * Handler that is called when the ecu is currently busy with another request
+     */
     override fun handleRequestIfBusy(request: UdsMessage) {
         if (handleInterceptors(request, true)) {
             logger.debugIf { "Incoming busy request for $name - ${request.message.toHexString(limit = 10)} was handled by interceptors" }
@@ -88,7 +91,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     }
 
     /**
-     * Normalizes an incoming request into hexadecimal
+     * Handler for an incoming diagnostic message when the ECU isn't busy
      */
     override fun handleRequest(request: UdsMessage) {
         if (handleInterceptors(request, false)) {
@@ -209,11 +212,14 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     }
 
     /**
-     * StoredProperties can be retrieved by using delegates. They are only stored until [reset] is called
+     * Retrieves a property that is persisted until [reset] or [clearStoredProperties] are called
      */
     fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
         StoragePropertyDelegate(this.internalDataStorage, initialValue)
 
+    /**
+     * Clears the stored properties
+     */
     fun clearStoredProperties() =
         internalDataStorage.clear()
 
