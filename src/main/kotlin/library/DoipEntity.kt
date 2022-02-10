@@ -100,7 +100,7 @@ open class DoipEntity(
                     this.cancel()
                     return@fixedRateTimer
                 }
-                logger.info("[${name}] Sending VAM")
+                logger.info("Sending VAM for $name")
                 val vam = DefaultDoipUdpMessageHandler.generateVamByEntityConfig(config)
                 runBlocking(Dispatchers.IO) {
                     socket.send(
@@ -207,9 +207,9 @@ open class DoipEntity(
         launch {
             MDC.put("ecu", name)
             try {
-                logger.traceIf { "[${name}] Incoming UDP message" }
+                logger.traceIf { "Incoming UDP message for $name" }
                 val message = udpMessageHandler.parseMessage(datagram)
-                logger.traceIf { "[${name}] Message is of type $message" }
+                logger.traceIf { "Message for $name is of type $message" }
                 udpMessageHandler.handleUdpMessage(socket.outgoing, datagram.address, message)
             } catch (e: HeaderNegAckException) {
                 val code = when (e) {

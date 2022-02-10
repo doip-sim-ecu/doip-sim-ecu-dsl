@@ -82,7 +82,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
 
     override fun handleRequestIfBusy(request: UdsMessage) {
         if (handleInterceptors(request, true)) {
-            logger.debugIf { "[${name}] Incoming busy request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
+            logger.debugIf { "Incoming busy request for $name - ${request.message.toHexString(limit = 10)} was handled by interceptors" }
         }
         super.handleRequestIfBusy(request)
     }
@@ -92,13 +92,13 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      */
     override fun handleRequest(request: UdsMessage) {
         if (handleInterceptors(request, false)) {
-            logger.debugIf { "[${name}] Incoming request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
+            logger.debugIf { "Incoming request for $name - ${request.message.toHexString(limit = 10)} was handled by interceptors" }
             return
         }
 
         val normalizedRequest by lazy { request.message.toHexString("", limit = data.requestRegexMatchBytes, limitExceededSuffix = "") }
 
-        logger.traceIf { "[${name}] Incoming request (${request.targetAddress}): ${request.message.toHexString()}" }
+        logger.traceIf { "Incoming request for $name (${request.targetAddress}) - ${request.message.toHexString()}" }
 
         // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
 
