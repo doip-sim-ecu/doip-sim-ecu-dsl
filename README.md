@@ -65,7 +65,7 @@ gateway("NAME") {
     ecu("ECU") {
         physicalAddress = 0x1011
         ...
-        // Request-HAndling for the (non-doip)-ECU behind the gateway  
+        // Request-Handling for the (non-doip)-ECU behind the gateway  
         request("11 03") { ack() }
     } 
 }
