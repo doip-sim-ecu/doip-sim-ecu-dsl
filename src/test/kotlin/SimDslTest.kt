@@ -2,12 +2,12 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import io.ktor.utils.io.*
 import library.UdsMessage
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
+import java.io.ByteArrayOutputStream
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -69,7 +69,7 @@ class SimDslTest {
             0x2,
             UdsMessage.PHYSICAL,
             byteArrayOf(0x22, 0x10, 0x20),
-            Mockito.mock(ByteWriteChannel::class.java)
+            Mockito.mock(ByteArrayOutputStream::class.java)
         )
         val simEcu = SimEcu(ecuData)
         val responseData = RequestResponseData(ecuData.requests[0], msg, simEcu)

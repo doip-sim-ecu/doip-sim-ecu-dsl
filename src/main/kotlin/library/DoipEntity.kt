@@ -8,8 +8,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.io.OutputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import javax.net.ssl.SSLServerSocketFactory
+import javax.net.ssl.SSLSocket
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 
@@ -21,6 +24,12 @@ typealias VIN = ByteArray
 enum class DoipNodeType(val value: Byte) {
     GATEWAY(0),
     NODE(1)
+}
+
+enum class TlsMode {
+    DISABLED,
+    OPTIONAL,
+    MANDATORY,
 }
 
 open class DoipEntityConfig(
@@ -35,6 +44,8 @@ open class DoipEntityConfig(
     val broadcastEnabled: Boolean = true,
     val broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255"),
     // TODO tlsEnabled, tlsPort, certificate chain?
+    val tlsMode: TlsMode = TlsMode.DISABLED,
+    val tlsPort: Int = 3496,
     val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
     val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
 ) {
@@ -84,7 +95,7 @@ open class DoipEntity(
             config = config
         )
 
-    protected open fun createDoipTcpMessageHandler(socket: Socket): DoipTcpConnectionMessageHandler =
+    protected open fun createDoipTcpMessageHandler(socket: DoipTcpSocket): DoipTcpConnectionMessageHandler =
         DefaultDoipTcpConnectionMessageHandler(
             doipEntity = this,
             socket = socket,
@@ -138,7 +149,7 @@ open class DoipEntity(
     override fun existsTargetAddress(targetAddress: Short): Boolean =
         targetEcusByPhysical.containsKey(targetAddress) || targetEcusByFunctional.containsKey(targetAddress)
 
-    override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel) {
+    override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream) {
         val ecu = targetEcusByPhysical[diagMessage.targetAddress]
         ecu?.run {
             MDC.put("ecu", ecu.name)
@@ -156,12 +167,12 @@ open class DoipEntity(
     open fun findEcuByName(name: String): SimulatedEcu? =
         this.ecus.firstOrNull { it.name == name }
 
-    protected open fun CoroutineScope.handleTcpSocket(socket: Socket) {
+    protected open fun CoroutineScope.handleTcpSocket(socket: DoipTcpSocket) {
         launch {
             logger.debugIf { "New incoming TCP connection from ${socket.remoteAddress}" }
             val tcpMessageHandler = createDoipTcpMessageHandler(socket)
             val input = socket.openReadChannel()
-            val output = socket.openWriteChannel(autoFlush = tcpMessageHandler.isAutoFlushEnabled())
+            val output = socket.openOutputStream()
             try {
                 connectionHandlers.add(tcpMessageHandler)
                 while (!socket.isClosed) {
@@ -179,16 +190,14 @@ open class DoipEntity(
                             logger.debug("Error in Header while parsing message, sending negative acknowledgment", e)
                             val response =
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
-                            output.writeFully(response, 0, response.size)
-                            output.flush()
+                            output.writeFully(response)
                         }
                     } catch (e: Exception) {
                         if (!socket.isClosed) {
                             logger.error("Unknown error parsing/handling message, sending negative acknowledgment", e)
                             val response =
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
-                            output.writeFully(response, 0, response.size)
-                            output.flush()
+                            output.writeFully(response)
                         }
                     }
                 }
@@ -281,23 +290,25 @@ open class DoipEntity(
                         .bind(InetSocketAddress(config.localAddress, config.localPort))
                 while (!serverSocket.isClosed) {
                     val socket = serverSocket.accept()
-                    handleTcpSocket(socket)
+                    handleTcpSocket(DelegatedKtorSocket(socket))
                 }
             }
         }
 
-//        thread(name = "TLS") {
-//            runBlocking {
-//                val serverSocket =
-//                    aSocket(ActorSelectorManager(Dispatchers.IO))
-//                        .tcp()
-//                        .bind(InetSocketAddress(config.localAddress, config.localPort))
-//
-//                while (!serverSocket.isClosed) {
-//                    val socket = serverSocket.accept()
-//                    handleTcpSocket(socket)
-//                }
-//            }
-//        }
+// TLS with ktor-network doesn't work yet https://youtrack.jetbrains.com/issue/KTOR-694
+        if (config.tlsMode != TlsMode.DISABLED) {
+            thread(name = "TLS") {
+                runBlocking {
+                    val tlsServerSocket = withContext(Dispatchers.IO) {
+                        SSLServerSocketFactory.getDefault().createServerSocket(config.tlsPort)
+                    }
+
+                    while (!tlsServerSocket.isClosed) {
+                        val socket = withContext(Dispatchers.IO) { tlsServerSocket.accept() as SSLSocket }
+                        handleTcpSocket(SSLDoipTcpSocket(socket))
+                    }
+                }
+            }
+        }
     }
 }

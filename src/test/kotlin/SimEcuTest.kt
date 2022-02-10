@@ -3,11 +3,11 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import io.ktor.utils.io.*
 import library.UdsMessage
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.*
+import java.io.ByteArrayOutputStream
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
 import kotlin.time.Duration.Companion.milliseconds
@@ -407,6 +407,6 @@ class SimEcuTest {
             targetAddress = targetAddress,
             targetAddressType = targetAddressType,
             message = data,
-            output = Mockito.mock(ByteWriteChannel::class.java)
+            output = Mockito.mock(ByteArrayOutputStream::class.java)
         )
 }

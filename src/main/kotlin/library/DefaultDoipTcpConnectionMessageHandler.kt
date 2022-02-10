@@ -1,15 +1,15 @@
 package library
 
-import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.io.OutputStream
 import kotlin.experimental.xor
 
 open class DefaultDoipTcpConnectionMessageHandler(
     val doipEntity: DoipEntity,
-    val socket: Socket,
+    val socket: DoipTcpSocket,
     val logicalAddress: Short,
     val maxPayloadLength: Int,
     val diagMessageHandler: DiagnosticMessageHandler
@@ -104,7 +104,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
         }
     }
 
-    override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
+    override suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
         MDC.put("ecu", doipEntity.name)
         logger.traceIf { "# handleTcpMessage $message" }
         when (message) {
@@ -117,16 +117,13 @@ open class DefaultDoipTcpConnectionMessageHandler(
             is DoipTcpDiagMessagePosAck -> handleTcpDiagMessagePosAck(message, output)
             is DoipTcpDiagMessageNegAck -> handleTcpDiagMessageNegAck(message, output)
         }
-        output.flush()
     }
 
-    override suspend fun isAutoFlushEnabled(): Boolean = false
-
-    protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: OutputStream) {
         logger.traceIf { "# handleTcpHeaderNegAck $message" }
     }
 
-    protected open suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: OutputStream) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         if (message.activationType != 0x00.toByte() && message.activationType != 0x01.toByte()) {
             output.writeFully(
@@ -137,6 +134,17 @@ open class DefaultDoipTcpConnectionMessageHandler(
                 ).message
             )
         } else {
+            if (doipEntity.config.tlsMode == TlsMode.MANDATORY && socket.socketType != SocketType.TLS_DATA) {
+                output.writeFully(
+                    DoipTcpRoutingActivationResponse(
+                        message.sourceAddress,
+                        logicalAddress,
+                        DoipTcpRoutingActivationResponse.RC_ERROR_REQUIRES_TLS
+                    ).message
+                )
+                return
+            }
+
             if (_registeredSourceAddress == null) {
                 _registeredSourceAddress = message.sourceAddress
             }
@@ -169,20 +177,20 @@ open class DefaultDoipTcpConnectionMessageHandler(
         }
     }
 
-    protected open suspend fun handleTcpRoutingActivationResponse(message: DoipTcpRoutingActivationResponse, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpRoutingActivationResponse(message: DoipTcpRoutingActivationResponse, output: OutputStream) {
         logger.traceIf { "# handleTcpRoutingActivationResponse $message" }
     }
 
-    protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: OutputStream) {
         logger.traceIf { "# handleTcpAliveCheckRequest $message" }
         output.writeFully(DoipTcpAliveCheckResponse(logicalAddress).message)
     }
 
-    protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: OutputStream) {
         logger.traceIf { "# handleTcpAliveCheckResponse $message" }
     }
 
-    protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: OutputStream) {
         if (_registeredSourceAddress != message.sourceAddress) {
             val reject = DoipTcpDiagMessageNegAck(
                 message.targetAddress,
@@ -217,11 +225,11 @@ open class DefaultDoipTcpConnectionMessageHandler(
         }
     }
 
-    protected open suspend fun handleTcpDiagMessagePosAck(message: DoipTcpDiagMessagePosAck, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpDiagMessagePosAck(message: DoipTcpDiagMessagePosAck, output: OutputStream) {
         // No implementation
     }
 
-    protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: OutputStream) {
         // No implementation
     }
 }
@@ -235,8 +243,11 @@ open class DefaultDoipTcpConnectionMessageHandler(
 
 interface DiagnosticMessageHandler {
     fun existsTargetAddress(targetAddress: Short): Boolean
-    suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel)
+    suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream)
 }
 
 fun DoipEntity.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?) =
     this.connectionHandlers.any { it.getRegisteredSourceAddress() == sourceAddress && it != exclude }
+
+fun OutputStream.writeFully(byteArray: ByteArray) =
+    this.write(byteArray)
