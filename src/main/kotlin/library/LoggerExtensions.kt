@@ -19,3 +19,10 @@ fun Logger.infoIf(t: Throwable? = null, supplier: () -> String) {
         this.info(supplier.invoke(), t)
     }
 }
+
+fun Logger.errorIf(t: Throwable? = null, supplier: () -> String) {
+    if (this.isErrorEnabled) {
+        this.error(supplier.invoke(), t)
+    }
+}
+

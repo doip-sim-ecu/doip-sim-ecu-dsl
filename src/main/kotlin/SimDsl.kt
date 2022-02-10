@@ -196,6 +196,7 @@ class RequestMatcher(
     val name: String?,
     val requestBytes: ByteArray?,
     val requestRegex: Regex?,
+    val loglevel: LogLevel = LogLevel.DEBUG,
     val responseHandler: RequestResponseHandler
 ) : DataStorage() {
     init {
@@ -242,6 +243,13 @@ fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
 
 data class ResetHandler(val name: String?, val handler: (SimEcu) -> Unit)
 
+enum class LogLevel {
+    ERROR,
+    INFO,
+    DEBUG,
+    TRACE,
+}
+
 open class RequestsData(
     val name: String,
     /**
@@ -284,8 +292,14 @@ open class RequestsData(
      * Define request-matcher & response-handler for a gateway or ecu by using an
      * exact matching byte-array
      */
-    fun request(request: ByteArray, name: String? = null, response: RequestResponseHandler = {}): RequestMatcher {
-        val req = RequestMatcher(name = name, requestBytes = request, requestRegex = null, responseHandler = response)
+    fun request(request: ByteArray, name: String? = null, loglevel: LogLevel = LogLevel.DEBUG, response: RequestResponseHandler = {}): RequestMatcher {
+        val req = RequestMatcher(
+            name = name,
+            requestBytes = request,
+            requestRegex = null,
+            loglevel = loglevel,
+            responseHandler = response
+        )
         requests.add(req)
         return req
     }
@@ -300,8 +314,14 @@ open class RequestsData(
      * Note: Take the maximal string length [requestRegexMatchBytes] into
      * account
      */
-    fun request(reqRegex: Regex, name: String? = null, response: RequestResponseHandler = {}): RequestMatcher {
-        val req = RequestMatcher(name = name, requestBytes = null, requestRegex = reqRegex, responseHandler = response)
+    fun request(reqRegex: Regex, name: String? = null, loglevel: LogLevel = LogLevel.DEBUG, response: RequestResponseHandler = {}): RequestMatcher {
+        val req = RequestMatcher(
+            name = name,
+            requestBytes = null,
+            requestRegex = reqRegex,
+            loglevel = loglevel,
+            responseHandler = response
+        )
         requests.add(req)
         return req
     }
@@ -317,11 +337,11 @@ open class RequestsData(
      * is automatically converted into a regular expression by replacing all "[]" with ".*",
      * turning it into uppercase, and removing all spaces.
      */
-    fun request(reqHex: String, name: String? = null, response: RequestResponseHandler = {}) {
+    fun request(reqHex: String, name: String? = null, loglevel: LogLevel = LogLevel.DEBUG, response: RequestResponseHandler = {}) {
         if (isRegex(reqHex)) {
-            request(regexifyRequestHex(reqHex), name, response)
+            request(regexifyRequestHex(reqHex), name, loglevel, response)
         } else {
-            request(reqHex.decodeHex(), name, response)
+            request(reqHex.decodeHex(), name, loglevel, response)
         }
     }
 

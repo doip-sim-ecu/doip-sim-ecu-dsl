@@ -80,7 +80,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         return false
     }
 
-    override fun handleRequestIfBusy(request: UdsMessage){
+    override fun handleRequestIfBusy(request: UdsMessage) {
         if (handleInterceptors(request, true)) {
             logger.debugIf { "[${name}] Incoming busy request ${request.message.toHexString(limit = 10)} was handled by interceptors" }
         }
@@ -110,11 +110,11 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                     requestIter.requestRegex!!.matches(normalizedRequest)
                 }
             } catch (e: Exception) {
-                logger.error("[${name}] Error while matching requests: ${e.message}")
+                logger.error("Error while matching requests for $name: ${e.message}", e)
                 throw e
             }
 
-            logger.traceIf { "[${name}] Request: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
+            logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
 
             if (!matches) {
                 continue
@@ -123,22 +123,22 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
             val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             requestIter.responseHandler.invoke(responseData)
             if (responseData.continueMatching) {
-                logger.debugIf { "[${name}] Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
+                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
                 continue
             } else if (responseData.response.isNotEmpty()) {
-                logger.debugIf { "[${name}] Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
+                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
                 sendResponse(request, responseData.response)
             } else {
-                logger.debugIf { "[${name}] Request: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
+                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
             }
             return
         }
 
         if (this.data.nrcOnNoMatch) {
-            logger.debugIf { "[${name}] Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
+            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
             sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
         } else {
-            logger.debugIf { "[${name}] Request: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
+            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
         }
     }
 
@@ -153,7 +153,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         alsoCallWhenEcuIsBusy: Boolean = false,
         interceptor: InterceptorResponseHandler
     ): String {
-        logger.traceIf { "[${this.name}] Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy)"}
+        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy) in ecu $name"}
 
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
@@ -180,7 +180,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      * Please note that the internal resolution for delay is milliseconds
      */
     fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
-        logger.traceIf { "[${this.name}] Adding or replacing timer '$name' to be executed after $delay"}
+        logger.traceIf { "Adding or replacing timer '$name' for $name to be executed after $delay"}
 
         synchronized(mainTimer) {
             timers[name]?.cancel()
@@ -201,7 +201,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      * Explicitly cancel a running timer
      */
     fun cancelTimer(name: String) {
-        logger.traceIf { "[${this.name}] Cancelling timer '$name'" }
+        logger.traceIf { "Cancelling timer '$name' for $name" }
         synchronized(mainTimer) {
             timers[name]?.cancel()
             timers.remove(name)
@@ -241,3 +241,11 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         }
     }
 }
+
+fun Logger.logForRequest(request: RequestMatcher, t: Throwable? = null, supplier: () -> String) =
+    when (request.loglevel) {
+        LogLevel.ERROR -> this.errorIf(t, supplier)
+        LogLevel.INFO -> this.infoIf(t, supplier)
+        LogLevel.DEBUG -> this.debugIf(t, supplier)
+        LogLevel.TRACE -> this.traceIf(t, supplier)
+    }

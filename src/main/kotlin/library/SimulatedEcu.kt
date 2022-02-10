@@ -13,12 +13,12 @@ open class SimulatedEcu(val config: EcuConfig) {
     private val isBusy: AtomicBoolean = AtomicBoolean(false)
 
     open fun handleRequest(request: UdsMessage) {
-        logger.debugIf { "[${name}] Handle Request message: ${request.message.toHexString(limit = 20)}" }
+        logger.debugIf { "Handle Request message: ${request.message.toHexString(limit = 20)} for $name" }
     }
 
     open fun handleRequestIfBusy(request: UdsMessage) {
         // Busy NRC
-        logger.debugIf { "[${name}] ECU is busy, sending busy-NRC" }
+        logger.debugIf { "ECU $name is busy, sending busy-NRC" }
         request.respond(byteArrayOf(0x7f, request.message[0], 0x21))
     }
 
