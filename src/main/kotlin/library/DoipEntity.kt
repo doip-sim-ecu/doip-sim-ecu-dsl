@@ -6,15 +6,19 @@ import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import nl.altindag.ssl.SSLFactory
+import nl.altindag.ssl.util.PemUtils
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.io.File
 import java.io.OutputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import javax.net.ssl.SSLServerSocketFactory
-import javax.net.ssl.SSLSocket
+import java.nio.file.Paths
+import javax.net.ssl.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
+import kotlin.system.exitProcess
 
 typealias GID = ByteArray
 typealias EID = ByteArray
@@ -43,9 +47,11 @@ open class DoipEntityConfig(
     val localPort: Int = 13400,
     val broadcastEnabled: Boolean = true,
     val broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255"),
-    // TODO tlsEnabled, tlsPort, certificate chain?
     val tlsMode: TlsMode = TlsMode.DISABLED,
     val tlsPort: Int = 3496,
+    val tlsCert: File? = null,
+    val tlsKey: File? = null,
+    val tlsKeyPassword: String? = null,
     val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
     val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
 ) {
@@ -266,18 +272,19 @@ open class DoipEntity(
 
         thread(name = "UDP") {
             runBlocking {
-                val socket =
+                val serverSocket =
                     aSocket(ActorSelectorManager(Dispatchers.IO))
-                        .udp() // InetSocketAddress(config.localAddress, config.localPort)
-                        .bind(localAddress=InetSocketAddress(config.localAddress, 13400)) {
+                        .udp()
+                        .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
                             this.broadcast = true
 //                        socket.joinGroup(multicastAddress)
                         }
-                startVamTimer(socket)
+                logger.info("Listening on udp:${serverSocket.localAddress}")
+                startVamTimer(serverSocket)
                 val udpMessageHandler = createDoipUdpMessageHandler()
-                while (!socket.isClosed) {
-                    val datagram = socket.receive()
-                    handleUdpMessage(udpMessageHandler, datagram, socket)
+                while (!serverSocket.isClosed) {
+                    val datagram = serverSocket.receive()
+                    handleUdpMessage(udpMessageHandler, datagram, serverSocket)
                 }
             }
         }
@@ -288,6 +295,7 @@ open class DoipEntity(
                     aSocket(ActorSelectorManager(Dispatchers.IO))
                         .tcp()
                         .bind(InetSocketAddress(config.localAddress, config.localPort))
+                logger.info("Listening on tcp:${serverSocket.localAddress}")
                 while (!serverSocket.isClosed) {
                     val socket = serverSocket.accept()
                     handleTcpSocket(DelegatedKtorSocket(socket))
@@ -297,11 +305,29 @@ open class DoipEntity(
 
 // TLS with ktor-network doesn't work yet https://youtrack.jetbrains.com/issue/KTOR-694
         if (config.tlsMode != TlsMode.DISABLED) {
+            if (config.tlsCert?.exists() == false || config.tlsCert?.isFile == false) {
+                System.err.println("${config.tlsCert.absolutePath} doesn't exist")
+                exitProcess(-1)
+            } else if (config.tlsKey?.exists() == false || config.tlsKey?.isFile == false) {
+                System.err.println("${config.tlsKey.absolutePath} doesn't exist")
+                exitProcess(-1)
+            }
+
             thread(name = "TLS") {
                 runBlocking {
+                    val key = PemUtils.loadIdentityMaterial(Paths.get(config.tlsCert!!.toURI()), Paths.get(config.tlsKey!!.toURI()), config.tlsKeyPassword?.toCharArray())
+                    val sslFactory = SSLFactory.builder()
+                        .withIdentityMaterial(key)
+                        .build()
                     val tlsServerSocket = withContext(Dispatchers.IO) {
-                        SSLServerSocketFactory.getDefault().createServerSocket(config.tlsPort)
+                        (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, config.localAddress) as SSLServerSocket)
                     }
+                    logger.info("Listening on tls:${tlsServerSocket.localSocketAddress}")
+                    tlsServerSocket.enabledProtocols = tlsServerSocket.supportedProtocols.intersect(setOf("TLSv1.2", "TLSv1.3")).toTypedArray()
+                    tlsServerSocket.enabledCipherSuites = tlsServerSocket.enabledCipherSuites.intersect(TlsCipherSuitesTlsV1_2 + TlsCipherSuitesTlsV1_3).toTypedArray()
+
+                    logger.debug("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
+                    logger.debug("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
 
                     while (!tlsServerSocket.isClosed) {
                         val socket = withContext(Dispatchers.IO) { tlsServerSocket.accept() as SSLSocket }

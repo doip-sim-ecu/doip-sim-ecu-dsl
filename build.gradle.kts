@@ -21,6 +21,8 @@ dependencies {
 //    implementation("io.ktor:ktor-network-tls:$ktorVersion")
 //    implementation("io.ktor:ktor-network-tls-certificates:$ktorVersion")
     api("ch.qos.logback:logback-classic:1.2.10")
+    implementation("io.github.hakky54:sslcontext-kickstart:7.2.1")
+    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.2.1")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")

@@ -1,5 +1,6 @@
 import library.*
 import org.slf4j.MDC
+import java.io.File
 import java.net.InetAddress
 import kotlin.properties.Delegates
 
@@ -56,6 +57,9 @@ open class GatewayData(name: String) : RequestsData(name) {
 
     var tlsMode: TlsMode = TlsMode.DISABLED
     var tlsPort: Int = 3496
+    var tlsCert: File? = null
+    var tlsKey: File? = null
+    var tlsKeyPassword: String? = null
 
     private val _ecus: MutableList<EcuData> = mutableListOf()
 
@@ -85,6 +89,9 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         broadcastAddress = this.broadcastAddress,
         tlsMode = this.tlsMode,
         tlsPort = this.tlsPort,
+        tlsCert = this.tlsCert,
+        tlsKey = this.tlsKey,
+        tlsKeyPassword = this.tlsKeyPassword,
         // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
         vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it },
     )

@@ -8,6 +8,7 @@
     </appender>
 
     <logger name="library.SimulatedEcu" level="debug" />
+    <logger name="library.DoipEntity" level="debug" />
     <logger name="SimEcu" level="debug" />
 
     <root level="info">
