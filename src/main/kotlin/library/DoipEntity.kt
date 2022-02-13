@@ -324,6 +324,7 @@ open class DoipEntity(
                 runBlocking {
                     val key = PemUtils.loadIdentityMaterial(Paths.get(tlsOptions.tlsCert!!.toURI()), Paths.get(tlsOptions.tlsKey!!.toURI()), tlsOptions.tlsKeyPassword?.toCharArray())
                     val trustMaterial = PemUtils.loadTrustMaterial(Paths.get(tlsOptions.tlsCert.toURI()))
+
                     val sslFactory = SSLFactory.builder()
                         .withIdentityMaterial(key)
                         .withTrustMaterial(trustMaterial)
@@ -333,6 +334,7 @@ open class DoipEntity(
                         (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, config.localAddress) as SSLServerSocket)
                     }
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
+
                     val supportedProtocols = tlsServerSocket.supportedProtocols.toSet()
                     val supportedCipherSuites = tlsServerSocket.supportedCipherSuites.toSet()
                     // Use filter to retain order of protocols/ciphers
