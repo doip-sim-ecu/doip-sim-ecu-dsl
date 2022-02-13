@@ -126,6 +126,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
     protected open suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: OutputStream) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         if (message.activationType != 0x00.toByte() && message.activationType != 0x01.toByte()) {
+            logger.error("Routing activation for ${message.sourceAddress} denied (Unknown type: ${message.activationType})")
             output.writeFully(
                 DoipTcpRoutingActivationResponse(
                     message.sourceAddress,
@@ -133,8 +134,10 @@ open class DefaultDoipTcpConnectionMessageHandler(
                     DoipTcpRoutingActivationResponse.RC_ERROR_UNSUPPORTED_ACTIVATION_TYPE
                 ).message
             )
+            return
         } else {
             if (doipEntity.config.tlsMode == TlsMode.MANDATORY && socket.socketType != SocketType.TLS_DATA) {
+                logger.info("Routing activation for ${message.sourceAddress} denied (TLS required)")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(
                         message.sourceAddress,
@@ -150,6 +153,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
             }
 
             if (_registeredSourceAddress != message.sourceAddress) {
+                logger.error("Routing activation for ${message.sourceAddress} denied (Different source address already registered)")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(
                         message.sourceAddress,
@@ -158,6 +162,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                     ).message
                 )
             } else if (doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this)) {
+                logger.error("Routing activation for ${message.sourceAddress} denied (Has already an active connection)")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(
                         message.sourceAddress,
@@ -166,6 +171,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                     ).message
                 )
             } else {
+                logger.info("Routing activation for ${message.sourceAddress} was successful")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(
                         message.sourceAddress,

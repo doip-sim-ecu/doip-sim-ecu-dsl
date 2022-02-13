@@ -175,7 +175,7 @@ open class DoipEntity(
 
     protected open fun CoroutineScope.handleTcpSocket(socket: DoipTcpSocket) {
         launch {
-            logger.debugIf { "New incoming TCP connection from ${socket.remoteAddress}" }
+            logger.debugIf { "New incoming data connection from ${socket.remoteAddress}" }
             val tcpMessageHandler = createDoipTcpMessageHandler(socket)
             val input = socket.openReadChannel()
             val output = socket.openOutputStream()
@@ -316,13 +316,15 @@ open class DoipEntity(
             thread(name = "TLS") {
                 runBlocking {
                     val key = PemUtils.loadIdentityMaterial(Paths.get(config.tlsCert!!.toURI()), Paths.get(config.tlsKey!!.toURI()), config.tlsKeyPassword?.toCharArray())
+                    val trustMaterial = PemUtils.loadTrustMaterial(Paths.get(config.tlsCert.toURI()))
                     val sslFactory = SSLFactory.builder()
                         .withIdentityMaterial(key)
+                        .withTrustMaterial(trustMaterial)
                         .build()
                     val tlsServerSocket = withContext(Dispatchers.IO) {
                         (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, config.localAddress) as SSLServerSocket)
                     }
-                    logger.info("Listening on tls:${tlsServerSocket.localSocketAddress}")
+                    logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
                     tlsServerSocket.enabledProtocols = tlsServerSocket.supportedProtocols.intersect(setOf("TLSv1.2", "TLSv1.3")).toTypedArray()
                     tlsServerSocket.enabledCipherSuites = tlsServerSocket.enabledCipherSuites.intersect(TlsCipherSuitesTlsV1_2 + TlsCipherSuitesTlsV1_3).toTypedArray()
 
@@ -330,8 +332,10 @@ open class DoipEntity(
                     logger.debug("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
 
                     while (!tlsServerSocket.isClosed) {
-                        val socket = withContext(Dispatchers.IO) { tlsServerSocket.accept() as SSLSocket }
-                        handleTcpSocket(SSLDoipTcpSocket(socket))
+                        withContext(Dispatchers.IO) {
+                            val socket = tlsServerSocket.accept() as SSLSocket
+                            handleTcpSocket(SSLDoipTcpSocket(socket))
+                        }
                     }
                 }
             }

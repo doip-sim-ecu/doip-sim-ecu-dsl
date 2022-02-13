@@ -6,7 +6,9 @@ then
   exit 1
 fi
 
-openssl req -nodes -newkey rsa:2048 -keyout "$1.key" -out "$1.csr"
+# create csr for ecu
+openssl req -nodes -newkey ed25519 -keyout "$1.key" -out "$1.csr" -subj="/CN=$1"
+# sign csr with ca key
 openssl x509 -req -in "$1.csr" -days 2000 -CA ecu_ca.crt -CAkey ecu_ca.key -CAcreateserial -out "$1.crt"
 
 #cat ecu_ca.crt "$1.crt" > "$1-fullchain.crt"

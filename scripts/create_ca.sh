@@ -1,8 +1,9 @@
 #!/bin/sh
+rm ecu_ca.*
 # generate rsa key for the CA
-openssl genrsa -out ecu_ca.key 2048
+#openssl genpkey -algorithm ed25519 -out ecu_ca.key
 # generate self-signed certificate for the ca
-openssl req -new -x509 -days 6000 -key ecu_ca.key -out ecu_ca.crt -config ecu_ca.conf
+openssl req -nodes -new -newkey ed25519 -x509 -days 6000 -keyout ecu_ca.key -out ecu_ca.crt -subj "/CN=ECU-CA-Root"
 # extract der
 openssl x509 -in ecu_ca.crt -out ecu_ca.der -outform der
 # show

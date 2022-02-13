@@ -9,7 +9,7 @@ val TlsCipherSuitesTlsV1_2 =
         "TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8",
         "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
         "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA384",
-//        "TLS_ECDHE_ECDSA_WITH_NULL_SHA", -- only for development purposes
+//        "TLS_ECDHE_ECDSA_WITH_NULL_SHA", // only for development purposes
     )
 
 val TlsCipherSuitesTlsV1_3 =
