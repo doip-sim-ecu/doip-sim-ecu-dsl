@@ -306,9 +306,14 @@ open class RequestsData(
          */
         loglevel: LogLevel = LogLevel.DEBUG,
         /**
+         * Insert at top
+         */
+        insertAtTop: Boolean = false,
+        /**
          * Handler that is called when the request is matched
          */
-        response: RequestResponseHandler = {}): RequestMatcher {
+        response: RequestResponseHandler = {}
+    ): RequestMatcher {
         val req = RequestMatcher(
             name = name,
             requestBytes = request,
@@ -316,7 +321,11 @@ open class RequestsData(
             loglevel = loglevel,
             responseHandler = response
         )
-        requests.add(req)
+        if (insertAtTop) {
+            requests.add(0, req)
+        } else {
+            requests.add(req)
+        }
         return req
     }
 
@@ -345,9 +354,14 @@ open class RequestsData(
          */
         loglevel: LogLevel = LogLevel.DEBUG,
         /**
+         * Insert at top
+         */
+        insertAtTop: Boolean = false,
+        /**
          * Handler that is called when the request is matched
          */
-        response: RequestResponseHandler = {}): RequestMatcher {
+        response: RequestResponseHandler = {}
+    ): RequestMatcher {
         val req = RequestMatcher(
             name = name,
             requestBytes = null,
@@ -355,7 +369,11 @@ open class RequestsData(
             loglevel = loglevel,
             responseHandler = response
         )
-        requests.add(req)
+        if (insertAtTop) {
+            requests.add(0, req)
+        } else {
+            requests.add(req)
+        }
         return req
     }
 
@@ -384,13 +402,18 @@ open class RequestsData(
          */
         loglevel: LogLevel = LogLevel.DEBUG,
         /**
+         * Insert at top
+         */
+        insertAtTop: Boolean = false,
+        /**
          * Handler that is called when the request is matched
          */
-        response: RequestResponseHandler = {}) {
+        response: RequestResponseHandler = {}
+    ) {
         if (isRegex(reqHex)) {
-            request(regexifyRequestHex(reqHex), name, loglevel, response)
+            request(regexifyRequestHex(reqHex), name, loglevel, insertAtTop, response)
         } else {
-            request(reqHex.decodeHex(), name, loglevel, response)
+            request(reqHex.decodeHex(), name, loglevel, insertAtTop, response)
         }
     }
 
