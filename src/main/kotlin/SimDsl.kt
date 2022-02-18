@@ -1,6 +1,4 @@
-import library.UdsMessage
-import library.decodeHex
-import library.toHexString
+import library.*
 import java.util.*
 import kotlin.IllegalArgumentException
 import kotlin.time.Duration
@@ -468,6 +466,9 @@ fun stop() {
 }
 
 fun start() {
+    // -Djdk.tls.server.cipherSuites=TLS_ECDHE_ECDSA_WITH_NULL_SHA
+    System.setProperty("jdk.tls.server.cipherSuites", TlsCipherSuitesTlsV1_2.joinToString(",") + TlsCipherSuitesTlsV1_3.joinToString(","))
+    // java.security --  jdk.tls.disabledAlgorithms -- remove NULL
     gatewayInstances.addAll(gateways.map { SimGateway(it) })
 
     gatewayInstances.forEach { it.start() }

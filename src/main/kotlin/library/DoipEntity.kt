@@ -279,7 +279,7 @@ open class DoipEntity(
                             this.broadcast = true
 //                        socket.joinGroup(multicastAddress)
                         }
-                logger.info("Listening on udp:${serverSocket.localAddress}")
+                logger.info("Listening on udp: ${serverSocket.localAddress}")
                 startVamTimer(serverSocket)
                 val udpMessageHandler = createDoipUdpMessageHandler()
                 while (!serverSocket.isClosed) {
@@ -295,7 +295,7 @@ open class DoipEntity(
                     aSocket(ActorSelectorManager(Dispatchers.IO))
                         .tcp()
                         .bind(InetSocketAddress(config.localAddress, config.localPort))
-                logger.info("Listening on tcp:${serverSocket.localAddress}")
+                logger.info("Listening on tcp: ${serverSocket.localAddress}")
                 while (!serverSocket.isClosed) {
                     val socket = serverSocket.accept()
                     handleTcpSocket(DelegatedKtorSocket(socket))
@@ -326,7 +326,7 @@ open class DoipEntity(
                     }
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
                     tlsServerSocket.enabledProtocols = tlsServerSocket.supportedProtocols.intersect(setOf("TLSv1.2", "TLSv1.3")).toTypedArray()
-                    tlsServerSocket.enabledCipherSuites = tlsServerSocket.enabledCipherSuites.intersect(TlsCipherSuitesTlsV1_2 + TlsCipherSuitesTlsV1_3).toTypedArray()
+                    tlsServerSocket.enabledCipherSuites = tlsServerSocket.supportedCipherSuites.intersect(TlsCipherSuitesTlsV1_2 + TlsCipherSuitesTlsV1_3).toTypedArray()
 
                     logger.debug("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
                     logger.debug("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
