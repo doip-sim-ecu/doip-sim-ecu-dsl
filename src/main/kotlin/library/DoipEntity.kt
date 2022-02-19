@@ -36,6 +36,14 @@ enum class TlsMode {
     MANDATORY,
 }
 
+data class TlsOptions(
+    val tlsCert: File? = null,
+    val tlsKey: File? = null,
+    val tlsKeyPassword: String? = null,
+    val tlsCiphers: List<String>? = DefaultTlsCiphers,
+    val tlsProtocols: List<String>? = DefaultTlsProtocols,
+)
+
 open class DoipEntityConfig(
     val name: String,
     val logicalAddress: Short,
@@ -49,9 +57,7 @@ open class DoipEntityConfig(
     val broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255"),
     val tlsMode: TlsMode = TlsMode.DISABLED,
     val tlsPort: Int = 3496,
-    val tlsCert: File? = null,
-    val tlsKey: File? = null,
-    val tlsKeyPassword: String? = null,
+    val tlsOptions: TlsOptions = TlsOptions(),
     val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
     val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
 ) {
@@ -305,28 +311,33 @@ open class DoipEntity(
 
 // TLS with ktor-network doesn't work yet https://youtrack.jetbrains.com/issue/KTOR-694
         if (config.tlsMode != TlsMode.DISABLED) {
-            if (config.tlsCert?.exists() == false || config.tlsCert?.isFile == false) {
-                System.err.println("${config.tlsCert.absolutePath} doesn't exist")
+            val tlsOptions = config.tlsOptions
+            if (tlsOptions.tlsCert?.exists() == false || tlsOptions.tlsCert?.isFile == false) {
+                System.err.println("${tlsOptions.tlsCert.absolutePath} doesn't exist")
                 exitProcess(-1)
-            } else if (config.tlsKey?.exists() == false || config.tlsKey?.isFile == false) {
-                System.err.println("${config.tlsKey.absolutePath} doesn't exist")
+            } else if (tlsOptions.tlsKey?.exists() == false || tlsOptions.tlsKey?.isFile == false) {
+                System.err.println("${tlsOptions.tlsKey.absolutePath} doesn't exist")
                 exitProcess(-1)
             }
 
             thread(name = "TLS") {
                 runBlocking {
-                    val key = PemUtils.loadIdentityMaterial(Paths.get(config.tlsCert!!.toURI()), Paths.get(config.tlsKey!!.toURI()), config.tlsKeyPassword?.toCharArray())
-                    val trustMaterial = PemUtils.loadTrustMaterial(Paths.get(config.tlsCert.toURI()))
+                    val key = PemUtils.loadIdentityMaterial(Paths.get(tlsOptions.tlsCert!!.toURI()), Paths.get(tlsOptions.tlsKey!!.toURI()), tlsOptions.tlsKeyPassword?.toCharArray())
+                    val trustMaterial = PemUtils.loadTrustMaterial(Paths.get(tlsOptions.tlsCert.toURI()))
                     val sslFactory = SSLFactory.builder()
                         .withIdentityMaterial(key)
                         .withTrustMaterial(trustMaterial)
                         .build()
+
                     val tlsServerSocket = withContext(Dispatchers.IO) {
                         (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, config.localAddress) as SSLServerSocket)
                     }
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
-                    tlsServerSocket.enabledProtocols = tlsServerSocket.supportedProtocols.intersect(setOf("TLSv1.2", "TLSv1.3")).toTypedArray()
-                    tlsServerSocket.enabledCipherSuites = tlsServerSocket.supportedCipherSuites.intersect(TlsCipherSuitesTlsV1_2 + TlsCipherSuitesTlsV1_3).toTypedArray()
+                    val supportedProtocols = tlsServerSocket.supportedProtocols.toSet()
+                    val supportedCipherSuites = tlsServerSocket.supportedCipherSuites.toSet()
+                    // Use filter to retain order of protocols/ciphers
+                    tlsServerSocket.enabledProtocols = tlsOptions.tlsProtocols?.filter { supportedProtocols.contains(it) }?.toTypedArray()
+                    tlsServerSocket.enabledCipherSuites = tlsOptions.tlsCiphers?.filter { supportedCipherSuites.contains(it) }?.toTypedArray()
 
                     logger.debug("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
                     logger.debug("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
