@@ -1,13 +1,13 @@
 package library
 
 import io.ktor.utils.io.*
+import java.io.OutputStream
 
 open class DoipTcpMessage
 
 interface DoipTcpConnectionMessageHandler {
     suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage
-    suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel)
-    suspend fun isAutoFlushEnabled(): Boolean
+    suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream)
 
     fun getRegisteredSourceAddress(): Short?
 }
@@ -37,12 +37,13 @@ class DoipTcpRoutingActivationResponse(
     @Suppress("unused")
     companion object {
         const val RC_ERROR_UNKNOWN_SOURCE_ADDRESS: Byte = 0x00
-        const val RC_ERROR_TCP_DATA_SOCKETS_EXHAUSED: Byte = 0x01
+        const val RC_ERROR_TCP_DATA_SOCKETS_EXHAUSTED: Byte = 0x01
         const val RC_ERROR_DIFFERENT_SOURCE_ADDRESS: Byte = 0x02
         const val RC_ERROR_SOURCE_ADDRESS_ALREADY_ACTIVE: Byte = 0x03
         const val RC_ERROR_AUTHENTICATION_MISSING: Byte = 0x04
         const val RC_ERROR_CONFIRMATION_REJECTED: Byte = 0x05
         const val RC_ERROR_UNSUPPORTED_ACTIVATION_TYPE: Byte = 0x06
+        const val RC_ERROR_REQUIRES_TLS: Byte = 0x07
         const val RC_OK: Byte = 0x10
         const val RC_OK_REQUIRES_CONFIRMATION: Byte = 0x11
     }

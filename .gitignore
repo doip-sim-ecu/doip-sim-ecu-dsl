@@ -3,3 +3,8 @@ build
 .idea
 .gradle
 *.log
+*.crt
+*.csr
+*.key
+*.der
+*.srl

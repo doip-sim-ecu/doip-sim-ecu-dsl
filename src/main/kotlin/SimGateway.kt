@@ -54,6 +54,10 @@ open class GatewayData(name: String) : RequestsData(name) {
      */
     var eid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte entity identification (usually MAC)
 
+    var tlsMode: TlsMode = TlsMode.DISABLED
+    var tlsPort: Int = 3496
+    var tlsOptions: TlsOptions = TlsOptions()
+
     private val _ecus: MutableList<EcuData> = mutableListOf()
 
     val ecus: List<EcuData>
@@ -80,6 +84,9 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         logicalAddress = this.logicalAddress,
         broadcastEnabled = this.broadcastEnable,
         broadcastAddress = this.broadcastAddress,
+        tlsMode = this.tlsMode,
+        tlsPort = this.tlsPort,
+        tlsOptions = this.tlsOptions,
         // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
         vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it },
     )
