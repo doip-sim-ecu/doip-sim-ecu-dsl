@@ -39,6 +39,10 @@ java {
     withSourcesJar()
 }
 
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+}
+
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
