@@ -8,4 +8,4 @@ pluginManagement {
 
 rootProject.name = "doip-sim-ecu-dsl"
 
-//include("doip-sim-ecu-dsl-test")
+include("doip-sim-ecu-dsl-test")

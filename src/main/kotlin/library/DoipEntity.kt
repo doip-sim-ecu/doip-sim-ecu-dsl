@@ -341,11 +341,19 @@ open class DoipEntity(
                     }
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
 
-                    val supportedProtocols = tlsServerSocket.supportedProtocols.toSet()
-                    val supportedCipherSuites = tlsServerSocket.supportedCipherSuites.toSet()
-                    // Use filter to retain order of protocols/ciphers
-                    tlsServerSocket.enabledProtocols = tlsOptions.tlsProtocols?.filter { supportedProtocols.contains(it) }?.toTypedArray()
-                    tlsServerSocket.enabledCipherSuites = tlsOptions.tlsCiphers?.filter { supportedCipherSuites.contains(it) }?.toTypedArray()
+                    if (tlsOptions.tlsProtocols != null) {
+                        val supportedProtocols = tlsServerSocket.supportedProtocols.toSet()
+                        // Use filter to retain order of protocols/ciphers
+                        tlsServerSocket.enabledProtocols =
+                            tlsOptions.tlsProtocols.filter { supportedProtocols.contains(it) }.toTypedArray()
+                    }
+
+                    if (tlsOptions.tlsCiphers != null) {
+                        val supportedCipherSuites = tlsServerSocket.supportedCipherSuites.toSet()
+                        // Use filter to retain order of protocols/ciphers
+                        tlsServerSocket.enabledCipherSuites =
+                            tlsOptions.tlsCiphers.filter { supportedCipherSuites.contains(it) }.toTypedArray()
+                    }
 
                     logger.debug("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
                     logger.debug("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
