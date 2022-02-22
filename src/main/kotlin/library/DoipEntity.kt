@@ -312,17 +312,23 @@ open class DoipEntity(
 // TLS with ktor-network doesn't work yet https://youtrack.jetbrains.com/issue/KTOR-694
         if (config.tlsMode != TlsMode.DISABLED) {
             val tlsOptions = config.tlsOptions
-            if (tlsOptions.tlsCert?.exists() == false || tlsOptions.tlsCert?.isFile == false) {
-                System.err.println("${tlsOptions.tlsCert.absolutePath} doesn't exist")
+            if (tlsOptions.tlsCert == null) {
+                System.err.println("tlsCert is null")
                 exitProcess(-1)
-            } else if (tlsOptions.tlsKey?.exists() == false || tlsOptions.tlsKey?.isFile == false) {
-                System.err.println("${tlsOptions.tlsKey.absolutePath} doesn't exist")
+            } else if (tlsOptions.tlsKey == null) {
+                System.err.println("tlsKey is null")
+                exitProcess(-1)
+            } else if (!tlsOptions.tlsCert.isFile) {
+                System.err.println("${tlsOptions.tlsCert.absolutePath} doesn't exist or isn't a file")
+                exitProcess(-1)
+            } else if (!tlsOptions.tlsKey.isFile) {
+                System.err.println("${tlsOptions.tlsKey.absolutePath} doesn't exist or isn't a file")
                 exitProcess(-1)
             }
 
             thread(name = "TLS") {
                 runBlocking {
-                    val key = PemUtils.loadIdentityMaterial(Paths.get(tlsOptions.tlsCert!!.toURI()), Paths.get(tlsOptions.tlsKey!!.toURI()), tlsOptions.tlsKeyPassword?.toCharArray())
+                    val key = PemUtils.loadIdentityMaterial(Paths.get(tlsOptions.tlsCert.toURI()), Paths.get(tlsOptions.tlsKey.toURI()), tlsOptions.tlsKeyPassword?.toCharArray())
                     val trustMaterial = PemUtils.loadTrustMaterial(Paths.get(tlsOptions.tlsCert.toURI()))
 
                     val sslFactory = SSLFactory.builder()
