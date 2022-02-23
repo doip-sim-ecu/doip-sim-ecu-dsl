@@ -54,6 +54,12 @@ private val nibbleToHex = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8
 
 fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE, limitExceededSuffix: String = "..."): String {
     val len = min(limit, this.size)
+    if (len == 0) {
+        if (this.size > limit) {
+            return limitExceededSuffix
+        }
+        return ""
+    }
     val sb = StringBuilder((len * 2) + ((len - 1) * separator.length))
     for (i in 0 until len) {
         if (separator.isNotEmpty() && i > 0) {

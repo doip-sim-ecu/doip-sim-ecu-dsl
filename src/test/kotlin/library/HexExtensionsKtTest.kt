@@ -23,6 +23,7 @@ class HexExtensionsKtTest {
         assertEquals("0010", ba.toHexString("", limit = 2, limitExceededSuffix = ""))
         assertEquals("...", ba.toHexString("", limit = 0))
         assertEquals("", ba.toHexString("", limit = 0, limitExceededSuffix = ""))
+        assertEquals("", byteArrayOf().toHexString())
     }
 
     @Test
