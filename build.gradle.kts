@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.github.doip-sim-ecu"
-version = "0.6.0"
+version = "0.6.1"
 
 repositories {
     mavenCentral()
