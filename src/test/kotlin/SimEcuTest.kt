@@ -159,7 +159,7 @@ class SimEcuTest {
     }
 
     @Test
-    fun `test interceptor`() {
+    fun `test inbound interceptor`() {
         val ecu = spy(SimEcu(ecuData(name = "TEST")))
         verify(ecu, times(0)).sendResponse(any(), any())
         ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
@@ -195,6 +195,27 @@ class SimEcuTest {
         assertThat(beforeInterceptor).isTrue()
         assertThat(intercepted).isFalse() // expired
         assertThat(afterInterceptor).isTrue()
+    }
+
+    @Test
+    fun `test outbound interceptor`() {
+        val ecu = spy(SimEcu(ecuData(name = "TEST")))
+        verify(ecu, times(0)).sendResponse(any(), any())
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+
+        // sendResponse got called, because there's no interceptor and NRC was sent
+        verify(ecu, times(1)).sendResponse(any(), any())
+
+        var outboundInterceptorCalled = false
+        ecu.addOrReplaceEcuOutboundInterceptor("OUTBOUND", 1000.milliseconds) { outboundInterceptorCalled = true; false }
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+        verify(ecu, times(2)).sendResponse(any(), any())
+        assertThat(outboundInterceptorCalled).isTrue()
+        outboundInterceptorCalled = false
+        ecu.removeOutboundInterceptor("OUTBOUND")
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+        verify(ecu, times(3)).sendResponse(any(), any())
+        assertThat(outboundInterceptorCalled).isFalse()
     }
 
     @Test
