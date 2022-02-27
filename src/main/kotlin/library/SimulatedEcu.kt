@@ -1,5 +1,6 @@
 package library
 
+import NrcError
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
@@ -25,7 +26,7 @@ open class SimulatedEcu(val config: EcuConfig) {
     open fun handleRequestIfBusy(request: UdsMessage) {
         // Busy NRC
         logger.debugIf { "ECU $name is busy, sending busy-NRC" }
-        request.respond(byteArrayOf(0x7f, request.message[0], 0x21))
+        request.respond(byteArrayOf(0x7f, request.message[0], NrcError.BusyRepeatRequest))
     }
 
     /**

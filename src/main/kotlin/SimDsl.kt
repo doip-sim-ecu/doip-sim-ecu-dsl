@@ -5,12 +5,20 @@ import kotlin.time.Duration
 
 typealias RequestResponseData = ResponseData<RequestMatcher>
 typealias RequestResponseHandler = RequestResponseData.() -> Unit
-typealias InterceptorResponseData = ResponseData<InterceptorData>
-typealias InterceptorResponseHandler = InterceptorResponseData.(request: RequestMessage) -> Boolean
+typealias InterceptorRequestData = ResponseData<RequestInterceptorData>
+typealias InterceptorRequestHandler = InterceptorRequestData.(request: RequestMessage) -> Boolean
+typealias InterceptorResponseHandler = InterceptorResponseData.(response: ByteArray) -> Boolean
 typealias EcuDataHandler = EcuData.() -> Unit
 typealias GatewayDataHandler = GatewayData.() -> Unit
 typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
 typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
+
+class InterceptorResponseData(
+    caller: ResponseInterceptorData,
+    request: UdsMessage,
+    val responseMessage: ByteArray,
+    ecu: SimEcu
+) : ResponseData<ResponseInterceptorData>(caller, request, ecu)
 
 @Suppress("unused")
 object NrcError {
@@ -51,7 +59,7 @@ object NrcError {
     const val VoltageTooLow: Byte = 0x93.toByte()
 }
 
-open class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
+class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
     UdsMessage(
         udsMessage.sourceAddress,
         udsMessage.targetAddress,
@@ -62,7 +70,7 @@ open class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
 /**
  * Define the response to be sent after the function returns
  */
-open class ResponseData<out T : DataStorage>(
+open class ResponseData<T>(
     /**
      * The object that called this response handler (e.g. [RequestMatcher] or [InterceptorData])
      */
@@ -119,7 +127,7 @@ open class ResponseData<out T : DataStorage>(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
         alsoCallWhenEcuIsBusy: Boolean = false,
-        interceptor: InterceptorResponseHandler
+        interceptor: InterceptorRequestHandler
     ) =
         ecu.addOrReplaceEcuInterceptor(name, duration, alsoCallWhenEcuIsBusy, interceptor)
 
