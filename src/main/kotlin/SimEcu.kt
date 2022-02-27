@@ -75,7 +75,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                     )
                     if (it.value.interceptor.invoke(responseData, response)) {
                         if (responseData.continueMatching) {
-                            return false
+                            return@forEach
                         } else if (responseData.response.isNotEmpty()) {
                             runBlocking {
                                 request.respond(responseData.response)
@@ -118,7 +118,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                         )
                         if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
                             if (responseData.continueMatching) {
-                                return false
+                                return@forEach
                             } else if (responseData.response.isNotEmpty()) {
                                 runBlocking {
                                     sendResponse(request, responseData.response)

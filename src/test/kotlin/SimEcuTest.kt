@@ -207,15 +207,32 @@ class SimEcuTest {
         verify(ecu, times(1)).sendResponse(any(), any())
 
         var outboundInterceptorCalled = false
-        ecu.addOrReplaceEcuOutboundInterceptor("OUTBOUND", 1000.milliseconds) { outboundInterceptorCalled = true; false }
+        var outboundInterceptorCalled2 = false
+        ecu.addOrReplaceEcuOutboundInterceptor("OUTBOUND", 200.milliseconds) {
+            outboundInterceptorCalled = true
+            continueMatching()
+            true
+        }
+        ecu.addOrReplaceEcuOutboundInterceptor("OUTBOUND2", 200.milliseconds) {
+            outboundInterceptorCalled2 = true
+            true
+        }
         ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
         verify(ecu, times(2)).sendResponse(any(), any())
         assertThat(outboundInterceptorCalled).isTrue()
+        assertThat(outboundInterceptorCalled2).isTrue()
         outboundInterceptorCalled = false
+        outboundInterceptorCalled2 = false
         ecu.removeOutboundInterceptor("OUTBOUND")
         ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
         verify(ecu, times(3)).sendResponse(any(), any())
         assertThat(outboundInterceptorCalled).isFalse()
+        assertThat(outboundInterceptorCalled2).isTrue()
+        outboundInterceptorCalled2 = false
+        sleep(216)
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+        assertThat(outboundInterceptorCalled).isFalse()
+        assertThat(outboundInterceptorCalled2).isFalse()
     }
 
     @Test
