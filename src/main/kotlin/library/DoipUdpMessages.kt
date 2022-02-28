@@ -12,11 +12,13 @@ class DoipUdpHeaderNegAck(val code: Byte) : DoipUdpMessage() {
         const val NACK_INVALID_PAYLOAD_LENGTH: Byte = 4
     }
 
-    val message by lazy { doipMessage(TYPE_HEADER_NACK, code) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
 class DoipUdpVehicleInformationRequest : DoipUdpMessage() {
-    val message by lazy { doipMessage(TYPE_UDP_VIR) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_UDP_VIR)
 }
 
 class DoipUdpVehicleInformationRequestWithEid(val eid: EID) : DoipUdpMessage() {
@@ -25,7 +27,9 @@ class DoipUdpVehicleInformationRequestWithEid(val eid: EID) : DoipUdpMessage() {
             throw IllegalArgumentException("eid must be 6 bytes")
         }
     }
-    val message by lazy { doipMessage(TYPE_UDP_VIR_EID, *eid) }
+
+    val message: ByteArray
+        get() = doipMessage(TYPE_UDP_VIR_EID, *eid)
 }
 
 class DoipUdpVehicleInformationRequestWithVIN(val vin: VIN) : DoipUdpMessage() {
@@ -34,7 +38,9 @@ class DoipUdpVehicleInformationRequestWithVIN(val vin: VIN) : DoipUdpMessage() {
             throw IllegalArgumentException("vin must be 17 bytes")
         }
     }
-    val message by lazy { doipMessage(TYPE_UDP_VIR_VIN, *vin) }
+
+    val message: ByteArray
+        get() = doipMessage(TYPE_UDP_VIR_VIN, *vin)
 }
 
 class DoipUdpVehicleAnnouncementMessage(
@@ -57,22 +63,23 @@ class DoipUdpVehicleAnnouncementMessage(
         }
     }
 
-    val message by lazy {
-        doipMessage(
-            TYPE_UDP_VAM,
-            *vin,
-            (logicalAddress.toInt() shr 8).toByte(),
-            logicalAddress.toByte(),
-            *eid,
-            *gid,
-            furtherActionRequired,
-            syncStatus
-        )
-    }
+    val message: ByteArray
+        get() =
+            doipMessage(
+                TYPE_UDP_VAM,
+                *vin,
+                (logicalAddress.toInt() shr 8).toByte(),
+                logicalAddress.toByte(),
+                *eid,
+                *gid,
+                furtherActionRequired,
+                syncStatus
+            )
 }
 
 class DoipUdpEntityStatusRequest : DoipUdpMessage() {
-    val message by lazy { doipMessage(TYPE_UDP_ENTITY_STATUS_REQ) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_UDP_ENTITY_STATUS_REQ)
 }
 
 class DoipUdpEntityStatusResponse(
@@ -81,21 +88,23 @@ class DoipUdpEntityStatusResponse(
     val currentNumberOfSockets: Byte,
     val maxDataSize: Int
 ) : DoipUdpMessage() {
-    val message by lazy {
-        doipMessage(
-            TYPE_UDP_ENTITY_STATUS_RES,
-            nodeType,
-            numberOfSockets,
-            currentNumberOfSockets,
-            *maxDataSize.toByteArray()
-        )
-    }
+    val message: ByteArray
+        get() =
+            doipMessage(
+                TYPE_UDP_ENTITY_STATUS_RES,
+                nodeType,
+                numberOfSockets,
+                currentNumberOfSockets,
+                *maxDataSize.toByteArray()
+            )
 }
 
 class DoipUdpDiagnosticPowerModeRequest : DoipUdpMessage() {
-    val message by lazy { doipMessage(TYPE_UDP_DIAG_POWER_MODE_REQ) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_UDP_DIAG_POWER_MODE_REQ)
 }
 
 class DoipUdpDiagnosticPowerModeResponse(val diagPowerMode: Byte) : DoipUdpMessage() {
-    val message by lazy { doipMessage(TYPE_UDP_DIAG_POWER_MODE_RES, diagPowerMode) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_UDP_DIAG_POWER_MODE_RES, diagPowerMode)
 }

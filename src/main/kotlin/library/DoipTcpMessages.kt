@@ -15,7 +15,8 @@ interface DoipTcpConnectionMessageHandler {
 class DoipTcpHeaderNegAck(
     val code: Byte
 ) : DoipTcpMessage() {
-    val message by lazy { doipMessage(TYPE_HEADER_NACK, code) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
 class DoipTcpRoutingActivationRequest(
@@ -23,9 +24,14 @@ class DoipTcpRoutingActivationRequest(
     val activationType: Byte,
     val oemData: Int? = null
 ) : DoipTcpMessage() {
-    val message by lazy {
-        doipMessage(TYPE_TCP_ROUTING_REQ, *sourceAddress.toByteArray(), activationType, *(oemData?.toByteArray() ?: ByteArray(0)))
-    }
+    val message: ByteArray
+        get() =
+            doipMessage(
+                TYPE_TCP_ROUTING_REQ,
+                *sourceAddress.toByteArray(),
+                activationType,
+                *(oemData?.toByteArray() ?: ByteArray(0))
+            )
 }
 
 class DoipTcpRoutingActivationResponse(
@@ -47,24 +53,27 @@ class DoipTcpRoutingActivationResponse(
         const val RC_OK: Byte = 0x10
         const val RC_OK_REQUIRES_CONFIRMATION: Byte = 0x11
     }
-    val message by lazy {
-        doipMessage(
-            TYPE_TCP_ROUTING_RES,
-            *testerAddress.toByteArray(),
-            *entityAddress.toByteArray(),
-            responseCode,
-            0, 0, 0, 0, // Reserved for standardization use.
-            *(oemData?.toByteArray() ?: ByteArray(0))
-        )
-    }
+
+    val message: ByteArray
+        get() =
+            doipMessage(
+                TYPE_TCP_ROUTING_RES,
+                *testerAddress.toByteArray(),
+                *entityAddress.toByteArray(),
+                responseCode,
+                0, 0, 0, 0, // Reserved for standardization use.
+                *(oemData?.toByteArray() ?: ByteArray(0))
+            )
 }
 
 class DoipTcpAliveCheckRequest : DoipTcpMessage() {
-    val message by lazy { doipMessage(TYPE_TCP_ALIVE_REQ) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_TCP_ALIVE_REQ)
 }
 
 class DoipTcpAliveCheckResponse(val sourceAddress: Short) : DoipTcpMessage() {
-    val message by lazy { doipMessage(TYPE_TCP_ALIVE_RES) }
+    val message: ByteArray
+        get() = doipMessage(TYPE_TCP_ALIVE_RES)
 }
 
 class DoipTcpDiagMessage(
@@ -72,11 +81,11 @@ class DoipTcpDiagMessage(
     val targetAddress: Short,
     val payload: ByteArray
 ) : DoipTcpMessage() {
-    val message by lazy {
-        doipMessage(
-            TYPE_TCP_DIAG_MESSAGE, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), *payload
-        )
-    }
+    val message: ByteArray
+        get() =
+            doipMessage(
+                TYPE_TCP_DIAG_MESSAGE, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), *payload
+            )
 }
 
 class DoipTcpDiagMessagePosAck(
@@ -85,7 +94,10 @@ class DoipTcpDiagMessagePosAck(
     val ackCode: Byte,
     val payload: ByteArray = ByteArray(0)
 ) : DoipTcpMessage() {
-    val message by lazy { doipMessage(TYPE_TCP_DIAG_MESSAGE_POS_ACK, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), ackCode, *payload) }
+    val message: ByteArray
+        get() = doipMessage(
+            TYPE_TCP_DIAG_MESSAGE_POS_ACK, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), ackCode, *payload
+        )
 }
 
 class DoipTcpDiagMessageNegAck(
@@ -104,5 +116,13 @@ class DoipTcpDiagMessageNegAck(
         const val NACK_CODE_UNKNOWN_NETWORK: Byte = 0x07
         const val NACK_CODE_TRANSPORT_PROTOCOL_ERROR: Byte = 0x08
     }
-    val message by lazy { doipMessage(TYPE_TCP_DIAG_MESSAGE_NEG_ACK, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), nackCode, *payload) }
+
+    val message: ByteArray
+        get() = doipMessage(
+            TYPE_TCP_DIAG_MESSAGE_NEG_ACK,
+            *sourceAddress.toByteArray(),
+            *targetAddress.toByteArray(),
+            nackCode,
+            *payload
+        )
 }

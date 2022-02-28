@@ -163,7 +163,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
             return
         }
 
-        val normalizedRequest by lazy { request.message.toHexString("", limit = data.requestRegexMatchBytes, limitExceededSuffix = "") }
+        val normalizedRequest = request.message.toHexString("", limit = data.requestRegexMatchBytes, limitExceededSuffix = "")
 
         logger.traceIf { "Incoming request for $name (${request.targetAddress}) - ${request.message.toHexString()}" }
 
