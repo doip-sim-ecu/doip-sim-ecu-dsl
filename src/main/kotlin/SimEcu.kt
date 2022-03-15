@@ -190,6 +190,10 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
             val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             try {
                 requestIter.responseHandler.invoke(responseData)
+            } catch (e: NrcException) {
+                val response = byteArrayOf(0x7F, request.message[0], e.code)
+                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${response.toHexString(limit = 10)}'" }
+                sendResponse(request, response)
             } catch (e: Exception) {
                 logger.errorIf(e) { "An error occurred while processing a request for $name: '${request.message.toHexString(limit = 10)}'  -> Sending NRC" }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))

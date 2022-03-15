@@ -419,6 +419,23 @@ class SimEcuTest {
         }
     }
 
+    @Test
+    fun `test nrc exception`() {
+        val ecu = spy(SimEcu(ecuData(
+            name = "TEST",
+            requests = listOf(
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                  throw NrcException(0x99.toByte())
+                },
+            )
+        )))
+        ecu.handleRequest(req(byteArrayOf(0x3e, 0x00)))
+
+        val captor: KArgumentCaptor<ByteArray> = argumentCaptor()
+        verify(ecu, times(1)).sendResponse(any(), captor.capture())
+        assertThat(captor.firstValue).containsExactly(0x7F, 0x3E, 0x99.toByte())
+    }
+
     private fun ecuData(
         name: String,
         physicalAddress: Short = 0x0001,

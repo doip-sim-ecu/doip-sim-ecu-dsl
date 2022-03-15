@@ -1,12 +1,13 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.allopen")
+    id("com.github.jk1.dependency-license-report") version "2.1"
     `maven-publish`
     `java-library`
 }
 
 group = "com.github.doip-sim-ecu"
-version = "0.7.0"
+version = "0.7.1"
 
 repositories {
     mavenCentral()
@@ -19,7 +20,9 @@ dependencies {
 
     api("io.ktor:ktor-network:$ktorVersion") // Apache-2.0
 
-    api("ch.qos.logback:logback-classic:1.2.10") // EPL-1.0
+    api("ch.qos.logback:logback-classic:1.2.11") // EPL-1.0
+
+    implementation("org.apache.commons:commons-collections4:4.4")
 
     implementation("io.github.hakky54:sslcontext-kickstart:7.2.1") // Apache-2.0
     implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.2.1") // Apache-2.0
@@ -53,6 +56,13 @@ publishing {
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+}
+
+licenseReport {
+    outputDir = "$projectDir/build/licenses"
+    projects = arrayOf(project, *project.subprojects.toTypedArray())
+    configurations = arrayOf("runtimeClasspath")
+    renderers = arrayOf(com.github.jk1.license.render.JsonReportRenderer("licenses.json", true))
 }
 
 allOpen {

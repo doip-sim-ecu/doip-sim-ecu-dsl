@@ -20,6 +20,8 @@ class InterceptorResponseData(
     ecu: SimEcu
 ) : ResponseData<ResponseInterceptorData>(caller, request, ecu)
 
+open class NrcException(val code: Byte): Exception()
+
 @Suppress("unused")
 object NrcError {
     // Common Response Codes
