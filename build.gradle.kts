@@ -1,13 +1,13 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.allopen")
-    id("com.github.jk1.dependency-license-report") version "2.1"
+//    id("com.github.jk1.dependency-license-report") version "2.1"
     `maven-publish`
     `java-library`
 }
 
 group = "com.github.doip-sim-ecu"
-version = "0.7.1"
+version = "0.7.2"
 
 repositories {
     mavenCentral()
@@ -58,12 +58,12 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-licenseReport {
-    outputDir = "$projectDir/build/licenses"
-    projects = arrayOf(project, *project.subprojects.toTypedArray())
-    configurations = arrayOf("runtimeClasspath")
-    renderers = arrayOf(com.github.jk1.license.render.JsonReportRenderer("licenses.json", true))
-}
+//licenseReport {
+//    outputDir = "$projectDir/build/licenses"
+//    projects = arrayOf(project, *project.subprojects.toTypedArray())
+//    configurations = arrayOf("runtimeClasspath")
+//    renderers = arrayOf(com.github.jk1.license.render.JsonReportRenderer("licenses.json", true))
+//}
 
 allOpen {
     annotation("helper.Open")

@@ -116,14 +116,26 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                             request = request,
                             ecu = this
                         )
-                        if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
-                            if (responseData.continueMatching) {
-                                return@forEach
-                            } else if (responseData.response.isNotEmpty()) {
-                                runBlocking {
-                                    sendResponse(request, responseData.response)
+                        try {
+                            if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
+                                if (responseData.continueMatching) {
+                                    logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10)}' handled by interceptor -> Continue matching" }
+                                    return@forEach
+                                } else if (responseData.response.isNotEmpty()) {
+                                    logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' handled by interceptor -> ${responseData.response.toHexString(limit = 10)}" }
+                                    runBlocking {
+                                        sendResponse(request, responseData.response)
+                                    }
                                 }
+                                return true
                             }
+                        } catch (e: NrcException) {
+                            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' handled by interceptor -> NRC ${e.code.toString(16)}" }
+                            sendResponse(request, byteArrayOf(0x7F, request.message[0], e.code))
+                            return true
+                        } catch (e: Exception) {
+                            logger.error("Error while processing interceptor ${it.value.name}", e)
+                            sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralReject))
                             return true
                         }
                     }
