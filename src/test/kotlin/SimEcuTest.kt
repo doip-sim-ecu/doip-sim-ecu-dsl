@@ -10,6 +10,7 @@ import org.mockito.kotlin.*
 import java.io.ByteArrayOutputStream
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 class SimEcuTest {
@@ -436,11 +437,32 @@ class SimEcuTest {
         assertThat(captor.firstValue).containsExactly(0x7F, 0x3E, 0x99.toByte())
     }
 
+    @Test
+    fun `test pending for`() {
+        val ecu = spy(SimEcu(ecuData(
+            name = "TEST",
+            requests = listOf(
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                    ack(pendingFor = 950.milliseconds)
+                },
+            )
+        )))
+        ecu.handleRequest(req(byteArrayOf(0x3e, 0x00)))
+
+        val captor: KArgumentCaptor<ByteArray> = argumentCaptor()
+        verify(ecu, times(10)).sendResponse(any(), captor.capture())
+        for (i in 0 until 9) {
+            assertThat(captor.allValues[i]).containsExactly(0x7F, 0x3E, 0x78.toByte())
+        }
+        assertThat(captor.lastValue).containsExactly(0x7e, 0x00)
+    }
+
     private fun ecuData(
         name: String,
         physicalAddress: Short = 0x0001,
         functionalAddress: Short = 0x0002,
         nrcOnNoMatch: Boolean = true,
+        pendingNrcSendInterval: Duration = 100.milliseconds,
         requests: List<RequestMatcher> = emptyList()
     ): EcuData =
         EcuData(
@@ -448,7 +470,8 @@ class SimEcuTest {
             physicalAddress = physicalAddress,
             functionalAddress = functionalAddress,
             nrcOnNoMatch = nrcOnNoMatch,
-            requests = requests
+            requests = requests,
+            pendingNrcSendInterval = pendingNrcSendInterval,
         )
 
     private fun req(

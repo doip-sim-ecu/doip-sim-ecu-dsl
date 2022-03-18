@@ -2,6 +2,8 @@ import library.*
 import org.slf4j.MDC
 import java.net.InetAddress
 import kotlin.properties.Delegates
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 open class GatewayData(name: String) : RequestsData(name) {
     /**
@@ -54,6 +56,11 @@ open class GatewayData(name: String) : RequestsData(name) {
      */
     var eid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte entity identification (usually MAC)
 
+    /**
+     * Interval between sending pending NRC messages (0x78)
+     */
+    var pendingNrcSendInterval: Duration = 2.seconds
+
     var tlsMode: TlsMode = TlsMode.DISABLED
     var tlsPort: Int = 3496
     var tlsOptions: TlsOptions = TlsOptions()
@@ -84,6 +91,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         logicalAddress = this.logicalAddress,
         broadcastEnabled = this.broadcastEnable,
         broadcastAddress = this.broadcastAddress,
+        pendingNrcSendInterval = this.pendingNrcSendInterval,
         tlsMode = this.tlsMode,
         tlsPort = this.tlsPort,
         tlsOptions = this.tlsOptions,
@@ -95,7 +103,8 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
     val gatewayEcuConfig = EcuConfig(
         name = this.name,
         physicalAddress = this.logicalAddress,
-        functionalAddress = this.functionalAddress
+        functionalAddress = this.functionalAddress,
+        pendingNrcSendInterval = this.pendingNrcSendInterval,
     )
     config.ecuConfigList.add(gatewayEcuConfig)
 
@@ -120,6 +129,7 @@ class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfi
                 resetHandler = data.resetHandler,
                 requestRegexMatchBytes = data.requestRegexMatchBytes,
                 ackBytesLengthMap = data.ackBytesLengthMap,
+                pendingNrcSendInterval = data.pendingNrcSendInterval,
             )
             return SimEcu(ecu)
         }

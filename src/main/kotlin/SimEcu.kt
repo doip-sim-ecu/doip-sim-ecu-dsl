@@ -28,7 +28,8 @@ fun EcuData.toEcuConfig(): EcuConfig =
     EcuConfig(
         name = name,
         physicalAddress = physicalAddress,
-        functionalAddress = functionalAddress
+        functionalAddress = functionalAddress,
+        pendingNrcSendInterval = pendingNrcSendInterval,
     )
 
 

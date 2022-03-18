@@ -19,6 +19,7 @@ import javax.net.ssl.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.seconds
 
 typealias GID = ByteArray
 typealias EID = ByteArray
@@ -44,6 +45,7 @@ data class TlsOptions(
     val tlsProtocols: List<String>? = DefaultTlsProtocols,
 )
 
+@Suppress("unused")
 open class DoipEntityConfig(
     val name: String,
     val logicalAddress: Short,
@@ -55,6 +57,7 @@ open class DoipEntityConfig(
     val localPort: Int = 13400,
     val broadcastEnabled: Boolean = true,
     val broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255"),
+    val pendingNrcSendInterval: kotlin.time.Duration = 2.seconds,
     val tlsMode: TlsMode = TlsMode.DISABLED,
     val tlsPort: Int = 3496,
     val tlsOptions: TlsOptions = TlsOptions(),
