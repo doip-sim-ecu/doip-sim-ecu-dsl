@@ -1,8 +1,5 @@
 import assertk.assertThat
-import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import assertk.assertions.isFalse
-import assertk.assertions.isTrue
+import assertk.assertions.*
 import library.UdsMessage
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -450,11 +447,13 @@ class SimEcuTest {
         ecu.handleRequest(req(byteArrayOf(0x3e, 0x00)))
 
         val captor: KArgumentCaptor<ByteArray> = argumentCaptor()
-        verify(ecu, times(10)).sendResponse(any(), captor.capture())
-        for (i in 0 until 9) {
-            assertThat(captor.allValues[i]).containsExactly(0x7F, 0x3E, 0x78.toByte())
+        verify(ecu, atLeast(10)).sendResponse(any(), captor.capture())
+        val values = captor.allValues
+        for (i in 0 until values.size - 1) {
+            assertThat(values[i]).containsExactly(0x7F, 0x3E, 0x78.toByte())
         }
         assertThat(captor.lastValue).containsExactly(0x7e, 0x00)
+        assertThat(values.size).isBetween(10, 11)
     }
 
     private fun ecuData(
