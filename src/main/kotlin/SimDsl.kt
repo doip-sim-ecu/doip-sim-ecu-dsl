@@ -29,7 +29,7 @@ object NrcError {
     const val ServiceNotSupported: Byte = 0x11
     const val SubFunctionNotSupported: Byte = 0x12
     const val IncorrectMessageLengthOrInvalidFormat: Byte = 0x13
-    const val ResponseTooLong: Byte = 0x04
+    const val ResponseTooLong: Byte = 0x14
 
     const val BusyRepeatRequest: Byte = 0x21
     const val ConditionsNotCorrect: Byte = 0x22
@@ -41,10 +41,29 @@ object NrcError {
     const val RequestOutOfRange: Byte = 0x31
 
     const val SecurityAccessDenied: Byte = 0x33
+    const val AuthenticationRequired: Byte = 0x34
 
     const val InvalidKey: Byte = 0x35
     const val ExceededNumberOfAttempts: Byte = 0x36
     const val RequiredTimeDelayNotExpired: Byte = 0x37
+    const val SecureDataTransmissionRequired: Byte = 0x38
+    const val SecureDataTransmissionNotAllowed = 0x39
+    const val SecureDataVerificationFailed = 0x3a
+
+    const val CertificateVerificationFailedInvalidTimePeriod = 0x50
+    const val CertificateVerificationFailedInvalidSignature = 0x51
+    const val CertificateVerificationFailedInvalidChainOfTrust = 0x52
+    const val CertificateVerificationFailedInvalidType = 0x53
+    const val CertificateVerificationFailedInvalidFormat = 0x54
+    const val CertificateVerificationFailedInvalidContent = 0x55
+    const val CertificateVerificationFailedInvalidScope = 0x56
+    const val CertificateVerificationFailedInvalidCertRevoked = 0x57
+    const val OwnershipVerificationFailed = 0x58
+    const val ChallengeCalculationFailed = 0x59
+    const val SettingAccessRightsFailed = 0x5a
+    const val SessionKeyCreationDerivationFailed = 0x5b
+    const val ConfigurationDataUsageFailed = 0x5c
+    const val DeAuthenticationFailed = 0x5d
 
     const val UploadDownloadNotAccepted: Byte = 0x70
     const val TransferDataSuspended: Byte = 0x71
@@ -56,9 +75,25 @@ object NrcError {
     const val SubFunctionNotSupportedInActiveSession: Byte = 0x7E
     const val ServiceNotSupportedInActiveSession: Byte = 0x7F
 
-    // Condition driven
+    const val RpmTooHigh = 0x81.toByte()
+    const val RpmTooLow = 0x82.toByte()
+    const val EngineIsRunning = 0x84.toByte()
+    const val EngineRunTimeTooLow = 0x85.toByte()
+    const val TemperatureTooHigh = 0x86.toByte()
+    const val TemperatureTooLow = 0x87.toByte()
+    const val VehicleSpeedToHigh = 0x88.toByte()
+    const val VehicleSpeedTooLow = 0x89.toByte()
+    const val ThrottleOrPedalTooHigh = 0x8a.toByte()
+    const val ThrottleOrPedalTooLow = 0x8b.toByte()
+    const val TransmissionRangeNotInNeutral = 0x8c.toByte()
+    const val TransmissionRangeNotInGear = 0x8d.toByte()
+
+    const val BrakeSwitchesNotClosed = 0x8f.toByte()
+
+    const val TorqueConvertedClutchLocked = 0x91.toByte()
     const val VoltageTooHigh: Byte = 0x92.toByte()
     const val VoltageTooLow: Byte = 0x93.toByte()
+    const val ResourceTemporarilyNotAvailable = 0x94.toByte()
 }
 
 class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
