@@ -26,7 +26,7 @@ dependencies {
 
     implementation("io.github.hakky54:sslcontext-kickstart:7.2.1") // Apache-2.0
     implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.2.1") // Apache-2.0
-    implementation("org.bouncycastle:bctls-jdk15on:1.70")
+    implementation("org.bouncycastle:bctls-jdk15on:1.70") // Bouncy Castle Licence (~MIT)
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
