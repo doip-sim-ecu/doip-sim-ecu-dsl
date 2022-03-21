@@ -15,6 +15,7 @@ typealias GatewayDataHandler = GatewayData.() -> Unit
 typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
 typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
 
+@Suppress("unused")
 class InterceptorResponseData(
     caller: ResponseInterceptorData,
     request: UdsMessage,
@@ -182,6 +183,11 @@ open class ResponseData<T>(
             val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
             while (System.currentTimeMillis() < end) {
                 ecu.sendResponse(request, pending)
+                if (caller is RequestMatcher) {
+                    ecu.logger.logForRequest(caller) { "Request for ${ecu.name}: '${request.message.toHexString(limit = 10)}' matched '$caller' -> Pending '${pending.toHexString(limit = 10)}'" }
+                } else {
+                    ecu.logger.debugIf { "Request for ${ecu.name}: '${request.message.toHexString(limit = 10)}' matched '$caller' -> Pending '${pending.toHexString(limit = 10)}'" }
+                }
                 if (end - System.currentTimeMillis() < ecu.config.pendingNrcSendInterval.inWholeMilliseconds) {
                     sleep(end - System.currentTimeMillis())
                 } else {
@@ -523,11 +529,13 @@ fun reset() {
     gatewayInstances.forEach { it.reset() }
 }
 
+@Suppress("unused")
 fun stop() {
 //    gatewayInstances.forEach { it.stop() }
     gatewayInstances.clear()
 }
 
+@Suppress("unused")
 fun start() {
     gatewayInstances.addAll(gateways.map { SimGateway(it) })
 
