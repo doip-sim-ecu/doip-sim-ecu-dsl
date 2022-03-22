@@ -1,5 +1,4 @@
 import library.*
-import java.lang.Thread.sleep
 import java.util.*
 import kotlin.IllegalArgumentException
 import kotlin.time.Duration
@@ -143,8 +142,16 @@ open class ResponseData<T>(
     val continueMatching
         get() = _continueMatching
 
+    val pendingFor: Duration?
+        get() = _pendingFor
+
+    val pendingForCallback: () -> Unit
+        get() = _pendingForCallback
+
     private var _response: ByteArray = ByteArray(0)
     private var _continueMatching: Boolean = false
+    private var _pendingFor: Duration? = null
+    private var _pendingForCallback: () -> Unit = {}
 
     /**
      * See [SimEcu.addOrReplaceTimer]
@@ -177,29 +184,12 @@ open class ResponseData<T>(
     fun removeEcuInterceptor(name: String) =
         ecu.removeInterceptor(name)
 
-    fun respond(responseHex: ByteArray, pendingFor: Duration? = null) {
-        if (pendingFor != null) {
-            val pending = byteArrayOf(0x7f, request.message[0], NrcError.RequestCorrectlyReceivedButResponseIsPending)
-            val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
-            while (System.currentTimeMillis() < end) {
-                ecu.sendResponse(request, pending)
-                if (caller is RequestMatcher) {
-                    ecu.logger.logForRequest(caller) { "Request for ${ecu.name}: '${request.message.toHexString(limit = 10)}' matched '$caller' -> Pending '${pending.toHexString(limit = 10)}'" }
-                } else {
-                    ecu.logger.debugIf { "Request for ${ecu.name}: '${request.message.toHexString(limit = 10)}' matched '$caller' -> Pending '${pending.toHexString(limit = 10)}'" }
-                }
-                if (end - System.currentTimeMillis() < ecu.config.pendingNrcSendInterval.inWholeMilliseconds) {
-                    sleep(end - System.currentTimeMillis())
-                } else {
-                    sleep(ecu.config.pendingNrcSendInterval.inWholeMilliseconds)
-                }
-            }
-        }
+    fun respond(responseHex: ByteArray) {
         _response = responseHex
     }
 
-    fun respond(responseHex: String, pendingFor: Duration? = null) =
-        respond(responseHex.decodeHex(), pendingFor)
+    fun respond(responseHex: String) =
+        respond(responseHex.decodeHex())
 
     /**
      * Acknowledge a request with the given payload. The first nrOfRequestBytes
@@ -207,10 +197,13 @@ open class ResponseData<T>(
      *
      * nrOfRequestBytes is the total number of bytes (including SID + 0x40)
      */
-    fun ack(payload: ByteArray = ByteArray(0), nrOfRequestBytes: Int, pendingFor: Duration? = null) =
+    fun ack(payload: ByteArray = ByteArray(0), nrOfRequestBytes: Int) =
         respond(
-            byteArrayOf((message[0] + 0x40.toByte()).toByte(), *message.copyOfRange(1, nrOfRequestBytes)) + payload,
-            pendingFor
+            byteArrayOf(
+                (message[0] + 0x40.toByte()).toByte(),
+                *message.copyOfRange(1, nrOfRequestBytes),
+                *payload
+            )
         )
 
     /**
@@ -220,8 +213,8 @@ open class ResponseData<T>(
      * payload must be a hex-string.
      * nrOfRequestBytes is the total number of bytes (including SID + 0x40)
      */
-    fun ack(payload: String, nrOfRequestBytes: Int, pendingFor: Duration? = null) =
-        ack(payload.decodeHex(), nrOfRequestBytes, pendingFor)
+    fun ack(payload: String, nrOfRequestBytes: Int) =
+        ack(payload.decodeHex(), nrOfRequestBytes)
 
     /**
      * Acknowledge a request with the given payload.
@@ -229,8 +222,8 @@ open class ResponseData<T>(
      * The first n bytes are automatically prefixed, depending on which service
      * is responded to (see [RequestsData.ackBytesLengthMap])
      */
-    fun ack(payload: String, pendingFor: Duration? = null) =
-        ack(payload, ecu.ackBytesMap[message[0]] ?: 2, pendingFor)
+    fun ack(payload: String) =
+        ack(payload, ecu.ackBytesMap[message[0]] ?: 2)
 
     /**
      * Acknowledge a request with the given payload.
@@ -238,20 +231,25 @@ open class ResponseData<T>(
      * The first n bytes are automatically prefixed, depending on which service
      * is responded to (see [RequestsData.ackBytesLengthMap])
      */
-    fun ack(payload: ByteArray = ByteArray(0), pendingFor: Duration? = null) =
-        ack(payload, ecu.ackBytesMap[message[0]] ?: 2, pendingFor)
+    fun ack(payload: ByteArray = ByteArray(0)) =
+        ack(payload, ecu.ackBytesMap[message[0]] ?: 2)
 
     /**
      * Send a negative response code (NRC) in response to the request
      */
-    fun nrc(code: Byte = NrcError.GeneralReject, pendingFor: Duration? = null) =
-        respond(byteArrayOf(0x7F, message[0], code), pendingFor)
+    fun nrc(code: Byte = NrcError.GeneralReject) =
+        respond(byteArrayOf(0x7F, message[0], code))
 
     /**
      * Don't send any responses/acknowledgement, and continue matching
      */
     fun continueMatching(continueMatching: Boolean = true) {
         _continueMatching = continueMatching
+    }
+
+    fun pendingFor(duration: Duration, callback: () -> Unit = {}) {
+        _pendingFor = duration
+        _pendingForCallback = callback
     }
 }
 

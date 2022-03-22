@@ -436,11 +436,15 @@ class SimEcuTest {
 
     @Test
     fun `test pending for`() {
+        var invokeAfterCalled = false
         val ecu = spy(SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
                 RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
-                    ack(pendingFor = 950.milliseconds)
+                    pendingFor(950.milliseconds) {
+                        invokeAfterCalled = true
+                    }
+                    ack()
                 },
             )
         )))
@@ -454,6 +458,7 @@ class SimEcuTest {
         }
         assertThat(captor.lastValue).containsExactly(0x7e, 0x00)
         assertThat(values.size).isBetween(10, 11)
+        assertThat(invokeAfterCalled).isTrue()
     }
 
     private fun ecuData(

@@ -68,21 +68,29 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         synchronized (this.outboundInterceptors) {
             this.outboundInterceptors.forEach {
                 if (!it.value.isExpired()) {
-                    val responseData = InterceptorResponseData(
-                        caller = it.value,
-                        request = request,
-                        responseMessage = response,
-                        ecu = this
-                    )
-                    if (it.value.interceptor.invoke(responseData, response)) {
-                        if (responseData.continueMatching) {
-                            return@forEach
-                        } else if (responseData.response.isNotEmpty()) {
-                            runBlocking {
-                                request.respond(responseData.response)
+                    try {
+                        val responseData = InterceptorResponseData(
+                            caller = it.value,
+                            request = request,
+                            responseMessage = response,
+                            ecu = this
+                        )
+                        if (it.value.interceptor.invoke(responseData, response)) {
+                            if (responseData.pendingFor != null) {
+                                throw UnsupportedOperationException("Outbound interceptors don't support pendingFor (yet)")
                             }
+                            if (responseData.continueMatching) {
+                                return@forEach
+                            } else if (responseData.response.isNotEmpty()) {
+                                runBlocking {
+                                    // Must directly send the response, otherwise we'd have an infinite loop
+                                    request.respond(responseData.response)
+                                }
+                            }
+                            return true
                         }
-                        return true
+                    } catch (e: Exception) {
+                        logger.error("Request for $name: '${request.message.toHexString(limit = 10)}' -> Error while processing outbound interceptors for response '${response.toHexString(limit = 10)}'")
                     }
                 } else {
                     hasExpiredEntries = true
@@ -99,6 +107,27 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
         }
 
         return false
+    }
+
+    private fun handlePending(request: UdsMessage, responseData: ResponseData<RequestMatcher>) {
+        val pendingFor = responseData.pendingFor ?: return
+
+        val pending = byteArrayOf(0x7f, request.message[0], NrcError.RequestCorrectlyReceivedButResponseIsPending)
+        val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
+        while (System.currentTimeMillis() < end) {
+            sendResponse(request, pending)
+            logger.logForRequest(responseData.caller) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '${responseData.caller}' -> Pending '${pending.toHexString(limit = 10)}'" }
+            if (end - System.currentTimeMillis() <= config.pendingNrcSendInterval.inWholeMilliseconds) {
+                Thread.sleep(end - System.currentTimeMillis())
+            } else {
+                Thread.sleep(config.pendingNrcSendInterval.inWholeMilliseconds)
+            }
+        }
+        try {
+            responseData.pendingForCallback.invoke()
+        } catch (e: Exception) {
+            logger.error("Request for $name: '${request.message.toHexString(limit = 10)}' matched '${responseData.caller}' -> Error while invoking pending-callback-handler", e)
+        }
     }
 
     private fun handleInboundInterceptors(request: UdsMessage, busy: Boolean): Boolean {
@@ -204,6 +233,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
             try {
                 requestIter.responseHandler.invoke(responseData)
             } catch (e: NrcException) {
+                handlePending(request, responseData)
                 val response = byteArrayOf(0x7F, request.message[0], e.code)
                 logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${response.toHexString(limit = 10)}'" }
                 sendResponse(request, response)
@@ -213,6 +243,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))
                 return
             }
+            handlePending(request, responseData)
             if (responseData.continueMatching) {
                 logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
                 continue
