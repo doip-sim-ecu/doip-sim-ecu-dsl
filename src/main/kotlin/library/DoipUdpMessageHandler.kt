@@ -140,7 +140,7 @@ interface DoipUdpMessageHandler {
         logger.traceIf { "> respondHeaderNegAck $code" }
         sendChannel.send(
             Datagram(
-                packet = ByteReadPacket(DoipUdpHeaderNegAck(code).message),
+                packet = ByteReadPacket(DoipUdpHeaderNegAck(code).asByteArray),
                 address = address
             )
         )

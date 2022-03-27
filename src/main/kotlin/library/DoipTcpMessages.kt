@@ -3,7 +3,7 @@ package library
 import io.ktor.utils.io.*
 import java.io.OutputStream
 
-open class DoipTcpMessage
+abstract class DoipTcpMessage : DoipMessage()
 
 interface DoipTcpConnectionMessageHandler {
     suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage
@@ -15,7 +15,7 @@ interface DoipTcpConnectionMessageHandler {
 class DoipTcpHeaderNegAck(
     val code: Byte
 ) : DoipTcpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
@@ -24,7 +24,7 @@ class DoipTcpRoutingActivationRequest(
     val activationType: Byte,
     val oemData: Int? = null
 ) : DoipTcpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() =
             doipMessage(
                 TYPE_TCP_ROUTING_REQ,
@@ -54,7 +54,7 @@ class DoipTcpRoutingActivationResponse(
         const val RC_OK_REQUIRES_CONFIRMATION: Byte = 0x11
     }
 
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() =
             doipMessage(
                 TYPE_TCP_ROUTING_RES,
@@ -67,12 +67,12 @@ class DoipTcpRoutingActivationResponse(
 }
 
 class DoipTcpAliveCheckRequest : DoipTcpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_TCP_ALIVE_REQ)
 }
 
 class DoipTcpAliveCheckResponse(val sourceAddress: Short) : DoipTcpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_TCP_ALIVE_RES)
 }
 
@@ -81,7 +81,7 @@ class DoipTcpDiagMessage(
     val targetAddress: Short,
     val payload: ByteArray
 ) : DoipTcpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() =
             doipMessage(
                 TYPE_TCP_DIAG_MESSAGE, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), *payload
@@ -94,7 +94,7 @@ class DoipTcpDiagMessagePosAck(
     val ackCode: Byte,
     val payload: ByteArray = ByteArray(0)
 ) : DoipTcpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(
             TYPE_TCP_DIAG_MESSAGE_POS_ACK, *sourceAddress.toByteArray(), *targetAddress.toByteArray(), ackCode, *payload
         )
@@ -117,7 +117,7 @@ class DoipTcpDiagMessageNegAck(
         const val NACK_CODE_TRANSPORT_PROTOCOL_ERROR: Byte = 0x08
     }
 
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(
             TYPE_TCP_DIAG_MESSAGE_NEG_ACK,
             *sourceAddress.toByteArray(),

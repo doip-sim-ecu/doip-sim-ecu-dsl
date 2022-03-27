@@ -5,6 +5,7 @@ import io.ktor.util.network.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import io.ktor.utils.io.jvm.javaio.*
+import java.io.Closeable
 import java.io.OutputStream
 import javax.net.ssl.SSLSocket
 
@@ -13,7 +14,7 @@ enum class SocketType {
     TLS_DATA,
 }
 
-interface DoipTcpSocket {
+interface DoipTcpSocket : AutoCloseable, Closeable {
     val remoteAddress: NetworkAddress
         get() = getSocketRemoteAddress()
 
@@ -26,7 +27,7 @@ interface DoipTcpSocket {
     fun getSocketRemoteAddress(): NetworkAddress
     fun openReadChannel(): ByteReadChannel
     fun openOutputStream(): OutputStream
-    fun close()
+    override fun close()
 }
 
 class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket  {

@@ -19,7 +19,7 @@ open class UdsMessage(
         val response = DoipTcpDiagMessage(targetAddress, sourceAddress, data)
 
         runBlocking {
-            output.writeFully(response.message)
+            output.writeFully(response.asByteArray)
         }
     }
 }

@@ -6,7 +6,7 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 import kotlin.math.max
 
-open class DefaultDoipUdpMessageHandler(
+open class DefaultDoipEntityUdpMessageHandler(
     val doipEntity: DoipEntity,
     val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
@@ -22,7 +22,7 @@ open class DefaultDoipUdpMessageHandler(
     ) {
         sendChannel.send(
             Datagram(
-                packet = ByteReadPacket(generateVamByEntityConfig(config).message),
+                packet = ByteReadPacket(generateVamByEntityConfig(config).asByteArray),
                 address = sourceAddress
             )
         )
@@ -70,7 +70,7 @@ open class DefaultDoipUdpMessageHandler(
                         max(doipEntity.connectionHandlers.size, 255).toByte(),
                         config.maxDataSize
                     )
-                        .message
+                        .asByteArray
                 ),
                 address = sourceAddress
             )
@@ -86,7 +86,7 @@ open class DefaultDoipUdpMessageHandler(
             Datagram(
                 packet = ByteReadPacket(
                     DoipUdpDiagnosticPowerModeResponse(0)
-                        .message
+                        .asByteArray
                 ),
                 address = sourceAddress
             )

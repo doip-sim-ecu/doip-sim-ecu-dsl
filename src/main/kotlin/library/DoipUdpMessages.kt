@@ -1,6 +1,6 @@
 package library
 
-open class DoipUdpMessage : DoipMessage()
+abstract class DoipUdpMessage : DoipMessage()
 
 class DoipUdpHeaderNegAck(val code: Byte) : DoipUdpMessage() {
     @Suppress("unused")
@@ -12,12 +12,12 @@ class DoipUdpHeaderNegAck(val code: Byte) : DoipUdpMessage() {
         const val NACK_INVALID_PAYLOAD_LENGTH: Byte = 4
     }
 
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
 class DoipUdpVehicleInformationRequest : DoipUdpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_VIR)
 }
 
@@ -28,7 +28,7 @@ class DoipUdpVehicleInformationRequestWithEid(val eid: EID) : DoipUdpMessage() {
         }
     }
 
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_VIR_EID, *eid)
 }
 
@@ -39,7 +39,7 @@ class DoipUdpVehicleInformationRequestWithVIN(val vin: VIN) : DoipUdpMessage() {
         }
     }
 
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_VIR_VIN, *vin)
 }
 
@@ -63,7 +63,7 @@ class DoipUdpVehicleAnnouncementMessage(
         }
     }
 
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() =
             doipMessage(
                 TYPE_UDP_VAM,
@@ -78,7 +78,7 @@ class DoipUdpVehicleAnnouncementMessage(
 }
 
 class DoipUdpEntityStatusRequest : DoipUdpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_ENTITY_STATUS_REQ)
 }
 
@@ -88,7 +88,7 @@ class DoipUdpEntityStatusResponse(
     val currentNumberOfSockets: Byte,
     val maxDataSize: Int
 ) : DoipUdpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() =
             doipMessage(
                 TYPE_UDP_ENTITY_STATUS_RES,
@@ -100,11 +100,11 @@ class DoipUdpEntityStatusResponse(
 }
 
 class DoipUdpDiagnosticPowerModeRequest : DoipUdpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_DIAG_POWER_MODE_REQ)
 }
 
 class DoipUdpDiagnosticPowerModeResponse(val diagPowerMode: Byte) : DoipUdpMessage() {
-    val message: ByteArray
+    override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_DIAG_POWER_MODE_RES, diagPowerMode)
 }

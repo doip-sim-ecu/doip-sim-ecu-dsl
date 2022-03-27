@@ -7,14 +7,14 @@ import org.slf4j.MDC
 import java.io.OutputStream
 import kotlin.experimental.xor
 
-open class DefaultDoipTcpConnectionMessageHandler(
+open class DefaultDoipEntityTcpConnectionMessageHandler(
     val doipEntity: DoipEntity,
     val socket: DoipTcpSocket,
     val logicalAddress: Short,
     val maxPayloadLength: Int,
     val diagMessageHandler: DiagnosticMessageHandler
 ) : DoipTcpConnectionMessageHandler {
-    private val logger: Logger = LoggerFactory.getLogger(DefaultDoipTcpConnectionMessageHandler::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
     private var _registeredSourceAddress: Short? = null
 
@@ -132,7 +132,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                     message.sourceAddress,
                     logicalAddress,
                     DoipTcpRoutingActivationResponse.RC_ERROR_UNSUPPORTED_ACTIVATION_TYPE
-                ).message
+                ).asByteArray
             )
             return
         } else {
@@ -143,7 +143,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                         message.sourceAddress,
                         logicalAddress,
                         DoipTcpRoutingActivationResponse.RC_ERROR_REQUIRES_TLS
-                    ).message
+                    ).asByteArray
                 )
                 return
             }
@@ -159,7 +159,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                         message.sourceAddress,
                         logicalAddress,
                         DoipTcpRoutingActivationResponse.RC_ERROR_DIFFERENT_SOURCE_ADDRESS
-                    ).message
+                    ).asByteArray
                 )
             } else if (doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this)) {
                 logger.error("Routing activation for ${message.sourceAddress} denied (Has already an active connection)")
@@ -168,7 +168,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                         message.sourceAddress,
                         logicalAddress,
                         DoipTcpRoutingActivationResponse.RC_ERROR_SOURCE_ADDRESS_ALREADY_ACTIVE
-                    ).message
+                    ).asByteArray
                 )
             } else {
                 logger.info("Routing activation for ${message.sourceAddress} was successful")
@@ -177,7 +177,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                         message.sourceAddress,
                         logicalAddress,
                         DoipTcpRoutingActivationResponse.RC_OK
-                    ).message
+                    ).asByteArray
                 )
             }
         }
@@ -189,7 +189,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
 
     protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: OutputStream) {
         logger.traceIf { "# handleTcpAliveCheckRequest $message" }
-        output.writeFully(DoipTcpAliveCheckResponse(logicalAddress).message)
+        output.writeFully(DoipTcpAliveCheckResponse(logicalAddress).asByteArray)
     }
 
     protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: OutputStream) {
@@ -203,7 +203,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                 message.sourceAddress,
                 DoipTcpDiagMessageNegAck.NACK_CODE_INVALID_SOURCE_ADDRESS
             )
-            output.writeFully(reject.message)
+            output.writeFully(reject.asByteArray)
             return
         }
         logger.traceIf { "# handleTcpDiagMessage $message for ${message.targetAddress}" }
@@ -215,7 +215,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                 message.sourceAddress,
                 0x00
             )
-            output.writeFully(ack.message)
+            output.writeFully(ack.asByteArray)
 
             // Handle the UDS message
             diagMessageHandler.onIncomingDiagMessage(message, output)
@@ -227,7 +227,7 @@ open class DefaultDoipTcpConnectionMessageHandler(
                 message.sourceAddress,
                 DoipTcpDiagMessageNegAck.NACK_CODE_UNKNOWN_TARGET_ADDRESS
             )
-            output.writeFully(reject.message)
+            output.writeFully(reject.asByteArray)
         }
     }
 

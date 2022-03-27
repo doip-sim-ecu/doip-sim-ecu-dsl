@@ -105,13 +105,13 @@ open class DoipEntity(
         SimulatedEcu(config)
 
     protected open fun createDoipUdpMessageHandler(): DoipUdpMessageHandler =
-        DefaultDoipUdpMessageHandler(
+        DefaultDoipEntityUdpMessageHandler(
             doipEntity = this,
             config = config
         )
 
     protected open fun createDoipTcpMessageHandler(socket: DoipTcpSocket): DoipTcpConnectionMessageHandler =
-        DefaultDoipTcpConnectionMessageHandler(
+        DefaultDoipEntityTcpConnectionMessageHandler(
             doipEntity = this,
             socket = socket,
             logicalAddress = config.logicalAddress,
@@ -132,7 +132,7 @@ open class DoipEntity(
             runBlocking(Dispatchers.IO) {
                 socket.send(
                     Datagram(
-                        packet = ByteReadPacket(vam.message),
+                        packet = ByteReadPacket(vam.asByteArray),
                         address = InetSocketAddress(config.broadcastAddress, 13400)
                     )
                 )
@@ -144,7 +144,7 @@ open class DoipEntity(
 
     protected open suspend fun startVamTimer(socket: BoundDatagramSocket) {
         if (config.broadcastEnabled) {
-            val vam = DefaultDoipUdpMessageHandler.generateVamByEntityConfig(config)
+            val vam = DefaultDoipEntityUdpMessageHandler.generateVamByEntityConfig(config)
             sendVams(vam, socket)
         }
     }
@@ -158,7 +158,7 @@ open class DoipEntity(
             targetAddress = request.sourceAddress,
             payload = data
         )
-        output.writeFully(response.message)
+        output.writeFully(response.asByteArray)
     }
 
     override fun existsTargetAddress(targetAddress: Short): Boolean =
@@ -204,14 +204,14 @@ open class DoipEntity(
                         if (!socket.isClosed) {
                             logger.debug("Error in Header while parsing message, sending negative acknowledgment", e)
                             val response =
-                                DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
+                                DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
                         }
                     } catch (e: Exception) {
                         if (!socket.isClosed) {
                             logger.error("Unknown error parsing/handling message, sending negative acknowledgment", e)
                             val response =
-                                DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).message
+                                DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
                         }
                     }
@@ -285,7 +285,9 @@ open class DoipEntity(
                     aSocket(ActorSelectorManager(Dispatchers.IO))
                         .udp()
                         .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
-                            this.broadcast = true
+                            broadcast = true
+                            reuseAddress = true
+                            reusePort = true
 //                        socket.joinGroup(multicastAddress)
                         }
                 logger.info("Listening on udp: ${serverSocket.localAddress}")
