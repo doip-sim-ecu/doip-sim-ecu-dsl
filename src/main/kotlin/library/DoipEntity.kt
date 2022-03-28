@@ -287,7 +287,6 @@ open class DoipEntity(
                         .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
                             broadcast = true
                             reuseAddress = true
-                            reusePort = true
 //                        socket.joinGroup(multicastAddress)
                         }
                 logger.info("Listening on udp: ${serverSocket.localAddress}")
