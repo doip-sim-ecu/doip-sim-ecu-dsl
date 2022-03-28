@@ -7,13 +7,13 @@ plugins {
 }
 
 group = "com.github.doip-sim-ecu"
-version = "0.8.2"
+version = "0.8.3"
 
 repositories {
     mavenCentral()
 }
 
-val ktorVersion = "1.6.7"
+val ktorVersion = "1.6.8"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
