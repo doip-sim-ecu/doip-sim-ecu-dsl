@@ -14,6 +14,7 @@ import java.io.File
 import java.io.OutputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.SocketException
 import java.nio.file.Paths
 import javax.net.ssl.*
 import kotlin.concurrent.fixedRateTimer
@@ -198,7 +199,12 @@ open class DoipEntity(
                         // ignore - socket was closed
                         logger.debug("Socket was closed by remote ${socket.remoteAddress}")
                         withContext(Dispatchers.IO) {
-                            socket.close()
+                            socket.runCatching { this.close() }
+                        }
+                    } catch (e: SocketException) {
+                        logger.error("Socket error: ${e.message} -> closing socket")
+                        withContext(Dispatchers.IO) {
+                            socket.runCatching { this.close() }
                         }
                     } catch (e: HeaderNegAckException) {
                         if (!socket.isClosed) {
@@ -217,7 +223,7 @@ open class DoipEntity(
                     }
                 }
             } catch (e: Throwable) {
-                logger.error("Unknown inside socket processing loop, closing socket", e)
+                logger.error("Unknown error inside socket processing loop, closing socket", e)
             } finally {
                 try {
                     withContext(Dispatchers.IO) {

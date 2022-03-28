@@ -1,0 +1,173 @@
+package library
+
+import io.ktor.network.selector.*
+import io.ktor.network.sockets.*
+import io.ktor.util.network.*
+import io.ktor.utils.io.core.*
+import kotlinx.coroutines.*
+import library.DoipUdpMessageHandler.Companion.logger
+import java.io.Closeable
+import java.net.InetSocketAddress
+import java.net.SocketAddress
+import java.nio.ByteBuffer
+import kotlin.concurrent.fixedRateTimer
+import kotlin.concurrent.thread
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+
+class DoipClient(
+    private val broadcastAddress: SocketAddress = InetSocketAddress("255.255.255.255", 13400),
+) : Closeable, AutoCloseable {
+    private lateinit var udpServerSocket: BoundDatagramSocket
+    private val _doipEntities: MutableMap<Short, DoipEntityAnnouncement> = mutableMapOf()
+
+    val doipEntities: Map<Short, DoipEntityAnnouncement>
+        get() = _doipEntities.toMap()
+
+    init {
+        startListening()
+        sendVirs()
+    }
+
+    fun connectToEntity(address: NetworkAddress): DoipTcpConnection {
+        return runBlocking {
+            val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
+                .tcp()
+                .connect(address)
+            val connection = DoipTcpConnection(socket, 0xd0f)
+            connection
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun waitForVAM(timeout: Duration = Duration.INFINITE, logicalAddress: Short? = null): Boolean =
+        runBlocking {
+            withTimeoutOrNull(timeout) {
+                val job = launch {
+                    while (
+                        _doipEntities.isEmpty() ||
+                        (logicalAddress != null && !_doipEntities.containsKey(logicalAddress))
+                    ) {
+                        delay(10)
+                    }
+                }
+                job.join()
+                true
+            } ?: false
+        }
+
+    private fun sendVirs() {
+        var virSentCounter = 0
+
+        fixedRateTimer("UDP_SEND_VIR", daemon = true, initialDelay = 100, period = 1000) {
+            if (virSentCounter >= 3) {
+                this.cancel()
+                return@fixedRateTimer
+            }
+
+            runBlocking {
+                logger.info("Sending VIR")
+                udpServerSocket.send(
+                    Datagram(
+                        packet = ByteReadPacket(DoipUdpVehicleInformationRequest().asByteArray),
+                        address = broadcastAddress
+                    )
+                )
+                virSentCounter++
+            }
+        }
+    }
+
+    private fun startListening() {
+        udpServerSocket = aSocket(ActorSelectorManager(Dispatchers.IO))
+            .udp()
+            .bind {
+                broadcast = true
+                reuseAddress = true
+            }
+
+        thread(name = "UDP_RECV", isDaemon = true) {
+            runBlocking {
+                val handler = DoipClientUdpMessageHandler()
+                while (!udpServerSocket.isClosed) {
+                    try {
+                        val datagram = udpServerSocket.receive()
+                        val message = handler.parseMessage(datagram)
+                        if (message is DoipUdpVehicleAnnouncementMessage) {
+                            val sourceAddress = datagram.address
+                            _doipEntities[message.logicalAddress] = DoipEntityAnnouncement(sourceAddress, message)
+                            logger.info("Received VAM for address ${message.logicalAddress.toString(16)} from udp:$sourceAddress")
+                        }
+                    } catch (e: CancellationException) {
+                        // ignore
+                    }
+                }
+            }
+        }
+    }
+
+    override fun close() {
+        udpServerSocket.close()
+    }
+}
+
+class DoipTcpConnection(socket: Socket, private val testerAddress: Short) {
+    private val writeChannel = socket.openWriteChannel()
+    private val readChannel = socket.openReadChannel()
+
+    init {
+        runBlocking {
+            writeChannel.writeFully(ByteBuffer.wrap(DoipTcpRoutingActivationRequest(testerAddress).asByteArray))
+            writeChannel.flush()
+
+            val msg = DoipTcpConnectionMessageHandler().receiveTcpData(readChannel) as DoipTcpRoutingActivationResponse
+            if (msg.responseCode != DoipTcpRoutingActivationResponse.RC_OK) {
+                throw ConnectException("Routing activation failed (${msg.responseCode})")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun sendDiagnosticMessage(
+        targetAddress: Short,
+        message: ByteArray,
+        waitForResponse: Boolean = true,
+        waitTimeout: Duration = Duration.INFINITE,
+        responseHandler: (ByteArray) -> Unit,
+    ) {
+        return runBlocking {
+            val request = DoipTcpDiagMessage(
+                testerAddress,
+                targetAddress,
+                message
+            )
+            writeChannel.writeFully(ByteBuffer.wrap(request.asByteArray))
+            writeChannel.flush()
+            val handler = DoipTcpConnectionMessageHandler()
+            val diagResponse = handler.receiveTcpData(readChannel)
+
+            if (diagResponse is DoipTcpDiagMessagePosAck) {
+                if (waitForResponse) {
+                    val response = withTimeoutOrNull(timeout = waitTimeout) {
+                        var msg: DoipTcpMessage?
+                        do {
+                            msg = handler.receiveTcpData(readChannel)
+                        } while (msg !is DoipTcpDiagMessage)
+                        msg
+                    } ?: throw RuntimeException("No response within $waitTimeout")
+
+                    responseHandler.invoke(response.payload)
+                }
+            } else {
+                throw RuntimeException("Response isn't positive ($diagResponse)")
+            }
+        }
+    }
+}
+
+data class DoipEntityAnnouncement(val sourceAddress: NetworkAddress, val message: DoipUdpVehicleAnnouncementMessage)
+
+private class DoipClientUdpMessageHandler : DoipUdpMessageHandler
+
+class ConnectException(msg: String): RuntimeException(msg)
+
