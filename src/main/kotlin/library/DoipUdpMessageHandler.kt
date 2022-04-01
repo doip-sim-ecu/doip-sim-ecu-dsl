@@ -1,7 +1,6 @@
 package library
 
 import io.ktor.network.sockets.*
-import io.ktor.util.network.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 import org.slf4j.Logger
@@ -14,7 +13,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpMessage(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpMessage
     ) {
         logger.traceIf { "> handleUdpMessage $message" }
@@ -54,7 +53,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpHeaderNegAck(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpHeaderNegAck
     ) {
         logger.traceIf { "> handleUdpHeaderNegAck $message" }
@@ -62,7 +61,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpVehicleInformationRequest(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequest
     ) {
         logger.traceIf { "> handleUdpVehicleInformationRequest $message" }
@@ -70,7 +69,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpVehicleInformationRequestWithEid(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequestWithEid
     ) {
         logger.traceIf { "> handleUdpVehicleInformationRequestWithEid $message" }
@@ -78,7 +77,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpVehicleInformationRequestWithVIN(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequestWithVIN
     ) {
         logger.traceIf { "> handleUdpVehicleInformationRequestWithVIN $message" }
@@ -86,7 +85,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpVehicleAnnouncementMessage(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleAnnouncementMessage
     ) {
         logger.traceIf { "> handleUdpVehicleAnnouncementMessage $message" }
@@ -94,7 +93,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpEntityStatusRequest(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpEntityStatusRequest
     ) {
         logger.traceIf { "> handleUdpEntityStatusRequest $message" }
@@ -102,7 +101,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpEntityStatusResponse(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpEntityStatusResponse
     ) {
         logger.traceIf { "> handleUdpEntityStatusResponse $message" }
@@ -110,7 +109,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpDiagnosticPowerModeRequest(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpDiagnosticPowerModeRequest
     ) {
         logger.traceIf { "> handleUdpDiagnosticPowerModeRequest $message" }
@@ -118,7 +117,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUdpDiagnosticPowerModeResponse(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpDiagnosticPowerModeResponse
     ) {
         logger.traceIf { "> handleUdpDiagnosticPowerModeResponse $message" }
@@ -126,7 +125,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun handleUnknownDoipUdpMessage(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpMessage
     ) {
         logger.traceIf { "> handleUnknownDoipUdpMessage $message" }
@@ -134,7 +133,7 @@ interface DoipUdpMessageHandler {
 
     suspend fun respondHeaderNegAck(
         sendChannel: SendChannel<Datagram>,
-        address: NetworkAddress,
+        address: SocketAddress,
         code: Byte
     ) {
         logger.traceIf { "> respondHeaderNegAck $code" }

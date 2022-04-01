@@ -13,7 +13,6 @@ import org.slf4j.MDC
 import java.io.File
 import java.io.OutputStream
 import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.net.SocketException
 import java.nio.file.Paths
 import javax.net.ssl.*
@@ -54,10 +53,10 @@ open class DoipEntityConfig(
     val eid: EID,
     val vin: VIN,
     val maxDataSize: Int = 0xFFFF,
-    val localAddress: InetAddress = InetAddress.getByName("0.0.0.0"),
+    val localAddress: String = "0.0.0.0",
     val localPort: Int = 13400,
     val broadcastEnabled: Boolean = true,
-    val broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255"),
+    val broadcastAddress: String = "255.255.255.255",
     val pendingNrcSendInterval: kotlin.time.Duration = 2.seconds,
     val tlsMode: TlsMode = TlsMode.DISABLED,
     val tlsPort: Int = 3496,
@@ -347,7 +346,7 @@ open class DoipEntity(
                         .build()
 
                     val tlsServerSocket = withContext(Dispatchers.IO) {
-                        (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, config.localAddress) as SSLServerSocket)
+                        (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, InetAddress.getByName(config.localAddress)) as SSLServerSocket)
                     }
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
 

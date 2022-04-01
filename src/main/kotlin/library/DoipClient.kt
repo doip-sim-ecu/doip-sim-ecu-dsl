@@ -1,14 +1,13 @@
+@file:Suppress("unused")
+
 package library
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
-import io.ktor.util.network.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import library.DoipUdpMessageHandler.Companion.logger
 import java.io.Closeable
-import java.net.InetSocketAddress
-import java.net.SocketAddress
 import java.nio.ByteBuffer
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
@@ -29,7 +28,7 @@ class DoipClient(
         sendVirs()
     }
 
-    fun connectToEntity(address: NetworkAddress): DoipTcpConnection {
+    fun connectToEntity(address: SocketAddress): DoipTcpConnection {
         return runBlocking {
             val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
                 .tcp()
@@ -165,7 +164,7 @@ class DoipTcpConnection(socket: Socket, private val testerAddress: Short) {
     }
 }
 
-data class DoipEntityAnnouncement(val sourceAddress: NetworkAddress, val message: DoipUdpVehicleAnnouncementMessage)
+data class DoipEntityAnnouncement(val sourceAddress: SocketAddress, val message: DoipUdpVehicleAnnouncementMessage)
 
 private class DoipClientUdpMessageHandler : DoipUdpMessageHandler
 

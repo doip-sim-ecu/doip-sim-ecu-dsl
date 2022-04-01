@@ -1,6 +1,5 @@
 import library.*
 import org.slf4j.MDC
-import java.net.InetAddress
 import kotlin.properties.Delegates
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -9,7 +8,7 @@ open class GatewayData(name: String) : RequestsData(name) {
     /**
      * Network address this gateway should bind on (default: 0.0.0.0)
      */
-    var localAddress: InetAddress = InetAddress.getByName("0.0.0.0")
+    var localAddress: String = "0.0.0.0"
 
     /**
      * Network port this gateway should bind on (default: 13400)
@@ -19,7 +18,7 @@ open class GatewayData(name: String) : RequestsData(name) {
     /**
      * Multicast address
      */
-    var multicastAddress: InetAddress? = null
+    var multicastAddress: String? = null
 
     /**
      * Whether VAM broadcasts shall be sent on startup (default: true)
@@ -29,7 +28,7 @@ open class GatewayData(name: String) : RequestsData(name) {
     /**
      * Default broadcast address for VAM messages (default: 255.255.255.255)
      */
-    var broadcastAddress: InetAddress = InetAddress.getByName("255.255.255.255")
+    var broadcastAddress: String = "255.255.255.255"
 
     /**
      * The logical address under which the gateway shall be reachable
