@@ -1,7 +1,6 @@
 package library
 
 import io.ktor.network.sockets.*
-import io.ktor.util.network.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 import kotlin.math.max
@@ -18,7 +17,7 @@ open class DefaultDoipEntityUdpMessageHandler(
 
     suspend fun sendVamResponse(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
     ) {
         sendChannel.send(
             Datagram(
@@ -30,7 +29,7 @@ open class DefaultDoipEntityUdpMessageHandler(
 
     override suspend fun handleUdpVehicleInformationRequest(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequest
     ) {
         sendVamResponse(sendChannel, sourceAddress)
@@ -38,7 +37,7 @@ open class DefaultDoipEntityUdpMessageHandler(
 
     override suspend fun handleUdpVehicleInformationRequestWithEid(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequestWithEid
     ) {
         if (config.eid.contentEquals(message.eid)) {
@@ -48,7 +47,7 @@ open class DefaultDoipEntityUdpMessageHandler(
 
     override suspend fun handleUdpVehicleInformationRequestWithVIN(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequestWithVIN
     ) {
         if (config.vin.contentEquals(message.vin)) {
@@ -58,7 +57,7 @@ open class DefaultDoipEntityUdpMessageHandler(
 
     override suspend fun handleUdpEntityStatusRequest(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpEntityStatusRequest
     ) {
         sendChannel.send(
@@ -79,7 +78,7 @@ open class DefaultDoipEntityUdpMessageHandler(
 
     override suspend fun handleUdpDiagnosticPowerModeRequest(
         sendChannel: SendChannel<Datagram>,
-        sourceAddress: NetworkAddress,
+        sourceAddress: SocketAddress,
         message: DoipUdpDiagnosticPowerModeRequest
     ) {
         sendChannel.send(

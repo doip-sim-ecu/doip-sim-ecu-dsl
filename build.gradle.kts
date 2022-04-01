@@ -13,7 +13,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "1.6.8"
+val ktorVersion = "2.0.0-beta-1"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
@@ -24,8 +24,8 @@ dependencies {
 
     implementation("org.apache.commons:commons-collections4:4.4")
 
-    implementation("io.github.hakky54:sslcontext-kickstart:7.2.1") // Apache-2.0
-    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.2.1") // Apache-2.0
+    implementation("io.github.hakky54:sslcontext-kickstart:7.3.0") // Apache-2.0
+    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.3.0") // Apache-2.0
     implementation("org.bouncycastle:bctls-jdk15on:1.70") // Bouncy Castle Licence (~MIT)
 
     testImplementation(kotlin("test"))
