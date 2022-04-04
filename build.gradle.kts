@@ -1,13 +1,14 @@
 plugins {
-    kotlin("jvm")
-    kotlin("plugin.allopen")
+    val kotlinVersion = "1.6.20"
+    kotlin("jvm") version kotlinVersion
+    kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
     `maven-publish`
     `java-library`
 }
 
 group = "com.github.doip-sim-ecu"
-version = "0.8.4"
+version = "0.8.5"
 
 repositories {
     mavenCentral()
