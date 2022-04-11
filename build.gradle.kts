@@ -14,7 +14,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.0.0-beta-1"
+val ktorVersion = "2.0.0"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
