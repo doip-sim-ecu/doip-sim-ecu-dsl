@@ -1,11 +1,12 @@
 @file:Suppress("unused")
 
-package library
+package client
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
+import library.*
 import library.DoipUdpMessageHandler.Companion.logger
 import java.io.Closeable
 import java.nio.ByteBuffer
@@ -123,6 +124,22 @@ class DoipTcpConnection(socket: Socket, private val testerAddress: Short) {
             }
         }
     }
+
+//    inline fun <reified T, reified Y> callEcu(
+//        targetAddress: Short,
+//        message: Y,
+//        waitTimeout: Duration = 5.seconds
+//    ): T {
+//        lateinit var messageOut: ByteArray
+//        if (message is ByteArray) {
+//            messageOut = message
+//        }
+//        sendDiagnosticMessage(targetAddress, messageOut, waitTimeout = waitTimeout) {
+//            val returnClass = T::class
+//            if (returnClass == ByteArray::class) {
+//            }
+//        }
+//    }
 
     fun sendDiagnosticMessage(
         targetAddress: Short,

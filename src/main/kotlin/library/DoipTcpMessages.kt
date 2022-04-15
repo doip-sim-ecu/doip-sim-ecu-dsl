@@ -3,7 +3,7 @@ package library
 import io.ktor.utils.io.*
 import library.DoipUdpMessageHandler.Companion.logger
 import java.io.OutputStream
-import kotlin.experimental.xor
+import kotlin.experimental.inv
 
 abstract class DoipTcpMessage : DoipMessage()
 
@@ -15,7 +15,7 @@ open class DoipTcpConnectionMessageHandler(
         logger.traceIf { "# receiveTcpData" }
         val protocolVersion = brc.readByte()
         val inverseProtocolVersion = brc.readByte()
-        if (protocolVersion != (inverseProtocolVersion xor 0xFF.toByte())) {
+        if (protocolVersion != inverseProtocolVersion.inv()) {
             throw IncorrectPatternFormat("Invalid header $protocolVersion != $inverseProtocolVersion xor 0xFF")
         }
         val payloadType = brc.readShort()
@@ -209,7 +209,7 @@ class DoipTcpAliveCheckRequest : DoipTcpMessage() {
 
 class DoipTcpAliveCheckResponse(val sourceAddress: Short) : DoipTcpMessage() {
     override val asByteArray: ByteArray
-        get() = doipMessage(TYPE_TCP_ALIVE_RES)
+        get() = doipMessage(TYPE_TCP_ALIVE_RES, *sourceAddress.toByteArray())
 }
 
 class DoipTcpDiagMessage(
