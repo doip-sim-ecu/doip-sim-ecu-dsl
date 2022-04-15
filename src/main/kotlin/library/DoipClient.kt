@@ -12,7 +12,6 @@ import java.nio.ByteBuffer
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 
 class DoipClient(
     private val broadcastAddress: SocketAddress = InetSocketAddress("255.255.255.255", 13400),
@@ -38,7 +37,6 @@ class DoipClient(
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     fun waitForVAM(timeout: Duration = Duration.INFINITE, logicalAddress: Short? = null): Boolean =
         runBlocking {
             withTimeoutOrNull(timeout) {
@@ -126,7 +124,6 @@ class DoipTcpConnection(socket: Socket, private val testerAddress: Short) {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     fun sendDiagnosticMessage(
         targetAddress: Short,
         message: ByteArray,

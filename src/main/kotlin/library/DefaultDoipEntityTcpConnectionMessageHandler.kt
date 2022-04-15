@@ -1,5 +1,7 @@
 package library
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -143,5 +145,7 @@ fun DoipEntity.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcp
                 && it != exclude
     }
 
-fun OutputStream.writeFully(byteArray: ByteArray) =
-    this.write(byteArray)
+suspend fun OutputStream.writeFully(byteArray: ByteArray) =
+    withContext(Dispatchers.IO) {
+        this@writeFully.write(byteArray)
+    }

@@ -1,7 +1,7 @@
 package library
 
 import io.ktor.utils.io.core.*
-import kotlin.experimental.xor
+import kotlin.experimental.inv
 
 open class HeaderNegAckException(message: String) : RuntimeException(message)
 
@@ -12,8 +12,7 @@ class UnknownPayloadType(message: String) : HeaderNegAckException(message)
 
 object DoipUdpMessageParser {
     private fun checkSyncPattern(protocolVersion: Byte, inverseProtocolVersion: Byte): Boolean {
-        if (protocolVersion != inverseProtocolVersion xor 0xFF.toByte()
-        ) {
+        if (protocolVersion != inverseProtocolVersion.inv()) {
             return false
         }
         return true

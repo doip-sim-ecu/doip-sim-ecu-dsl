@@ -1,4 +1,3 @@
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -20,7 +19,7 @@ class StoragePropertyDelegate<T>(
 }
 
 open class DataStorage {
-    private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
+    private val internalDataStorage: MutableMap<String, Any?> = mutableMapOf()
 
     /**
      * Create a persistent property by means of delegation, with an initival value
