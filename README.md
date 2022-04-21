@@ -13,7 +13,7 @@ To see a fairly comprehensive example with explanations on how to use this libra
 look at the example project [doip-sim-ecu-dsl-example](https://github.com/doip-sim-ecu/doip-sim-ecu-dsl-example).
 
 ### Requirements
-The doip-library & DSL is written in Kotlin/JVM 1.6.10 with the ktor-network 1.6.7 library. 
+The doip-library & DSL is written in Kotlin/JVM 1.6.21 with the ktor-network 2.0.0 library. 
  
 An ecu-simulation that utilizes this library will therefore require usage of compatible versions 
 of these dependencies.
