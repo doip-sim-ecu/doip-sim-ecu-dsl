@@ -1,5 +1,8 @@
 import helper.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import library.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -377,23 +380,28 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      * Resets all the ECUs stored properties, timers, interceptors and requests
      */
     fun reset() {
-        MDC.put("ecu", name)
-        logger.debug("Resetting interceptors, timers and stored data")
+        runBlocking(Dispatchers.Default) {
+            MDC.put("ecu", name)
 
-        this.interceptors.clear()
+            launch(MDCContext()) {
+                logger.debug("Resetting interceptors, timers and stored data")
 
-        synchronized(mainTimer) {
-            this.timers.forEach { it.value.cancel() }
-            this.timers.clear()
-        }
+                interceptors.clear()
 
-        clearStoredProperties()
-        this.data.requests.forEach { it.reset() }
-        this.data.resetHandler.forEach {
-            if (it.name != null) {
-                logger.traceIf { "Calling onReset-Handler" }
+                synchronized(mainTimer) {
+                    timers.forEach { it.value.cancel() }
+                    timers.clear()
+                }
+
+                clearStoredProperties()
+                data.requests.forEach { it.reset() }
+                data.resetHandler.forEach {
+                    if (it.name != null) {
+                        logger.traceIf { "Calling onReset-Handler" }
+                    }
+                    it.handler(this@SimEcu)
+                }
             }
-            it.handler(this)
         }
     }
 }

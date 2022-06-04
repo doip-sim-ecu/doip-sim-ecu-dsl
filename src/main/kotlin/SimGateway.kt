@@ -1,3 +1,6 @@
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import library.*
 import org.slf4j.MDC
 import kotlin.properties.Delegates
@@ -144,11 +147,16 @@ class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfi
     }
 
     fun reset(recursiveEcus: Boolean = true) {
-        MDC.put("ecu", name)
-        logger.infoIf { "Resetting gateway" }
-        this.requests.forEach { it.reset() }
-        if (recursiveEcus) {
-            this.ecus.forEach { (it as SimEcu).reset() }
+        runBlocking {
+            MDC.put("ecu", name)
+
+            launch(MDCContext()) {
+                logger.infoIf { "Resetting gateway" }
+                requests.forEach { it.reset() }
+                if (recursiveEcus) {
+                    ecus.forEach { (it as SimEcu).reset() }
+                }
+            }
         }
     }
 }
