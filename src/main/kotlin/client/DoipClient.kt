@@ -28,13 +28,15 @@ class DoipClient(
         sendVirs()
     }
 
-    fun connectToEntity(address: SocketAddress): DoipTcpConnection {
+    fun connectToEntity(address: SocketAddress, testerAddress: Short = 0xe80.toShort(), timeout: Duration = Duration.INFINITE): DoipEntityTcpConnection {
         return runBlocking {
-            val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
-                .tcp()
-                .connect(address)
-            val connection = DoipTcpConnection(socket, 0xd0f)
-            connection
+            withTimeout(timeout) {
+                val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
+                    .tcp()
+                    .connect(address)
+                val connection = DoipEntityTcpConnection(socket, testerAddress)
+                connection
+            }
         }
     }
 
@@ -109,7 +111,7 @@ class DoipClient(
     }
 }
 
-class DoipTcpConnection(socket: Socket, private val testerAddress: Short) {
+class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) {
     private val writeChannel = socket.openWriteChannel()
     private val readChannel = socket.openReadChannel()
 

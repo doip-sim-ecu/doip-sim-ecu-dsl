@@ -1,6 +1,9 @@
 package library
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -22,8 +25,12 @@ open class DefaultDoipEntityTcpConnectionMessageHandler(
         _registeredSourceAddress
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
-        MDC.put("ecu", doipEntity.name)
-        super.handleTcpMessage(message, output)
+        runBlocking {
+            MDC.put("ecu", doipEntity.name)
+            launch(MDCContext()) {
+                super.handleTcpMessage(message, output)
+            }
+        }
     }
 
     override suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: OutputStream) {

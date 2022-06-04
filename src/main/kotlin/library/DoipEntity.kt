@@ -6,6 +6,7 @@ import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.slf4j.MDCContext
 import nl.altindag.ssl.SSLFactory
 import nl.altindag.ssl.util.PemUtils
 import org.slf4j.LoggerFactory
@@ -123,19 +124,21 @@ open class DoipEntity(
         var vamSentCounter = 0
 
         fixedRateTimer("VAM", daemon = true, initialDelay = 500, period = 500) {
-            MDC.put("ecu", name)
             if (vamSentCounter >= 3) {
                 this.cancel()
                 return@fixedRateTimer
             }
             logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()}")
             runBlocking(Dispatchers.IO) {
-                socket.send(
-                    Datagram(
-                        packet = ByteReadPacket(vam.asByteArray),
-                        address = InetSocketAddress(config.broadcastAddress, 13400)
+                MDC.put("ecu", name)
+                launch(MDCContext()) {
+                    socket.send(
+                        Datagram(
+                            packet = ByteReadPacket(vam.asByteArray),
+                            address = InetSocketAddress(config.broadcastAddress, 13400)
+                        )
                     )
-                )
+                }
             }
 
             vamSentCounter++
@@ -167,15 +170,24 @@ open class DoipEntity(
     override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream) {
         val ecu = targetEcusByPhysical[diagMessage.targetAddress]
         ecu?.run {
-            MDC.put("ecu", ecu.name)
-            onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output))
+            runBlocking {
+                MDC.put("ecu", ecu.name)
+                launch(MDCContext()) {
+                    onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output))
+                }
+            }
+            // Exit if the target ecu was found by physical
             return
         }
 
         val ecus = targetEcusByFunctional[diagMessage.targetAddress]
         ecus?.forEach {
-            MDC.put("ecu", it.name)
-            it.onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.FUNCTIONAL, output))
+            runBlocking {
+                MDC.put("ecu", it.name)
+                launch(MDCContext()) {
+                    it.onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.FUNCTIONAL, output))
+                }
+            }
         }
     }
 
@@ -240,31 +252,33 @@ open class DoipEntity(
         datagram: Datagram,
         socket: BoundDatagramSocket
     ) {
-        launch {
+        runBlocking {
             MDC.put("ecu", name)
-            try {
-                logger.traceIf { "Incoming UDP message for $name" }
-                val message = udpMessageHandler.parseMessage(datagram)
-                logger.traceIf { "Message for $name is of type $message" }
-                udpMessageHandler.handleUdpMessage(socket.outgoing, datagram.address, message)
-            } catch (e: HeaderNegAckException) {
-                val code = when (e) {
-                    is IncorrectPatternFormat -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
-                    is HeaderTooShort -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
-                    is InvalidPayloadLength -> DoipUdpHeaderNegAck.NACK_INVALID_PAYLOAD_LENGTH
-                    is UnknownPayloadType -> DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
-                    else -> {
-                        DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
+            launch(MDCContext()) {
+                try {
+                    logger.traceIf { "Incoming UDP message for $name" }
+                    val message = udpMessageHandler.parseMessage(datagram)
+                    logger.traceIf { "Message for $name is of type $message" }
+                    udpMessageHandler.handleUdpMessage(socket.outgoing, datagram.address, message)
+                } catch (e: HeaderNegAckException) {
+                    val code = when (e) {
+                        is IncorrectPatternFormat -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
+                        is HeaderTooShort -> DoipUdpHeaderNegAck.NACK_INCORRECT_PATTERN_FORMAT
+                        is InvalidPayloadLength -> DoipUdpHeaderNegAck.NACK_INVALID_PAYLOAD_LENGTH
+                        is UnknownPayloadType -> DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
+                        else -> {
+                            DoipUdpHeaderNegAck.NACK_UNKNOWN_PAYLOAD_TYPE
+                        }
                     }
+                    logger.debug("Error in Message-Header, sending negative acknowledgement", e)
+                    udpMessageHandler.respondHeaderNegAck(
+                        socket.outgoing,
+                        datagram.address,
+                        code
+                    )
+                } catch (e: Exception) {
+                    logger.error("Unknown error while processing message", e)
                 }
-                logger.debug("Error in Message-Header, sending negative acknowledgement", e)
-                udpMessageHandler.respondHeaderNegAck(
-                    socket.outgoing,
-                    datagram.address,
-                    code
-                )
-            } catch (e: Exception) {
-                logger.error("Unknown error while processing message", e)
             }
         }
     }

@@ -1,5 +1,6 @@
 plugins {
     val kotlinVersion = "1.7.0"
+
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
@@ -12,6 +13,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
+version = "0.9.1"
 
 repositories {
     gradlePluginPortal()
@@ -23,6 +25,7 @@ val ktorVersion = "2.0.2"
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
     api("io.ktor:ktor-network:$ktorVersion") // Apache-2.0
 
     api("ch.qos.logback:logback-classic:1.2.11") // EPL-1.0
