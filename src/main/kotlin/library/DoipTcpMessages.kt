@@ -112,11 +112,17 @@ open class DoipTcpConnectionMessageHandler(
         logger.traceIf { "# handleTcpHeaderNegAck $message" }
     }
 
-    protected open suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: OutputStream) {
+    protected open suspend fun handleTcpRoutingActivationRequest(
+        message: DoipTcpRoutingActivationRequest,
+        output: OutputStream
+    ) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
     }
 
-    protected open suspend fun handleTcpRoutingActivationResponse(message: DoipTcpRoutingActivationResponse, output: OutputStream) {
+    protected open suspend fun handleTcpRoutingActivationResponse(
+        message: DoipTcpRoutingActivationResponse,
+        output: OutputStream
+    ) {
         logger.traceIf { "# handleTcpRoutingActivationResponse $message" }
     }
 
@@ -163,6 +169,7 @@ class DoipTcpRoutingActivationRequest(
                 *reserved.toByteArray(),
                 *(oemData?.toByteArray() ?: ByteArray(0))
             )
+
     @Suppress("unused")
     companion object {
         const val ACTIVATION_TYPE_DEFAULT: Byte = 0x00

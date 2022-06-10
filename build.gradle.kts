@@ -23,10 +23,11 @@ repositories {
 val ktorVersion = "2.0.2"
 
 dependencies {
+    // Apache-2.0
+    api("io.ktor:ktor-network-jvm:$ktorVersion")
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
-    api("io.ktor:ktor-network:$ktorVersion") // Apache-2.0
 
     api("ch.qos.logback:logback-classic:1.2.11") // EPL-1.0
 

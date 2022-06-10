@@ -28,7 +28,11 @@ class DoipClient(
         sendVirs()
     }
 
-    fun connectToEntity(address: SocketAddress, testerAddress: Short = 0xe80.toShort(), timeout: Duration = Duration.INFINITE): DoipEntityTcpConnection {
+    fun connectToEntity(
+        address: SocketAddress,
+        testerAddress: Short = 0xe80.toShort(),
+        timeout: Duration = Duration.INFINITE
+    ): DoipEntityTcpConnection {
         return runBlocking {
             withTimeout(timeout) {
                 val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
@@ -184,5 +188,5 @@ data class DoipEntityAnnouncement(val sourceAddress: SocketAddress, val message:
 
 private class DoipClientUdpMessageHandler : DoipUdpMessageHandler
 
-class ConnectException(msg: String): RuntimeException(msg)
+class ConnectException(msg: String) : RuntimeException(msg)
 
