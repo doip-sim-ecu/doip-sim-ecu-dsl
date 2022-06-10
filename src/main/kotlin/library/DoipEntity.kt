@@ -64,6 +64,7 @@ open class DoipEntityConfig(
     val tlsOptions: TlsOptions = TlsOptions(),
     val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
     val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
+    val additionalVams: List<DoipUdpVehicleAnnouncementMessage> = emptyList()
 ) {
     init {
         if (name.isEmpty()) {
@@ -149,6 +150,9 @@ open class DoipEntity(
         if (config.broadcastEnabled) {
             val vam = DefaultDoipEntityUdpMessageHandler.generateVamByEntityConfig(config)
             sendVams(vam, socket)
+            config.additionalVams.forEach { additionalVam ->
+                sendVams(additionalVam, socket)
+            }
         }
     }
 
