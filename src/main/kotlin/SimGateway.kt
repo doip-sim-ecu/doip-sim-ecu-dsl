@@ -68,9 +68,13 @@ open class GatewayData(name: String) : RequestsData(name) {
     var tlsOptions: TlsOptions = TlsOptions()
 
     private val _ecus: MutableList<EcuData> = mutableListOf()
+    private val _additionalVams: MutableList<DoipUdpVehicleAnnouncementMessage> = mutableListOf()
 
     val ecus: List<EcuData>
         get() = this._ecus.toList()
+
+    val additionalVams: List<DoipUdpVehicleAnnouncementMessage>
+        get() = this._additionalVams.toList()
 
 
     /**
@@ -80,6 +84,13 @@ open class GatewayData(name: String) : RequestsData(name) {
         val ecuData = EcuData(name)
         receiver.invoke(ecuData)
         _ecus.add(ecuData)
+    }
+
+    fun doipEntity(name: String, vam: DoipUdpVehicleAnnouncementMessage, receiver: EcuData.() -> Unit) {
+        val ecuData = EcuData(name)
+        receiver.invoke(ecuData)
+        _ecus.add(ecuData)
+        _additionalVams.add(vam)
     }
 }
 
@@ -99,6 +110,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         tlsOptions = this.tlsOptions,
         // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
         vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it },
+        additionalVams = this.additionalVams,
     )
 
     // Add the gateway itself as an ecu, so it too can receive requests
