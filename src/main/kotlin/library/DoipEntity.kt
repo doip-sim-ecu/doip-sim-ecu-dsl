@@ -351,7 +351,11 @@ open class DoipEntity(
 
             thread(name = "TLS") {
                 runBlocking {
-                    val key = PemUtils.loadIdentityMaterial(Paths.get(tlsOptions.tlsCert.toURI()), Paths.get(tlsOptions.tlsKey.toURI()), tlsOptions.tlsKeyPassword?.toCharArray())
+                    val key = PemUtils.loadIdentityMaterial(
+                        Paths.get(tlsOptions.tlsCert.toURI()),
+                        Paths.get(tlsOptions.tlsKey.toURI()),
+                        tlsOptions.tlsKeyPassword?.toCharArray()
+                    )
                     val trustMaterial = PemUtils.loadTrustMaterial(Paths.get(tlsOptions.tlsCert.toURI()))
 
                     val sslFactory = SSLFactory.builder()
@@ -360,7 +364,11 @@ open class DoipEntity(
                         .build()
 
                     val tlsServerSocket = withContext(Dispatchers.IO) {
-                        (sslFactory.sslServerSocketFactory.createServerSocket(config.tlsPort, 50, InetAddress.getByName(config.localAddress)) as SSLServerSocket)
+                        (sslFactory.sslServerSocketFactory.createServerSocket(
+                            config.tlsPort,
+                            50,
+                            InetAddress.getByName(config.localAddress)
+                        ) as SSLServerSocket)
                     }
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
 

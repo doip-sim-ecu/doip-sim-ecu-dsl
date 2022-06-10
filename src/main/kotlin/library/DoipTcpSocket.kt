@@ -29,7 +29,7 @@ interface DoipTcpSocket : AutoCloseable, Closeable {
     override fun close()
 }
 
-class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket  {
+class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket {
     override fun isSocketClosed(): Boolean =
         socket.isClosed
 
@@ -51,7 +51,7 @@ class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket  {
 
 class SSLDoipTcpSocket(private val socket: SSLSocket) : DoipTcpSocket {
     private val _remoteAddress = InetSocketAddress(socket.remoteSocketAddress.hostname, socket.remoteSocketAddress.port)
-    
+
     override fun isSocketClosed(): Boolean =
         socket.isClosed
 
