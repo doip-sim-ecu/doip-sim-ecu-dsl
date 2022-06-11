@@ -3,12 +3,13 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
+    signing
     `maven-publish`
     `java-library`
 }
 
-group = "com.github.doip-sim-ecu"
-version = "0.9.0"
+group = "io.github.doip-sim-ecu"
+version = "0.9.1"
 
 repositories {
     mavenCentral()
@@ -40,6 +41,7 @@ tasks.test {
 
 java {
     withSourcesJar()
+    withJavadocJar()
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
@@ -50,6 +52,42 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
+            pom {
+                name.set("DoIP Simulation ECU DSL ")
+                description.set("This is a a kotlin based domain specific language (dsl) to quickly and intuitively write custom DoIP ECU simulations.")
+                url.set("https://github.com/doip-sim-ecu/doip-sim-ecu-dsl")
+                developers {
+                    developer {
+                        id.set("froks")
+                        name.set("Florian Roks")
+                        email.set("flo.github@debugco.de")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/doip-sim-ecu/doip-sim-ecu-dsl")
+                    developerConnection.set("scm:git:ssh://github.com:doip-sim-ecu/doip-sim-ecu-dsl.git")
+                    connection.set("scm:git:git://github.com/doip-sim-ecu/doip-sim-ecu-dsl.git")
+                }
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            val publishSnapshotUrl: String? by project
+            val publishReleaseUrl: String? by project
+            url = uri(if (version.toString().endsWith("SNAPSHOT")) publishSnapshotUrl!! else publishReleaseUrl!!)
+            credentials {
+                val ossrhUsername: String? by project
+                val ossrhPassword: String? by project
+                username = ossrhUsername
+                password = ossrhPassword
+            }
         }
     }
 }
@@ -67,5 +105,18 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 
 allOpen {
     annotation("helper.Open")
+}
+
+signing {
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    val file = File(signingKey)
+    val data = if (file.exists()) {
+        file.readText()
+    } else {
+        signingKey
+    }
+    useInMemoryPgpKeys(data, signingPassword)
+    sign(publishing.publications)
 }
 
