@@ -81,7 +81,7 @@ publishing {
         maven {
             val publishSnapshotUrl: String? by project
             val publishReleaseUrl: String? by project
-            url = uri(if (version.toString().endsWith("SNAPSHOT")) publishSnapshotUrl!! else publishReleaseUrl!!)
+            url = uri((if (version.toString().endsWith("SNAPSHOT")) publishSnapshotUrl else publishReleaseUrl) ?: "invalid")
             credentials {
                 val ossrhUsername: String? by project
                 val ossrhPassword: String? by project
@@ -110,13 +110,15 @@ allOpen {
 signing {
     val signingKey: String? by project
     val signingPassword: String? by project
-    val file = File(signingKey)
-    val data = if (file.exists()) {
-        file.readText()
-    } else {
-        signingKey
+    if (signingKey != null) {
+        val file = File(signingKey)
+        val data = if (file.exists()) {
+            file.readText()
+        } else {
+            signingKey
+        }
+        useInMemoryPgpKeys(data, signingPassword)
+        sign(publishing.publications)
     }
-    useInMemoryPgpKeys(data, signingPassword)
-    sign(publishing.publications)
 }
 
