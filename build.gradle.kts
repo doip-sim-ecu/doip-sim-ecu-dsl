@@ -83,8 +83,8 @@ publishing {
             val publishReleaseUrl: String? by project
             url = uri((if (version.toString().endsWith("SNAPSHOT")) publishSnapshotUrl else publishReleaseUrl) ?: "invalid")
             credentials {
-                val ossrhUsername: String? by project
-                val ossrhPassword: String? by project
+                val ossrhUsername: String? = System.getenv("OSSRH_USERNAME")
+                val ossrhPassword: String? = System.getenv("OSSRH_PASSWORD")
                 username = ossrhUsername
                 password = ossrhPassword
             }
@@ -108,8 +108,8 @@ allOpen {
 }
 
 signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
+    val signingKey: String? = System.getenv("SIGNING_KEY")
+    val signingPassword: String? = System.getenv("SIGNING_PASSWORD")
     if (signingKey != null) {
         val file = File(signingKey)
         val data = if (file.exists()) {

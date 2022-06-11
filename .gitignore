@@ -8,6 +8,3 @@ build
 *.key
 *.der
 *.srl
-
-# contains secrets for publishing
-gradle.properties
