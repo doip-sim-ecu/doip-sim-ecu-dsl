@@ -1,5 +1,6 @@
 package library
 
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import kotlin.math.min
 
@@ -36,7 +37,10 @@ fun String.decodeHex(): ByteArray {
         throw IllegalArgumentException("Length of hex chars isn't even in string '$this'")
     }
 
-    val buf = ByteArray(bb.flip().limit())
+    // cast to buffer, so it runs on jdk1.8 and jdk 11+
+    // cause: jdk 11's bytebuffer implements its own flip method with a different return type
+    (bb as Buffer).flip()
+    val buf = ByteArray((bb as Buffer).limit())
     bb.get(buf)
     return buf
 // Simpler yet worse performing version

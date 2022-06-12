@@ -1,4 +1,5 @@
-[![](https://jitpack.io/v/doip-sim-ecu/doip-sim-ecu-dsl.svg)](https://jitpack.io/#doip-sim-ecu/doip-sim-ecu-dsl)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.doip-sim-ecu/doip-sim-ecu-dsl/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.doip-sim-ecu/doip-sim-ecu-dsl)
+[![JitPack](https://jitpack.io/v/doip-sim-ecu/doip-sim-ecu-dsl.svg)](https://jitpack.io/#doip-sim-ecu/doip-sim-ecu-dsl)
 
 # DoIP Simulation ECU DSL
 
@@ -9,11 +10,14 @@ Its main purpose is to enable programmers to quickly write integration tests for
 and therefore to allow better testing of error and edge cases, as well as creating 
 regression tests.   
 
-To see a fairly comprehensive example with explanations on how to use this library in a project,
-look at the example project [doip-sim-ecu-dsl-example](https://github.com/doip-sim-ecu/doip-sim-ecu-dsl-example).
+To see a fairly comprehensive example with explanations on how to use this library in a project, look at 
+the example project [doip-sim-ecu-dsl-example](https://github.com/doip-sim-ecu/doip-sim-ecu-dsl-example).
+
+There's another example of how a [DoIP ECU UDS simulation](https://github.com/doip-sim-ecu/doip-sim-uds-ecu-example) 
+could be used in a test setup (e.g. with additional REST interface).  
 
 ### Requirements
-The doip-library & DSL is written in Kotlin/JVM 1.6.21 with the ktor-network 2.0.0 library. 
+The doip-library & DSL is written in Kotlin/JVM 1.7.0 with the ktor-network 2.0.2 library. 
  
 An ecu-simulation that utilizes this library will therefore require usage of compatible versions 
 of these dependencies.
@@ -26,13 +30,13 @@ For build.gradle.kts:
 ```
 repositories {
     ...
-    maven("https://jitpack.io")
+    mavenCentral()
     ...
 }
 
 dependencies {
      ...
-     implementation("com.github.doip-sim-ecu:doip-sim-ecu-dsl:<REPLACE_WITH_VERSION>")
+     implementation("io.github.doip-sim-ecu:doip-sim-ecu-dsl:<REPLACE_WITH_VERSION>")
      ...
 }
 ```
@@ -41,13 +45,13 @@ For build.gradle:
 ```
 repositories {
     ...
-    maven { "https://jitpack.io" }
+    mavenCentral()
     ...
 }
 
 dependencies {
     ...
-    implementation 'com.github.doip-sim-ecu:doip-sim-ecu-dsl:<REPLACE_WITH_VERSION>'
+    implementation 'io.github.doip-sim-ecu:doip-sim-ecu-dsl:<REPLACE_WITH_VERSION>'
     ...
 }
 ```

@@ -181,7 +181,7 @@ class SimEcuTest {
         assertThat(beforeInterceptor).isTrue()
         assertThat(intercepted).isTrue()
         assertThat(afterInterceptor).isFalse()
-        sleep(200)
+        sleep(250)
         removeInterceptor = false
         beforeInterceptor = false
         intercepted = false

@@ -1,5 +1,5 @@
 plugins {
-    val kotlinVersion = "1.6.20"
+    val kotlinVersion = "1.7.0"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
@@ -9,13 +9,13 @@ plugins {
 }
 
 group = "io.github.doip-sim-ecu"
-version = "0.9.1"
+version = "0.9.5"
 
 repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.0.0"
+val ktorVersion = "2.0.2"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
@@ -26,7 +26,7 @@ dependencies {
 
     implementation("org.apache.commons:commons-collections4:4.4")
 
-    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.4.0") // Apache-2.0
+    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.4.3") // Apache-2.0
     implementation("org.bouncycastle:bctls-jdk15on:1.70") // Bouncy Castle Licence (~MIT)
 
     testImplementation(kotlin("test"))
