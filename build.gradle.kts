@@ -3,15 +3,18 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
+    id("net.researchgate.release") version "2.8.1"
     signing
     `maven-publish`
     `java-library`
 }
 
+apply<NexusReleasePlugin>()
+
 group = "io.github.doip-sim-ecu"
-version = "0.9.5"
 
 repositories {
+    gradlePluginPortal()
     mavenCentral()
 }
 
@@ -77,6 +80,7 @@ publishing {
             }
         }
     }
+
     repositories {
         maven {
             val publishSnapshotUrl: String? by project
@@ -122,3 +126,7 @@ signing {
     }
 }
 
+configure<NexusReleaseExtension> {
+    username.set(System.getenv("OSSRH_USERNAME"))
+    password.set(System.getenv("OSSRH_PASSWORD"))
+}
