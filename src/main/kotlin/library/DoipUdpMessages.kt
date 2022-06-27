@@ -48,8 +48,8 @@ class DoipUdpVehicleAnnouncementMessage(
     val logicalAddress: Short,
     val gid: GID,
     val eid: EID,
-    val furtherActionRequired: Byte,
-    val syncStatus: Byte
+    val furtherActionRequired: Byte = 0,
+    val syncStatus: Byte = 0,
 ) : DoipUdpMessage() {
     init {
         if (vin.size != 17) {
