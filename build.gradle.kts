@@ -123,10 +123,13 @@ signing {
         val data = if (file.exists()) {
             file.readText()
         } else {
-            signingKey
+            signingKey.replace(" ", "\n")
         }
+        println(data)
         useInMemoryPgpKeys(data, signingPassword)
         sign(publishing.publications)
+    } else {
+        println("Jar file isn't signed")
     }
 }
 
