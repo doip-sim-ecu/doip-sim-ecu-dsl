@@ -125,7 +125,6 @@ signing {
         } else {
             signingKey.replace(" ", "\n")
         }
-        println(data)
         useInMemoryPgpKeys(data, signingPassword)
         sign(publishing.publications)
     } else {
