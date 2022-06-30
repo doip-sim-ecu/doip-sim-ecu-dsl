@@ -121,7 +121,7 @@ open class DoipEntity(
             diagMessageHandler = this
         )
 
-    protected open suspend fun sendVams(vam: DoipUdpVehicleAnnouncementMessage, socket: BoundDatagramSocket) {
+    protected open suspend fun sendVams(vams: List<DoipUdpVehicleAnnouncementMessage>, socket: BoundDatagramSocket) {
         var vamSentCounter = 0
 
         fixedRateTimer("VAM", daemon = true, initialDelay = 500, period = 500) {
@@ -129,16 +129,18 @@ open class DoipEntity(
                 this.cancel()
                 return@fixedRateTimer
             }
-            logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()}")
-            runBlocking(Dispatchers.IO) {
-                MDC.put("ecu", name)
-                launch(MDCContext()) {
-                    socket.send(
-                        Datagram(
-                            packet = ByteReadPacket(vam.asByteArray),
-                            address = InetSocketAddress(config.broadcastAddress, 13400)
+            vams.forEach { vam ->
+                logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()}")
+                runBlocking(Dispatchers.IO) {
+                    MDC.put("ecu", name)
+                    launch(MDCContext()) {
+                        socket.send(
+                            Datagram(
+                                packet = ByteReadPacket(vam.asByteArray),
+                                address = InetSocketAddress(config.broadcastAddress, 13400)
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -148,11 +150,8 @@ open class DoipEntity(
 
     protected open suspend fun startVamTimer(socket: BoundDatagramSocket) {
         if (config.broadcastEnabled) {
-            val vam = DefaultDoipEntityUdpMessageHandler.generateVamByEntityConfig(config)
-            sendVams(vam, socket)
-            config.additionalVams.forEach { additionalVam ->
-                sendVams(additionalVam, socket)
-            }
+            val vams = DefaultDoipEntityUdpMessageHandler.generateVamByEntityConfig(config)
+            sendVams(vams, socket)
         }
     }
 
@@ -310,7 +309,7 @@ open class DoipEntity(
                         .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
                             broadcast = true
                             reuseAddress = true
-//                        socket.joinGroup(multicastAddress)
+//                            socket.joinGroup(multicastAddress)
                         }
                 logger.info("Listening on udp: ${serverSocket.localAddress}")
                 startVamTimer(serverSocket)

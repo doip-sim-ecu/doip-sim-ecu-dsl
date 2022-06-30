@@ -86,6 +86,16 @@ open class GatewayData(name: String) : RequestsData(name) {
         _ecus.add(ecuData)
     }
 
+    fun additionalVam(logicalAddress: Short, eid: EID, gid: GID = this.gid, vin: String = this.vin!!) {
+        val vam = DoipUdpVehicleAnnouncementMessage(
+            vin = vin.toByteArray(),
+            logicalAddress = logicalAddress,
+            eid = eid,
+            gid = gid,
+        )
+        _additionalVams.add(vam)
+    }
+
     fun doipEntity(name: String, vam: DoipUdpVehicleAnnouncementMessage, receiver: EcuData.() -> Unit) {
         val ecuData = EcuData(name)
         receiver.invoke(ecuData)

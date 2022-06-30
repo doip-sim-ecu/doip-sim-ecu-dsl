@@ -3,28 +3,36 @@ package library
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.math.max
 
 open class DefaultDoipEntityUdpMessageHandler(
     val doipEntity: DoipEntity,
     val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
+    private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityUdpMessageHandler::class.java)
 
     companion object {
-        fun generateVamByEntityConfig(config: DoipEntityConfig): DoipUdpVehicleAnnouncementMessage =
+        fun generateVamByEntityConfig(config: DoipEntityConfig): List<DoipUdpVehicleAnnouncementMessage> = listOf(
             DoipUdpVehicleAnnouncementMessage(config.vin, config.logicalAddress, config.gid, config.eid, 0, 0)
+        ) + config.additionalVams
     }
 
     suspend fun sendVamResponse(
         sendChannel: SendChannel<Datagram>,
         sourceAddress: SocketAddress,
     ) {
-        sendChannel.send(
-            Datagram(
-                packet = ByteReadPacket(generateVamByEntityConfig(config).asByteArray),
-                address = sourceAddress
+        val vams = generateVamByEntityConfig(config)
+        vams.forEach { vam ->
+            logger.info("Sending VAM for ${vam.logicalAddress.toString(16)}")
+            sendChannel.send(
+                Datagram(
+                    packet = ByteReadPacket(vam.asByteArray),
+                    address = sourceAddress
+                )
             )
-        )
+        }
     }
 
     override suspend fun handleUdpVehicleInformationRequest(
@@ -41,7 +49,10 @@ open class DefaultDoipEntityUdpMessageHandler(
         message: DoipUdpVehicleInformationRequestWithEid
     ) {
         if (config.eid.contentEquals(message.eid)) {
+            logger.info("Received VIR for VIN, responding with VAMs")
             sendVamResponse(sendChannel, sourceAddress)
+        } else {
+            logger.info("Received VIR for different VIN, not responding")
         }
     }
 
@@ -50,8 +61,11 @@ open class DefaultDoipEntityUdpMessageHandler(
         sourceAddress: SocketAddress,
         message: DoipUdpVehicleInformationRequestWithVIN
     ) {
+
         if (config.vin.contentEquals(message.vin)) {
             sendVamResponse(sendChannel, sourceAddress)
+        } else {
+
         }
     }
 
