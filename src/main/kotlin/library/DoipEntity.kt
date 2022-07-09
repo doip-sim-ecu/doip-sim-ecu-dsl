@@ -32,6 +32,7 @@ enum class DoipNodeType(val value: Byte) {
     NODE(1)
 }
 
+@Suppress("unused")
 enum class TlsMode {
     DISABLED,
     OPTIONAL,
@@ -64,7 +65,6 @@ open class DoipEntityConfig(
     val tlsOptions: TlsOptions = TlsOptions(),
     val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
     val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
-    val additionalVams: List<DoipUdpVehicleAnnouncementMessage> = emptyList()
 ) {
     init {
         if (name.isEmpty()) {
@@ -150,7 +150,7 @@ open class DoipEntity(
 
     protected open suspend fun startVamTimer(socket: BoundDatagramSocket) {
         if (config.broadcastEnabled) {
-            val vams = DefaultDoipEntityUdpMessageHandler.generateVamByEntityConfig(config)
+            val vams = DefaultDoipEntityUdpMessageHandler.generateVamByEntityConfig(this)
             sendVams(vams, socket)
         }
     }

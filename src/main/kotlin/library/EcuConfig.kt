@@ -5,4 +5,5 @@ open class EcuConfig(
     val physicalAddress: Short,
     val functionalAddress: Short,
     val pendingNrcSendInterval: kotlin.time.Duration,
+    val additionalVam: EcuAdditionalVamData? = null,
 )

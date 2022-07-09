@@ -7,6 +7,7 @@ import kotlin.properties.Delegates
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+@Suppress("unused")
 open class GatewayData(name: String) : RequestsData(name) {
     /**
      * Network address this gateway should bind on (default: 0.0.0.0)
@@ -73,10 +74,6 @@ open class GatewayData(name: String) : RequestsData(name) {
     val ecus: List<EcuData>
         get() = this._ecus.toList()
 
-    val additionalVams: List<DoipUdpVehicleAnnouncementMessage>
-        get() = this._additionalVams.toList()
-
-
     /**
      * Defines an ecu and its properties as behind this gateway
      */
@@ -84,16 +81,6 @@ open class GatewayData(name: String) : RequestsData(name) {
         val ecuData = EcuData(name)
         receiver.invoke(ecuData)
         _ecus.add(ecuData)
-    }
-
-    fun additionalVam(logicalAddress: Short, eid: EID, gid: GID = this.gid, vin: String = this.vin!!) {
-        val vam = DoipUdpVehicleAnnouncementMessage(
-            vin = vin.toByteArray(),
-            logicalAddress = logicalAddress,
-            eid = eid,
-            gid = gid,
-        )
-        _additionalVams.add(vam)
     }
 
     fun doipEntity(name: String, vam: DoipUdpVehicleAnnouncementMessage, receiver: EcuData.() -> Unit) {
@@ -120,7 +107,6 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         tlsOptions = this.tlsOptions,
         // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
         vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it },
-        additionalVams = this.additionalVams,
     )
 
     // Add the gateway itself as an ecu, so it too can receive requests

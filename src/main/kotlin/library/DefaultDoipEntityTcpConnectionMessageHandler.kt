@@ -71,7 +71,10 @@ open class DefaultDoipEntityTcpConnectionMessageHandler(
                         DoipTcpRoutingActivationResponse.RC_ERROR_DIFFERENT_SOURCE_ADDRESS
                     ).asByteArray
                 )
-            } else if (doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this) && doipEntity.config.additionalVams.isEmpty()) {
+            } else if (
+                doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this) &&
+                doipEntity.ecus.all { it.config.additionalVam == null }
+            ) {
                 logger.error("Routing activation for ${message.sourceAddress} denied (Has already an active connection)")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(

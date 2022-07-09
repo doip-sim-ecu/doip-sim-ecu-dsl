@@ -497,6 +497,7 @@ open class EcuData(
     var physicalAddress: Short = 0,
     var functionalAddress: Short = 0,
     var pendingNrcSendInterval: Duration = 2.seconds,
+    var additionalVam: EcuAdditionalVamData? = null,
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),

@@ -33,6 +33,7 @@ fun EcuData.toEcuConfig(): EcuConfig =
         physicalAddress = physicalAddress,
         functionalAddress = functionalAddress,
         pendingNrcSendInterval = pendingNrcSendInterval,
+        additionalVam = additionalVam,
     )
 
 
@@ -235,6 +236,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
             val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
             try {
                 requestIter.responseHandler.invoke(responseData)
+                handlePending(request, responseData)
             } catch (e: NrcException) {
                 handlePending(request, responseData)
                 val response = byteArrayOf(0x7F, request.message[0], e.code)
@@ -246,7 +248,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))
                 return
             }
-            handlePending(request, responseData)
+
             if (responseData.continueMatching) {
                 logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
                 continue

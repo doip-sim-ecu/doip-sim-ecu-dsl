@@ -2,7 +2,9 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import library.EcuAdditionalVamData
 import library.UdsMessage
+import library.decodeHex
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -39,6 +41,7 @@ class SimDslTest {
                 request("10", "REQ2") { ack() }
                 request("10 []", "REQ3") { ack() }
                 request(Regex("10.*"), "REQ4") { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
+                additionalVam = EcuAdditionalVamData(eid = "1234".decodeHex())
             }
         }
         assertThat(gateways.size).isEqualTo(1)
@@ -49,6 +52,7 @@ class SimDslTest {
         assertThat(gateways[0].ecus.size).isEqualTo(1)
         assertThat(gateways[0].ecus[0].name).isEqualTo("ECU1")
         assertThat(gateways[0].ecus[0].requests.size).isEqualTo(4)
+        assertThat(gateways[0].ecus[0].additionalVam!!.eid).isEqualTo("1234".decodeHex())
 
         assertThat(gatewayInstances.size).isEqualTo(0)
     }

@@ -14,16 +14,18 @@ open class DefaultDoipEntityUdpMessageHandler(
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityUdpMessageHandler::class.java)
 
     companion object {
-        fun generateVamByEntityConfig(config: DoipEntityConfig): List<DoipUdpVehicleAnnouncementMessage> = listOf(
-            DoipUdpVehicleAnnouncementMessage(config.vin, config.logicalAddress, config.gid, config.eid, 0, 0)
-        ) + config.additionalVams
+        fun generateVamByEntityConfig(doipEntity: DoipEntity): List<DoipUdpVehicleAnnouncementMessage> =
+            with(doipEntity.config) {
+                listOf(DoipUdpVehicleAnnouncementMessage(vin, logicalAddress, gid, eid)) +
+                        doipEntity.ecus.filter { it.config.additionalVam != null }.map { it.config.additionalVam!!.toVam(it.config, doipEntity.config) }
+            }
     }
 
     suspend fun sendVamResponse(
         sendChannel: SendChannel<Datagram>,
         sourceAddress: SocketAddress,
     ) {
-        val vams = generateVamByEntityConfig(config)
+        val vams = generateVamByEntityConfig(doipEntity)
         vams.forEach { vam ->
             logger.info("Sending VAM for ${vam.logicalAddress.toString(16)}")
             sendChannel.send(
@@ -64,8 +66,6 @@ open class DefaultDoipEntityUdpMessageHandler(
 
         if (config.vin.contentEquals(message.vin)) {
             sendVamResponse(sendChannel, sourceAddress)
-        } else {
-
         }
     }
 
