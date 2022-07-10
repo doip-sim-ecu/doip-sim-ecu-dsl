@@ -1,5 +1,5 @@
 plugins {
-    val kotlinVersion = "1.7.0"
+    val kotlinVersion = "1.7.10"
 
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
@@ -20,7 +20,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.0.2"
+val ktorVersion = "2.0.3"
 
 dependencies {
     // Apache-2.0
