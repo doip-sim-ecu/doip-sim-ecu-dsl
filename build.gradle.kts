@@ -13,7 +13,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.9.7"
+version = "0.9.8"
 
 repositories {
     gradlePluginPortal()
@@ -60,7 +60,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
             pom {
-                name.set("DoIP Simulation ECU DSL ")
+                name.set("DoIP Simulation ECU DSL")
                 description.set("This is a a kotlin based domain specific language (dsl) to quickly and intuitively write custom DoIP ECU simulations.")
                 url.set("https://github.com/doip-sim-ecu/doip-sim-ecu-dsl")
                 developers {

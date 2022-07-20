@@ -226,6 +226,9 @@ open class DoipEntity(
                             val response =
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
+                            withContext(Dispatchers.IO) {
+                                socket.runCatching { this.close() }
+                            }
                         }
                     } catch (e: Exception) {
                         if (!socket.isClosed) {
@@ -233,6 +236,9 @@ open class DoipEntity(
                             val response =
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
+                            withContext(Dispatchers.IO) {
+                                socket.runCatching { this.close() }
+                            }
                         }
                     }
                 }
