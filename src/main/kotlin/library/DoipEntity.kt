@@ -54,7 +54,7 @@ open class DoipEntityConfig(
     val gid: GID,
     val eid: EID,
     val vin: VIN,
-    val maxDataSize: Int = 0xFFFF,
+    val maxDataSize: Int = Int.MAX_VALUE,
     val localAddress: String = "0.0.0.0",
     val localPort: Int = 13400,
     val broadcastEnabled: Boolean = true,

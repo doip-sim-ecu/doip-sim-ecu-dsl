@@ -64,6 +64,11 @@ open class GatewayData(name: String) : RequestsData(name) {
      */
     var pendingNrcSendInterval: Duration = 2.seconds
 
+    /**
+     * Maximum payload data size allowed for a DoIP message
+     */
+    var maxDataSize: Int = Int.MAX_VALUE
+
     var tlsMode: TlsMode = TlsMode.DISABLED
     var tlsPort: Int = 3496
     var tlsOptions: TlsOptions = TlsOptions()
@@ -107,6 +112,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         tlsOptions = this.tlsOptions,
         // Fill up too short vin's with 'Z' - if no vin is given, use 0xFF, as defined in ISO 13400 for when no vin is set (yet)
         vin = this.vin?.padEnd(17, 'Z')?.toByteArray() ?: ByteArray(17).let { it.fill(0xFF.toByte()); it },
+        maxDataSize = this.maxDataSize,
     )
 
     // Add the gateway itself as an ecu, so it too can receive requests

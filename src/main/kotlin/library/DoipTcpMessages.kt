@@ -21,7 +21,7 @@ open class DoipTcpConnectionMessageHandler(
         val payloadType = brc.readShort()
         val payloadLength = brc.readInt()
         if (payloadLength > maxPayloadLength) {
-            throw InvalidPayloadLength("Payload longer than maximum allowed length")
+            throw InvalidPayloadLength("Payload longer than maximum allowed length ($payloadLength > $maxPayloadLength)")
         }
         when (payloadType) {
             TYPE_HEADER_NACK -> {
