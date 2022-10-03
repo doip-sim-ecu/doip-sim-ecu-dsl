@@ -20,7 +20,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.1.1"
+val ktorVersion = "2.1.2"
 
 dependencies {
     // Apache-2.0
