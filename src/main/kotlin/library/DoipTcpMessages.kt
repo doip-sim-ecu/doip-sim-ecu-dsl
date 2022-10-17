@@ -3,6 +3,7 @@ package library
 import io.ktor.utils.io.*
 import library.DoipUdpMessageHandler.Companion.logger
 import java.io.OutputStream
+import java.lang.Integer.min
 import kotlin.experimental.inv
 
 abstract class DoipTcpMessage : DoipMessage()
@@ -16,7 +17,10 @@ open class DoipTcpConnectionMessageHandler(
         val protocolVersion = brc.readByte()
         val inverseProtocolVersion = brc.readByte()
         if (protocolVersion != inverseProtocolVersion.inv()) {
-            throw IncorrectPatternFormat("Invalid header $protocolVersion != $inverseProtocolVersion xor 0xFF")
+            val available =  brc.availableForRead
+            val data = ByteArray(min(available, 2000))
+            brc.readFully(data)
+            throw IncorrectPatternFormat("Invalid header $protocolVersion != $inverseProtocolVersion xor 0xFF -- $available bytes available - first ${data.size}: ${data.toHexString()}")
         }
         val payloadType = brc.readShort()
         val payloadLength = brc.readInt()

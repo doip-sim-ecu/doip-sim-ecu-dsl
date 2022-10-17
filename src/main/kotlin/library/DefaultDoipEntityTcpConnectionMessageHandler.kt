@@ -125,7 +125,7 @@ open class DefaultDoipEntityTcpConnectionMessageHandler(
             // Handle the UDS message
             diagMessageHandler.onIncomingDiagMessage(message, output)
         } else {
-            logger.traceIf { "# targetAddress ${message.targetAddress} exists, sending negative ack" }
+            logger.traceIf { "# targetAddress ${message.targetAddress} doesn't exist, sending negative ack" }
             // Reject message with unknown target address
             val reject = DoipTcpDiagMessageNegAck(
                 message.targetAddress,

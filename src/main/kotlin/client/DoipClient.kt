@@ -152,7 +152,7 @@ class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) 
         message: ByteArray,
         waitForResponse: Boolean = true,
         waitTimeout: Duration = Duration.INFINITE,
-        responseHandler: (ByteArray) -> Unit,
+        responseHandler: (ByteArray) -> Unit = {},
     ) {
         return runBlocking {
             val request = DoipTcpDiagMessage(
