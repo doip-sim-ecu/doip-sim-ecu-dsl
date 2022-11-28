@@ -29,7 +29,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
 
-    api("ch.qos.logback:logback-classic:1.3.4") // EPL-1.0
+    api("ch.qos.logback:logback-classic:1.4.5") // EPL-1.0
 //    api("org.slf4j:slf4j-api:1.7.32")
 
     implementation("org.apache.commons:commons-collections4:4.4")
