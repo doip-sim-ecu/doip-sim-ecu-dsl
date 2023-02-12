@@ -1,27 +1,27 @@
 package library
 
-abstract class DoipUdpMessage : DoipMessage()
+public abstract class DoipUdpMessage : DoipMessage()
 
-class DoipUdpHeaderNegAck(val code: Byte) : DoipUdpMessage() {
+public class DoipUdpHeaderNegAck(public val code: Byte) : DoipUdpMessage() {
     @Suppress("unused")
-    companion object {
-        const val NACK_INCORRECT_PATTERN_FORMAT: Byte = 0
-        const val NACK_UNKNOWN_PAYLOAD_TYPE: Byte = 1
-        const val NACK_MESSAGE_TOO_LARGE: Byte = 2
-        const val NACK_OUT_OF_MEMORY: Byte = 3
-        const val NACK_INVALID_PAYLOAD_LENGTH: Byte = 4
+    public companion object {
+        public const val NACK_INCORRECT_PATTERN_FORMAT: Byte = 0
+        public const val NACK_UNKNOWN_PAYLOAD_TYPE: Byte = 1
+        public const val NACK_MESSAGE_TOO_LARGE: Byte = 2
+        public const val NACK_OUT_OF_MEMORY: Byte = 3
+        public const val NACK_INVALID_PAYLOAD_LENGTH: Byte = 4
     }
 
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
-class DoipUdpVehicleInformationRequest : DoipUdpMessage() {
+public class DoipUdpVehicleInformationRequest : DoipUdpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_VIR)
 }
 
-class DoipUdpVehicleInformationRequestWithEid(val eid: EID) : DoipUdpMessage() {
+public class DoipUdpVehicleInformationRequestWithEid(public val eid: EID) : DoipUdpMessage() {
     init {
         if (eid.size != 6) {
             throw IllegalArgumentException("eid must be 6 bytes")
@@ -32,7 +32,7 @@ class DoipUdpVehicleInformationRequestWithEid(val eid: EID) : DoipUdpMessage() {
         get() = doipMessage(TYPE_UDP_VIR_EID, *eid)
 }
 
-class DoipUdpVehicleInformationRequestWithVIN(val vin: VIN) : DoipUdpMessage() {
+public class DoipUdpVehicleInformationRequestWithVIN(public val vin: VIN) : DoipUdpMessage() {
     init {
         if (vin.size != 17) {
             throw IllegalArgumentException("vin must be 17 bytes")
@@ -43,13 +43,13 @@ class DoipUdpVehicleInformationRequestWithVIN(val vin: VIN) : DoipUdpMessage() {
         get() = doipMessage(TYPE_UDP_VIR_VIN, *vin)
 }
 
-class DoipUdpVehicleAnnouncementMessage(
-    val vin: VIN,
-    val logicalAddress: Short,
-    val gid: GID,
-    val eid: EID,
-    val furtherActionRequired: Byte = 0,
-    val syncStatus: Byte = 0,
+public class DoipUdpVehicleAnnouncementMessage(
+    public val vin: VIN,
+    public val logicalAddress: Short,
+    public val gid: GID,
+    public val eid: EID,
+    public val furtherActionRequired: Byte = 0,
+    public val syncStatus: Byte = 0,
 ) : DoipUdpMessage() {
     init {
         if (vin.size != 17) {
@@ -77,16 +77,16 @@ class DoipUdpVehicleAnnouncementMessage(
             )
 }
 
-class DoipUdpEntityStatusRequest : DoipUdpMessage() {
+public class DoipUdpEntityStatusRequest : DoipUdpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_ENTITY_STATUS_REQ)
 }
 
-class DoipUdpEntityStatusResponse(
-    val nodeType: Byte,
-    val numberOfSockets: Byte,
-    val currentNumberOfSockets: Byte,
-    val maxDataSize: Int
+public class DoipUdpEntityStatusResponse(
+    public val nodeType: Byte,
+    public val numberOfSockets: Byte,
+    public val currentNumberOfSockets: Byte,
+    public val maxDataSize: Int
 ) : DoipUdpMessage() {
     override val asByteArray: ByteArray
         get() =
@@ -99,12 +99,12 @@ class DoipUdpEntityStatusResponse(
             )
 }
 
-class DoipUdpDiagnosticPowerModeRequest : DoipUdpMessage() {
+public class DoipUdpDiagnosticPowerModeRequest : DoipUdpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_DIAG_POWER_MODE_REQ)
 }
 
-class DoipUdpDiagnosticPowerModeResponse(val diagPowerMode: Byte) : DoipUdpMessage() {
+public class DoipUdpDiagnosticPowerModeResponse(public val diagPowerMode: Byte) : DoipUdpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_UDP_DIAG_POWER_MODE_RES, diagPowerMode)
 }

@@ -3,19 +3,19 @@ package library
 import kotlinx.coroutines.*
 import java.io.OutputStream
 
-open class UdsMessage(
-    val sourceAddress: Short,
-    val targetAddress: Short,
-    val targetAddressType: Int,
-    val message: ByteArray,
-    val output: OutputStream
+public open class UdsMessage(
+    public val sourceAddress: Short,
+    public val targetAddress: Short,
+    public val targetAddressType: Int,
+    public val message: ByteArray,
+    public val output: OutputStream
 ) {
-    companion object {
-        const val PHYSICAL = 0
-        const val FUNCTIONAL = 1
+    public companion object {
+        public const val PHYSICAL: Int = 0
+        public const val FUNCTIONAL: Int = 1
     }
 
-    fun respond(data: ByteArray) {
+    public fun respond(data: ByteArray) {
         val response = DoipTcpDiagMessage(targetAddress, sourceAddress, data)
 
         runBlocking {
@@ -24,7 +24,7 @@ open class UdsMessage(
     }
 }
 
-fun DoipTcpDiagMessage.toUdsMessage(addressType: Int, output: OutputStream): UdsMessage =
+public fun DoipTcpDiagMessage.toUdsMessage(addressType: Int, output: OutputStream): UdsMessage =
     UdsMessage(
         sourceAddress = this.sourceAddress,
         targetAddress = this.targetAddress,

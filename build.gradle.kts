@@ -13,7 +13,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.9.11"
+version = "0.9.15"
 
 repositories {
     gradlePluginPortal()
@@ -52,7 +52,17 @@ java {
     withJavadocJar()
 }
 
+kotlin {
+    explicitApi()
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    targetCompatibility = "1.8"
+    sourceCompatibility = "1.8"
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
 }
 
@@ -99,10 +109,6 @@ publishing {
             }
         }
     }
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
 }
 
 //licenseReport {

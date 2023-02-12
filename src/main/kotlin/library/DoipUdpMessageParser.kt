@@ -3,14 +3,14 @@ package library
 import io.ktor.utils.io.core.*
 import kotlin.experimental.inv
 
-open class HeaderNegAckException(message: String) : RuntimeException(message)
+public open class HeaderNegAckException(message: String) : RuntimeException(message)
 
-class IncorrectPatternFormat(message: String) : HeaderNegAckException(message)
-class HeaderTooShort(message: String) : HeaderNegAckException(message)
-class InvalidPayloadLength(message: String) : HeaderNegAckException(message)
-class UnknownPayloadType(message: String) : HeaderNegAckException(message)
+public class IncorrectPatternFormat(message: String) : HeaderNegAckException(message)
+public class HeaderTooShort(message: String) : HeaderNegAckException(message)
+public class InvalidPayloadLength(message: String) : HeaderNegAckException(message)
+public class UnknownPayloadType(message: String) : HeaderNegAckException(message)
 
-object DoipUdpMessageParser {
+public object DoipUdpMessageParser {
     private fun checkSyncPattern(protocolVersion: Byte, inverseProtocolVersion: Byte): Boolean {
         if (protocolVersion != inverseProtocolVersion.inv()) {
             return false
@@ -30,10 +30,10 @@ object DoipUdpMessageParser {
         return block() as DoipUdpMessage
     }
 
-    fun parseUDP(ba: ByteArray): DoipUdpMessage =
+    public fun parseUDP(ba: ByteArray): DoipUdpMessage =
         parseUDP(ByteReadPacket(ba))
 
-    fun parseUDP(brp: ByteReadPacket): DoipUdpMessage {
+    public fun parseUDP(brp: ByteReadPacket): DoipUdpMessage {
         // Check header length
         if (brp.remaining < 8) {
             throw HeaderTooShort("DoIP UDP message too short for interpretation")

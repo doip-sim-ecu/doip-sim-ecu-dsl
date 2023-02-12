@@ -10,18 +10,18 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.io.OutputStream
 
-open class DefaultDoipEntityTcpConnectionMessageHandler(
-    val doipEntity: DoipEntity,
-    val socket: DoipTcpSocket,
+public open class DefaultDoipEntityTcpConnectionMessageHandler(
+    public val doipEntity: DoipEntity,
+    public val socket: DoipTcpSocket,
     maxPayloadLength: Int,
-    val logicalAddress: Short,
-    val diagMessageHandler: DiagnosticMessageHandler
+    public val logicalAddress: Short,
+    public val diagMessageHandler: DiagnosticMessageHandler
 ) : DoipTcpConnectionMessageHandler(maxPayloadLength) {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
     private var _registeredSourceAddress: Short? = null
 
-    fun getRegisteredSourceAddress(): Short? =
+    public fun getRegisteredSourceAddress(): Short? =
         _registeredSourceAddress
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
@@ -144,18 +144,18 @@ open class DefaultDoipEntityTcpConnectionMessageHandler(
 //    }
 //}
 
-interface DiagnosticMessageHandler {
-    fun existsTargetAddress(targetAddress: Short): Boolean
-    suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream)
+public interface DiagnosticMessageHandler {
+    public fun existsTargetAddress(targetAddress: Short): Boolean
+    public suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream)
 }
 
-fun DoipEntity.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?) =
+public fun DoipEntity.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?): Boolean =
     this.connectionHandlers.any {
         (it as DefaultDoipEntityTcpConnectionMessageHandler).getRegisteredSourceAddress() == sourceAddress
                 && it != exclude
     }
 
-suspend fun OutputStream.writeFully(byteArray: ByteArray) =
+public suspend fun OutputStream.writeFully(byteArray: ByteArray): Unit =
     withContext(Dispatchers.IO) {
         this@writeFully.write(byteArray)
     }

@@ -8,28 +8,28 @@ import java.io.Closeable
 import java.io.OutputStream
 import javax.net.ssl.SSLSocket
 
-enum class SocketType {
+public enum class SocketType {
     TCP_DATA,
     TLS_DATA,
 }
 
-interface DoipTcpSocket : AutoCloseable, Closeable {
-    val remoteAddress: SocketAddress
+public interface DoipTcpSocket : AutoCloseable, Closeable {
+    public val remoteAddress: SocketAddress
         get() = getSocketRemoteAddress()
 
-    val isClosed: Boolean
+    public val isClosed: Boolean
         get() = isSocketClosed()
 
-    val socketType: SocketType
+    public val socketType: SocketType
 
-    fun isSocketClosed(): Boolean
-    fun getSocketRemoteAddress(): SocketAddress
-    fun openReadChannel(): ByteReadChannel
-    fun openOutputStream(): OutputStream
+    public fun isSocketClosed(): Boolean
+    public fun getSocketRemoteAddress(): SocketAddress
+    public fun openReadChannel(): ByteReadChannel
+    public fun openOutputStream(): OutputStream
     override fun close()
 }
 
-class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket {
+internal class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket {
     override fun isSocketClosed(): Boolean =
         socket.isClosed
 
@@ -49,7 +49,7 @@ class DelegatedKtorSocket(private val socket: Socket) : DoipTcpSocket {
         get() = SocketType.TCP_DATA
 }
 
-class SSLDoipTcpSocket(private val socket: SSLSocket) : DoipTcpSocket {
+internal class SSLDoipTcpSocket(private val socket: SSLSocket) : DoipTcpSocket {
     private val _remoteAddress = InetSocketAddress(socket.remoteSocketAddress.hostname, socket.remoteSocketAddress.port)
 
     override fun isSocketClosed(): Boolean =

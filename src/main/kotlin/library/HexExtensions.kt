@@ -4,7 +4,7 @@ import java.nio.Buffer
 import java.nio.ByteBuffer
 import kotlin.math.min
 
-fun String.decodeHex(): ByteArray {
+public fun String.decodeHex(): ByteArray {
     // Maximum size for the resulting bytearray is string-length / 2
     val bb = ByteBuffer.allocate(this.length / 2)
 
@@ -51,12 +51,12 @@ fun String.decodeHex(): ByteArray {
 //        .toByteArray()
 }
 
-fun String.encodedAsHexString(separator: String = " "): String =
+public fun String.encodedAsHexString(separator: String = " "): String =
     this.encodeToByteArray().toHexString(separator)
 
 private val nibbleToHex = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
-fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE, limitExceededSuffix: String = "..."): String {
+public fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE, limitExceededSuffix: String = "..."): String {
     val len = min(limit, this.size)
     if (len == 0) {
         if (this.size > limit) {

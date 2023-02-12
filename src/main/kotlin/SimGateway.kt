@@ -8,87 +8,87 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("unused")
-open class GatewayData(name: String) : RequestsData(name) {
+public open class GatewayData(name: String) : RequestsData(name) {
     /**
      * Network address this gateway should bind on (default: 0.0.0.0)
      */
-    var localAddress: String = "0.0.0.0"
+    public var localAddress: String = "0.0.0.0"
 
     /**
      * Network port this gateway should bind on (default: 13400)
      */
-    var localPort: Int = 13400
+    public var localPort: Int = 13400
 
     /**
      * Multicast address
      */
-    var multicastAddress: String? = null
+    public var multicastAddress: String? = null
 
     /**
      * Whether VAM broadcasts shall be sent on startup (default: true)
      */
-    var broadcastEnable: Boolean = true
+    public var broadcastEnable: Boolean = true
 
     /**
      * Default broadcast address for VAM messages (default: 255.255.255.255)
      */
-    var broadcastAddress: String = "255.255.255.255"
+    public var broadcastAddress: String = "255.255.255.255"
 
     /**
      * The logical address under which the gateway shall be reachable
      */
-    var logicalAddress by Delegates.notNull<Short>()
+    public var logicalAddress: Short by Delegates.notNull()
 
     /**
      * The functional address under which the gateway (and other ecus) shall be reachable
      */
-    var functionalAddress by Delegates.notNull<Short>()
+    public var functionalAddress: Short by Delegates.notNull()
 
     /**
      * Vehicle identifier, 17 chars, will be filled with '0`, or if left null, set to 0xFF
      */
-    var vin: String? = null // 17 byte VIN
+    public  var vin: String? = null // 17 byte VIN
 
     /**
      * Group ID of the gateway
      */
-    var gid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte group identification (used before mac is set)
+    public var gid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte group identification (used before mac is set)
 
     /**
      * Entity ID of the gateway
      */
-    var eid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte entity identification (usually MAC)
+    public var eid: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0) // 6 byte entity identification (usually MAC)
 
     /**
      * Interval between sending pending NRC messages (0x78)
      */
-    var pendingNrcSendInterval: Duration = 2.seconds
+    public var pendingNrcSendInterval: Duration = 2.seconds
 
     /**
      * Maximum payload data size allowed for a DoIP message
      */
-    var maxDataSize: Int = Int.MAX_VALUE
+    public var maxDataSize: Int = Int.MAX_VALUE
 
-    var tlsMode: TlsMode = TlsMode.DISABLED
-    var tlsPort: Int = 3496
-    var tlsOptions: TlsOptions = TlsOptions()
+    public var tlsMode: TlsMode = TlsMode.DISABLED
+    public var tlsPort: Int = 3496
+    public var tlsOptions: TlsOptions = TlsOptions()
 
     private val _ecus: MutableList<EcuData> = mutableListOf()
     private val _additionalVams: MutableList<DoipUdpVehicleAnnouncementMessage> = mutableListOf()
 
-    val ecus: List<EcuData>
+    public val ecus: List<EcuData>
         get() = this._ecus.toList()
 
     /**
      * Defines an ecu and its properties as behind this gateway
      */
-    fun ecu(name: String, receiver: EcuData.() -> Unit) {
+    public fun ecu(name: String, receiver: EcuData.() -> Unit) {
         val ecuData = EcuData(name)
         receiver.invoke(ecuData)
         _ecus.add(ecuData)
     }
 
-    fun doipEntity(name: String, vam: DoipUdpVehicleAnnouncementMessage, receiver: EcuData.() -> Unit) {
+    public fun doipEntity(name: String, vam: DoipUdpVehicleAnnouncementMessage, receiver: EcuData.() -> Unit) {
         val ecuData = EcuData(name)
         receiver.invoke(ecuData)
         _ecus.add(ecuData)
@@ -129,8 +129,8 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
     return config
 }
 
-class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfig()) {
-    val requests: List<RequestMatcher>
+public class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfig()) {
+    public val requests: List<RequestMatcher>
         get() = data.requests
 
     override fun createEcu(config: EcuConfig): SimulatedEcu {
@@ -160,7 +160,7 @@ class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfi
         return super.findEcuByName(name) as SimEcu?
     }
 
-    fun reset(recursiveEcus: Boolean = true) {
+    public fun reset(recursiveEcus: Boolean = true) {
         runBlocking {
             MDC.put("ecu", name)
 

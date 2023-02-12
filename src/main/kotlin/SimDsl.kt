@@ -4,101 +4,101 @@ import kotlin.IllegalArgumentException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-typealias RequestResponseData = ResponseData<RequestMatcher>
-typealias RequestResponseHandler = RequestResponseData.() -> Unit
-typealias InterceptorRequestData = ResponseData<RequestInterceptorData>
-typealias InterceptorRequestHandler = InterceptorRequestData.(request: RequestMessage) -> Boolean
-typealias InterceptorResponseHandler = InterceptorResponseData.(response: ByteArray) -> Boolean
-typealias EcuDataHandler = EcuData.() -> Unit
-typealias GatewayDataHandler = GatewayData.() -> Unit
-typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
-typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
+public typealias RequestResponseData = ResponseData<RequestMatcher>
+public typealias RequestResponseHandler = RequestResponseData.() -> Unit
+public typealias InterceptorRequestData = ResponseData<RequestInterceptorData>
+public typealias InterceptorRequestHandler = InterceptorRequestData.(request: RequestMessage) -> Boolean
+public typealias InterceptorResponseHandler = InterceptorResponseData.(response: ByteArray) -> Boolean
+public typealias EcuDataHandler = EcuData.() -> Unit
+public typealias GatewayDataHandler = GatewayData.() -> Unit
+public typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
+public typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
 
 @Suppress("unused")
-class InterceptorResponseData(
+public class InterceptorResponseData(
     caller: ResponseInterceptorData,
     request: UdsMessage,
-    val responseMessage: ByteArray,
+    public val responseMessage: ByteArray,
     ecu: SimEcu
 ) : ResponseData<ResponseInterceptorData>(caller, request, ecu)
 
-open class NrcException(val code: Byte): Exception()
+public open class NrcException(public val code: Byte): Exception()
 
 @Suppress("unused")
-object NrcError {
+public object NrcError {
     // Common Response Codes
-    const val GeneralReject: Byte = 0x10
-    const val ServiceNotSupported: Byte = 0x11
-    const val SubFunctionNotSupported: Byte = 0x12
-    const val IncorrectMessageLengthOrInvalidFormat: Byte = 0x13
-    const val ResponseTooLong: Byte = 0x14
+    public const val GeneralReject: Byte = 0x10
+    public const val ServiceNotSupported: Byte = 0x11
+    public const val SubFunctionNotSupported: Byte = 0x12
+    public const val IncorrectMessageLengthOrInvalidFormat: Byte = 0x13
+    public const val ResponseTooLong: Byte = 0x14
 
-    const val BusyRepeatRequest: Byte = 0x21
-    const val ConditionsNotCorrect: Byte = 0x22
+    public const val BusyRepeatRequest: Byte = 0x21
+    public const val ConditionsNotCorrect: Byte = 0x22
 
-    const val RequestSequenceError: Byte = 0x24
-    const val NoResponseFromSubNetComponent: Byte = 0x25
-    const val FailurePreventsExecutionOfRequestedAction: Byte = 0x26
+    public const val RequestSequenceError: Byte = 0x24
+    public const val NoResponseFromSubNetComponent: Byte = 0x25
+    public const val FailurePreventsExecutionOfRequestedAction: Byte = 0x26
 
-    const val RequestOutOfRange: Byte = 0x31
+    public const val RequestOutOfRange: Byte = 0x31
 
-    const val SecurityAccessDenied: Byte = 0x33
-    const val AuthenticationRequired: Byte = 0x34
+    public const val SecurityAccessDenied: Byte = 0x33
+    public const val AuthenticationRequired: Byte = 0x34
 
-    const val InvalidKey: Byte = 0x35
-    const val ExceededNumberOfAttempts: Byte = 0x36
-    const val RequiredTimeDelayNotExpired: Byte = 0x37
-    const val SecureDataTransmissionRequired: Byte = 0x38
-    const val SecureDataTransmissionNotAllowed = 0x39
-    const val SecureDataVerificationFailed = 0x3a
+    public const val InvalidKey: Byte = 0x35
+    public const val ExceededNumberOfAttempts: Byte = 0x36
+    public const val RequiredTimeDelayNotExpired: Byte = 0x37
+    public const val SecureDataTransmissionRequired: Byte = 0x38
+    public const val SecureDataTransmissionNotAllowed: Byte = 0x39
+    public const val SecureDataVerificationFailed: Byte = 0x3a
 
-    const val CertificateVerificationFailedInvalidTimePeriod = 0x50
-    const val CertificateVerificationFailedInvalidSignature = 0x51
-    const val CertificateVerificationFailedInvalidChainOfTrust = 0x52
-    const val CertificateVerificationFailedInvalidType = 0x53
-    const val CertificateVerificationFailedInvalidFormat = 0x54
-    const val CertificateVerificationFailedInvalidContent = 0x55
-    const val CertificateVerificationFailedInvalidScope = 0x56
-    const val CertificateVerificationFailedInvalidCertRevoked = 0x57
-    const val OwnershipVerificationFailed = 0x58
-    const val ChallengeCalculationFailed = 0x59
-    const val SettingAccessRightsFailed = 0x5a
-    const val SessionKeyCreationDerivationFailed = 0x5b
-    const val ConfigurationDataUsageFailed = 0x5c
-    const val DeAuthenticationFailed = 0x5d
+    public const val CertificateVerificationFailedInvalidTimePeriod: Byte = 0x50
+    public const val CertificateVerificationFailedInvalidSignature: Byte = 0x51
+    public const val CertificateVerificationFailedInvalidChainOfTrust: Byte = 0x52
+    public const val CertificateVerificationFailedInvalidType: Byte = 0x53
+    public const val CertificateVerificationFailedInvalidFormat: Byte = 0x54
+    public const val CertificateVerificationFailedInvalidContent: Byte = 0x55
+    public const val CertificateVerificationFailedInvalidScope: Byte = 0x56
+    public const val CertificateVerificationFailedInvalidCertRevoked: Byte = 0x57
+    public const val OwnershipVerificationFailed: Byte = 0x58
+    public const val ChallengeCalculationFailed: Byte = 0x59
+    public const val SettingAccessRightsFailed: Byte = 0x5a
+    public const val SessionKeyCreationDerivationFailed: Byte = 0x5b
+    public const val ConfigurationDataUsageFailed: Byte = 0x5c
+    public const val DeAuthenticationFailed: Byte = 0x5d
 
-    const val UploadDownloadNotAccepted: Byte = 0x70
-    const val TransferDataSuspended: Byte = 0x71
-    const val GeneralProgrammingFailure: Byte = 0x72
-    const val WrongBlockSequenceCounter: Byte = 0x73
+    public const val UploadDownloadNotAccepted: Byte = 0x70
+    public const val TransferDataSuspended: Byte = 0x71
+    public const val GeneralProgrammingFailure: Byte = 0x72
+    public const val WrongBlockSequenceCounter: Byte = 0x73
 
-    const val RequestCorrectlyReceivedButResponseIsPending: Byte = 0x78
+    public const val RequestCorrectlyReceivedButResponseIsPending: Byte = 0x78
 
-    const val SubFunctionNotSupportedInActiveSession: Byte = 0x7E
-    const val ServiceNotSupportedInActiveSession: Byte = 0x7F
+    public const val SubFunctionNotSupportedInActiveSession: Byte = 0x7E
+    public const val ServiceNotSupportedInActiveSession: Byte = 0x7F
 
-    const val RpmTooHigh = 0x81.toByte()
-    const val RpmTooLow = 0x82.toByte()
-    const val EngineIsRunning = 0x84.toByte()
-    const val EngineRunTimeTooLow = 0x85.toByte()
-    const val TemperatureTooHigh = 0x86.toByte()
-    const val TemperatureTooLow = 0x87.toByte()
-    const val VehicleSpeedToHigh = 0x88.toByte()
-    const val VehicleSpeedTooLow = 0x89.toByte()
-    const val ThrottleOrPedalTooHigh = 0x8a.toByte()
-    const val ThrottleOrPedalTooLow = 0x8b.toByte()
-    const val TransmissionRangeNotInNeutral = 0x8c.toByte()
-    const val TransmissionRangeNotInGear = 0x8d.toByte()
+    public const val RpmTooHigh: Byte = 0x81.toByte()
+    public const val RpmTooLow: Byte = 0x82.toByte()
+    public const val EngineIsRunning: Byte = 0x84.toByte()
+    public const val EngineRunTimeTooLow: Byte = 0x85.toByte()
+    public const val TemperatureTooHigh: Byte = 0x86.toByte()
+    public const val TemperatureTooLow: Byte = 0x87.toByte()
+    public const val VehicleSpeedToHigh: Byte = 0x88.toByte()
+    public const val VehicleSpeedTooLow: Byte = 0x89.toByte()
+    public const val ThrottleOrPedalTooHigh: Byte = 0x8a.toByte()
+    public const val ThrottleOrPedalTooLow: Byte = 0x8b.toByte()
+    public const val TransmissionRangeNotInNeutral: Byte = 0x8c.toByte()
+    public const val TransmissionRangeNotInGear: Byte = 0x8d.toByte()
 
-    const val BrakeSwitchesNotClosed = 0x8f.toByte()
+    public const val BrakeSwitchesNotClosed: Byte = 0x8f.toByte()
 
-    const val TorqueConvertedClutchLocked = 0x91.toByte()
-    const val VoltageTooHigh: Byte = 0x92.toByte()
-    const val VoltageTooLow: Byte = 0x93.toByte()
-    const val ResourceTemporarilyNotAvailable = 0x94.toByte()
+    public const val TorqueConvertedClutchLocked: Byte = 0x91.toByte()
+    public const val VoltageTooHigh: Byte = 0x92.toByte()
+    public const val VoltageTooLow: Byte = 0x93.toByte()
+    public const val ResourceTemporarilyNotAvailable: Byte = 0x94.toByte()
 }
 
-class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
+public class RequestMessage(udsMessage: UdsMessage, public val isBusy: Boolean) :
     UdsMessage(
         udsMessage.sourceAddress,
         udsMessage.targetAddress,
@@ -109,43 +109,43 @@ class RequestMessage(udsMessage: UdsMessage, val isBusy: Boolean) :
 /**
  * Define the response to be sent after the function returns
  */
-open class ResponseData<T>(
+public open class ResponseData<T>(
     /**
      * The object that called this response handler (e.g. [RequestMatcher] or [InterceptorData])
      */
-    val caller: T,
+    public val caller: T,
     /**
      * The request as received for the ecu
      */
-    val request: UdsMessage,
+    public val request: UdsMessage,
     /**
      * Represents the simulated ecu, allows you to modify data on it
      */
-    val ecu: SimEcu
+    public val ecu: SimEcu
 ) {
     /**
      * The request as a byte-array for easier access
      */
-    val message: ByteArray
+    public val message: ByteArray
         get() = request.message
 
     /**
      * The response that's scheduled to be sent after the response handler
      * finishes
      */
-    val response
+    public val response: ByteArray
         get() = _response
 
     /**
      * Continue matching with other request handlers
      */
-    val continueMatching
+    public val continueMatching: Boolean
         get() = _continueMatching
 
-    val pendingFor: Duration?
+    public val pendingFor: Duration?
         get() = _pendingFor
 
-    val pendingForCallback: () -> Unit
+    public val pendingForCallback: () -> Unit
         get() = _pendingForCallback
 
     private var _response: ByteArray = ByteArray(0)
@@ -156,39 +156,39 @@ open class ResponseData<T>(
     /**
      * See [SimEcu.addOrReplaceTimer]
      */
-    fun addOrReplaceEcuTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
+    public fun addOrReplaceEcuTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
         ecu.addOrReplaceTimer(name, delay, handler)
     }
 
     /**
      * See [SimEcu.cancelTimer]
      */
-    fun cancelEcuTimer(name: String) {
+    public fun cancelEcuTimer(name: String) {
         ecu.cancelTimer(name)
     }
 
     /**
      * See [SimEcu.addOrReplaceEcuInterceptor]
      */
-    fun addOrReplaceEcuInterceptor(
+    public fun addOrReplaceEcuInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
         alsoCallWhenEcuIsBusy: Boolean = false,
         interceptor: InterceptorRequestHandler
-    ) =
+    ): String =
         ecu.addOrReplaceEcuInterceptor(name, duration, alsoCallWhenEcuIsBusy, interceptor)
 
     /**
      * See [SimEcu.removeInterceptor]
      */
-    fun removeEcuInterceptor(name: String) =
+    public fun removeEcuInterceptor(name: String): RequestInterceptorData? =
         ecu.removeInterceptor(name)
 
-    fun respond(responseHex: ByteArray) {
+    public fun respond(responseHex: ByteArray) {
         _response = responseHex
     }
 
-    fun respond(responseHex: String) =
+    public fun respond(responseHex: String): Unit =
         respond(responseHex.decodeHex())
 
     /**
@@ -197,7 +197,7 @@ open class ResponseData<T>(
      *
      * nrOfRequestBytes is the total number of bytes (including SID + 0x40)
      */
-    fun ack(payload: ByteArray = ByteArray(0), nrOfRequestBytes: Int) =
+    public fun ack(payload: ByteArray = ByteArray(0), nrOfRequestBytes: Int): Unit =
         respond(
             byteArrayOf(
                 (message[0] + 0x40.toByte()).toByte(),
@@ -213,7 +213,7 @@ open class ResponseData<T>(
      * payload must be a hex-string.
      * nrOfRequestBytes is the total number of bytes (including SID + 0x40)
      */
-    fun ack(payload: String, nrOfRequestBytes: Int) =
+    public fun ack(payload: String, nrOfRequestBytes: Int): Unit =
         ack(payload.decodeHex(), nrOfRequestBytes)
 
     /**
@@ -222,7 +222,7 @@ open class ResponseData<T>(
      * The first n bytes are automatically prefixed, depending on which service
      * is responded to (see [RequestsData.ackBytesLengthMap])
      */
-    fun ack(payload: String) =
+    public fun ack(payload: String): Unit =
         ack(payload, ecu.ackBytesMap[message[0]] ?: 2)
 
     /**
@@ -231,23 +231,23 @@ open class ResponseData<T>(
      * The first n bytes are automatically prefixed, depending on which service
      * is responded to (see [RequestsData.ackBytesLengthMap])
      */
-    fun ack(payload: ByteArray = ByteArray(0)) =
+    public fun ack(payload: ByteArray = ByteArray(0)): Unit =
         ack(payload, ecu.ackBytesMap[message[0]] ?: 2)
 
     /**
      * Send a negative response code (NRC) in response to the request
      */
-    fun nrc(code: Byte = NrcError.GeneralReject) =
+    public fun nrc(code: Byte = NrcError.GeneralReject): Unit =
         respond(byteArrayOf(0x7F, message[0], code))
 
     /**
      * Don't send any responses/acknowledgement, and continue matching
      */
-    fun continueMatching(continueMatching: Boolean = true) {
+    public fun continueMatching(continueMatching: Boolean = true) {
         _continueMatching = continueMatching
     }
 
-    fun pendingFor(duration: Duration, callback: () -> Unit = {}) {
+    public fun pendingFor(duration: Duration, callback: () -> Unit = {}) {
         _pendingFor = duration
         _pendingForCallback = callback
     }
@@ -256,12 +256,12 @@ open class ResponseData<T>(
 /**
  * Defines a matcher for an incoming request and the lambdas to be executed when it matches
  */
-class RequestMatcher(
-    val name: String?,
-    val requestBytes: ByteArray?,
-    val requestRegex: Regex?,
-    val loglevel: LogLevel = LogLevel.DEBUG,
-    val responseHandler: RequestResponseHandler
+public class RequestMatcher(
+    public val name: String?,
+    public val requestBytes: ByteArray?,
+    public val requestRegex: Regex?,
+    public val loglevel: LogLevel = LogLevel.DEBUG,
+    public val responseHandler: RequestResponseHandler
 ) : DataStorage() {
     init {
         if (requestBytes == null && requestRegex == null) {
@@ -274,7 +274,7 @@ class RequestMatcher(
     /**
      * Reset persistent storage for this request
      */
-    fun reset() {
+    public fun reset() {
         clearStoredProperties()
     }
 
@@ -294,10 +294,10 @@ class RequestMatcher(
     }
 }
 
-fun List<RequestMatcher>.findByName(name: String) =
+internal fun List<RequestMatcher>.findByName(name: String) =
     this.firstOrNull { it.name == name }
 
-fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
+internal fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
     val index = this.indexOfFirst { it.name == name }
     if (index >= 0) {
         return this.removeAt(index)
@@ -305,42 +305,42 @@ fun MutableList<RequestMatcher>.removeByName(name: String): RequestMatcher? {
     return null
 }
 
-data class ResetHandler(val name: String?, val handler: (SimEcu) -> Unit)
+public data class ResetHandler(val name: String?, val handler: (SimEcu) -> Unit)
 
-enum class LogLevel {
+public enum class LogLevel {
     ERROR,
     INFO,
     DEBUG,
     TRACE,
 }
 
-open class RequestsData(
-    val name: String,
+public open class RequestsData(
+    public val name: String,
     /**
      * Return a nrc when no request could be matched
      */
-    var nrcOnNoMatch: Boolean = true,
+    public var nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
     /**
      * Maximum length of data converted into a hex-string for incoming requests
      */
-    var requestRegexMatchBytes: Int = 10,
+    public var requestRegexMatchBytes: Int = 10,
 
     /**
      * Map of Request SID to number of ack response byte count
      */
-    var ackBytesLengthMap: Map<Byte, Int> = mapOf(),
+    public var ackBytesLengthMap: Map<Byte, Int> = mapOf(),
 ) {
     /**
      * List of all defined requests in the order they were defined
      */
-    val requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
+    public val requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
 
     /**
      * List of defined reset handlers
      */
-    val resetHandler: MutableList<ResetHandler> = mutableListOf(*resetHandler.toTypedArray())
+    public val resetHandler: MutableList<ResetHandler> = mutableListOf(*resetHandler.toTypedArray())
 
 
     private fun regexifyRequestHex(requestHex: String) =
@@ -356,7 +356,7 @@ open class RequestsData(
      * Define request-matcher & response-handler for a gateway or ecu by using an
      * exact matching byte-array
      */
-    fun request(
+    public fun request(
         /**
          * Byte-Array to exactly match the request
          */
@@ -404,7 +404,7 @@ open class RequestsData(
      * account
      *
      */
-    fun request(
+    public fun request(
         /**
          * Regular expression to match the request - see [requestRegexMatchBytes] and normalization
          */
@@ -452,7 +452,7 @@ open class RequestsData(
      * is automatically converted into a regular expression by replacing all "[]" with ".*",
      * turning it into uppercase, and removing all spaces.
      */
-    fun request(
+    public fun request(
         /**
          * Hex-String to exactly match the request
          */
@@ -481,7 +481,7 @@ open class RequestsData(
         }
     }
 
-    fun onReset(name: String? = null, handler: (SimEcu) -> Unit) {
+    public fun onReset(name: String? = null, handler: (SimEcu) -> Unit) {
         resetHandler.add(ResetHandler(name, handler))
     }
 
@@ -492,12 +492,12 @@ open class RequestsData(
 /**
  * Define the data associated with the ecu
  */
-open class EcuData(
+public open class EcuData(
     name: String,
-    var physicalAddress: Short = 0,
-    var functionalAddress: Short = 0,
-    var pendingNrcSendInterval: Duration = 2.seconds,
-    var additionalVam: EcuAdditionalVamData? = null,
+    public var physicalAddress: Short = 0,
+    public var functionalAddress: Short = 0,
+    public var pendingNrcSendInterval: Duration = 2.seconds,
+    public var additionalVam: EcuAdditionalVamData? = null,
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
@@ -512,30 +512,30 @@ open class EcuData(
     ackBytesLengthMap = ackBytesLengthMap,
 )
 
-val gateways: MutableList<GatewayData> = mutableListOf()
-val gatewayInstances: MutableList<SimGateway> = mutableListOf()
+internal val gateways: MutableList<GatewayData> = mutableListOf()
+internal val gatewayInstances: MutableList<SimGateway> = mutableListOf()
 
 /**
  * Defines a DoIP-Gateway and the ECUs behind it
  */
-fun gateway(name: String, receiver: GatewayDataHandler) {
+public fun gateway(name: String, receiver: GatewayDataHandler) {
     val gatewayData = GatewayData(name)
     receiver.invoke(gatewayData)
     gateways.add(gatewayData)
 }
 
-fun reset() {
+public fun reset() {
     gatewayInstances.forEach { it.reset() }
 }
 
 @Suppress("unused")
-fun stop() {
+public fun stop() {
 //    gatewayInstances.forEach { it.stop() }
     gatewayInstances.clear()
 }
 
 @Suppress("unused")
-fun start() {
+public fun start() {
     gatewayInstances.addAll(gateways.map { SimGateway(it) })
 
     gatewayInstances.forEach { it.start() }

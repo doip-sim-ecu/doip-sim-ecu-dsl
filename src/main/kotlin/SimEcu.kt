@@ -11,23 +11,23 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 
-open class InterceptorData<T>(
-    val name: String,
-    val interceptor: T,
-    val isExpired: () -> Boolean
+public open class InterceptorData<T>(
+    public val name: String,
+    public val interceptor: T,
+    public val isExpired: () -> Boolean
 ) : DataStorage()
 
-class RequestInterceptorData(
+public class RequestInterceptorData(
     name: String,
     interceptor: InterceptorRequestHandler,
-    val alsoCallWhenEcuIsBusy: Boolean,
+    public val alsoCallWhenEcuIsBusy: Boolean,
     isExpired: () -> Boolean
 ) : InterceptorData<InterceptorRequestHandler>(name, interceptor, isExpired)
 
-class ResponseInterceptorData(name: String, interceptor: InterceptorResponseHandler, isExpired: () -> Boolean)
+public class ResponseInterceptorData(name: String, interceptor: InterceptorResponseHandler, isExpired: () -> Boolean)
     : InterceptorData<InterceptorResponseHandler>(name, interceptor, isExpired)
 
-fun EcuData.toEcuConfig(): EcuConfig =
+internal fun EcuData.toEcuConfig(): EcuConfig =
     EcuConfig(
         name = name,
         physicalAddress = physicalAddress,
@@ -38,15 +38,15 @@ fun EcuData.toEcuConfig(): EcuConfig =
 
 
 @Open
-class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
+public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     private val internalDataStorage: MutableMap<String, Any?> = ConcurrentHashMap()
 
-    val logger: Logger = LoggerFactory.getLogger(SimEcu::class.java)
+    public val logger: Logger = LoggerFactory.getLogger(SimEcu::class.java)
 
-    val requests
+    public val requests: MutableList<RequestMatcher>
         get() = data.requests
 
-    val ackBytesMap
+    public val ackBytesMap: Map<Byte, Int>
         get() = data.ackBytesLengthMap
 
     private val interceptors = Collections.synchronizedMap(LinkedHashMap<String, RequestInterceptorData>())
@@ -55,7 +55,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     private val mainTimer: Timer by lazy { Timer("$name-Timer", true) }
     private val timers = ConcurrentHashMap<String, EcuTimerTask>()
 
-    fun sendResponse(request: UdsMessage, response: ByteArray) {
+    public fun sendResponse(request: UdsMessage, response: ByteArray) {
         if (handleOutboundInterceptors(request, response)) {
             return
         }
@@ -274,7 +274,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      *
      * Interceptors are executed before request matching
      */
-    fun addOrReplaceEcuInterceptor(
+    public fun addOrReplaceEcuInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
         alsoCallWhenEcuIsBusy: Boolean = false,
@@ -299,7 +299,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     /**
      * Remove an interceptor by name
      */
-    fun removeInterceptor(name: String) =
+    public fun removeInterceptor(name: String): RequestInterceptorData? =
         interceptors.remove(name)
 
     /**
@@ -307,7 +307,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
      *
      * Outbound interceptors are executed before a response is sent
      */
-    fun addOrReplaceEcuOutboundInterceptor(
+    public fun addOrReplaceEcuOutboundInterceptor(
         name: String = UUID.randomUUID().toString(),
         duration: Duration = Duration.INFINITE,
         interceptor: InterceptorResponseHandler
@@ -330,14 +330,14 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     /**
      * Remove an outbound interceptor by name
      */
-    fun removeOutboundInterceptor(name: String) =
+    public fun removeOutboundInterceptor(name: String): ResponseInterceptorData? =
         outboundInterceptors.remove(name)
 
     /**
      * Adds a new, or replaces an existing timer with a new routine.
      * Please note that the internal resolution for delay is milliseconds
      */
-    fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
+    public fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
         logger.traceIf { "Adding or replacing timer '$name' for $name to be executed after $delay"}
 
         synchronized(mainTimer) {
@@ -358,7 +358,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     /**
      * Explicitly cancel a running timer
      */
-    fun cancelTimer(name: String) {
+    public fun cancelTimer(name: String) {
         logger.traceIf { "Cancelling timer '$name' for $name" }
         synchronized(mainTimer) {
             timers[name]?.cancel()
@@ -369,19 +369,19 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     /**
      * Retrieves a property that is persisted until [reset] or [clearStoredProperties] are called
      */
-    fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
+    public fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
         StoragePropertyDelegate(this.internalDataStorage, initialValue)
 
     /**
      * Clears the stored properties
      */
-    fun clearStoredProperties() =
+    public fun clearStoredProperties(): Unit =
         internalDataStorage.clear()
 
     /**
      * Resets all the ECUs stored properties, timers, interceptors and requests
      */
-    fun reset() {
+    public fun reset() {
         runBlocking(Dispatchers.Default) {
             MDC.put("ecu", name)
 
@@ -408,7 +408,7 @@ class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()) {
     }
 }
 
-fun Logger.logForRequest(request: RequestMatcher, t: Throwable? = null, supplier: () -> String) =
+private fun Logger.logForRequest(request: RequestMatcher, t: Throwable? = null, supplier: () -> String) =
     when (request.loglevel) {
         LogLevel.ERROR -> this.errorIf(t, supplier)
         LogLevel.INFO -> this.infoIf(t, supplier)

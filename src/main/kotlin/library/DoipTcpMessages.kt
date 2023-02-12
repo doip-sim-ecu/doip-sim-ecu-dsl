@@ -1,18 +1,19 @@
 package library
 
 import io.ktor.utils.io.*
-import library.DoipUdpMessageHandler.Companion.logger
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.OutputStream
 import java.lang.Integer.min
 import kotlin.experimental.inv
 
-abstract class DoipTcpMessage : DoipMessage()
+public abstract class DoipTcpMessage : DoipMessage()
 
-open class DoipTcpConnectionMessageHandler(
-    val maxPayloadLength: Int = Int.MAX_VALUE
+public open class DoipTcpConnectionMessageHandler(
+    public val maxPayloadLength: Int = Int.MAX_VALUE
 ) {
 
-    open suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage {
+    public open suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage {
         logger.traceIf { "# receiveTcpData" }
         val protocolVersion = brc.readByte()
         val inverseProtocolVersion = brc.readByte()
@@ -98,7 +99,7 @@ open class DoipTcpConnectionMessageHandler(
         }
     }
 
-    open suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
+    public open suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
         logger.traceIf { "# handleTcpMessage $message" }
         when (message) {
             is DoipTcpHeaderNegAck -> handleTcpHeaderNegAck(message, output)
@@ -149,20 +150,24 @@ open class DoipTcpConnectionMessageHandler(
     protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: OutputStream) {
         logger.traceIf { "# handleTcpDiagMessageNegAck $message for ${message.targetAddress}" }
     }
+
+    private companion object {
+        private val logger: Logger = LoggerFactory.getLogger(DoipTcpConnectionMessageHandler::class.java)
+    }
 }
 
-class DoipTcpHeaderNegAck(
-    val code: Byte
+public class DoipTcpHeaderNegAck(
+    public val code: Byte
 ) : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
-class DoipTcpRoutingActivationRequest(
-    val sourceAddress: Short,
-    val activationType: Byte = ACTIVATION_TYPE_DEFAULT,
-    val reserved: Int = 0,
-    val oemData: Int? = null
+public class DoipTcpRoutingActivationRequest(
+    public val sourceAddress: Short,
+    public val activationType: Byte = ACTIVATION_TYPE_DEFAULT,
+    public val reserved: Int = 0,
+    public val oemData: Int? = null
 ) : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() =
@@ -175,30 +180,30 @@ class DoipTcpRoutingActivationRequest(
             )
 
     @Suppress("unused")
-    companion object {
-        const val ACTIVATION_TYPE_DEFAULT: Byte = 0x00
-        const val ACTIVATION_TYPE_REGULATORY: Byte = 0x01
+    public companion object {
+        public const val ACTIVATION_TYPE_DEFAULT: Byte = 0x00
+        public const val ACTIVATION_TYPE_REGULATORY: Byte = 0x01
     }
 }
 
-class DoipTcpRoutingActivationResponse(
-    val testerAddress: Short,
-    val entityAddress: Short,
-    val responseCode: Byte,
-    val oemData: Int? = null
+public class DoipTcpRoutingActivationResponse(
+    public val testerAddress: Short,
+    public val entityAddress: Short,
+    public val responseCode: Byte,
+    public val oemData: Int? = null
 ) : DoipTcpMessage() {
     @Suppress("unused")
-    companion object {
-        const val RC_ERROR_UNKNOWN_SOURCE_ADDRESS: Byte = 0x00
-        const val RC_ERROR_TCP_DATA_SOCKETS_EXHAUSTED: Byte = 0x01
-        const val RC_ERROR_DIFFERENT_SOURCE_ADDRESS: Byte = 0x02
-        const val RC_ERROR_SOURCE_ADDRESS_ALREADY_ACTIVE: Byte = 0x03
-        const val RC_ERROR_AUTHENTICATION_MISSING: Byte = 0x04
-        const val RC_ERROR_CONFIRMATION_REJECTED: Byte = 0x05
-        const val RC_ERROR_UNSUPPORTED_ACTIVATION_TYPE: Byte = 0x06
-        const val RC_ERROR_REQUIRES_TLS: Byte = 0x07
-        const val RC_OK: Byte = 0x10
-        const val RC_OK_REQUIRES_CONFIRMATION: Byte = 0x11
+    public companion object {
+        public const val RC_ERROR_UNKNOWN_SOURCE_ADDRESS: Byte = 0x00
+        public const val RC_ERROR_TCP_DATA_SOCKETS_EXHAUSTED: Byte = 0x01
+        public const val RC_ERROR_DIFFERENT_SOURCE_ADDRESS: Byte = 0x02
+        public const val RC_ERROR_SOURCE_ADDRESS_ALREADY_ACTIVE: Byte = 0x03
+        public const val RC_ERROR_AUTHENTICATION_MISSING: Byte = 0x04
+        public const val RC_ERROR_CONFIRMATION_REJECTED: Byte = 0x05
+        public const val RC_ERROR_UNSUPPORTED_ACTIVATION_TYPE: Byte = 0x06
+        public const val RC_ERROR_REQUIRES_TLS: Byte = 0x07
+        public const val RC_OK: Byte = 0x10
+        public const val RC_OK_REQUIRES_CONFIRMATION: Byte = 0x11
     }
 
     override val asByteArray: ByteArray
@@ -213,20 +218,20 @@ class DoipTcpRoutingActivationResponse(
             )
 }
 
-class DoipTcpAliveCheckRequest : DoipTcpMessage() {
+public class DoipTcpAliveCheckRequest : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_TCP_ALIVE_REQ)
 }
 
-class DoipTcpAliveCheckResponse(val sourceAddress: Short) : DoipTcpMessage() {
+public class DoipTcpAliveCheckResponse(public val sourceAddress: Short) : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_TCP_ALIVE_RES, *sourceAddress.toByteArray())
 }
 
-class DoipTcpDiagMessage(
-    val sourceAddress: Short,
-    val targetAddress: Short,
-    val payload: ByteArray
+public class DoipTcpDiagMessage(
+    public val sourceAddress: Short,
+    public val targetAddress: Short,
+    public val payload: ByteArray
 ) : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() =
@@ -235,11 +240,11 @@ class DoipTcpDiagMessage(
             )
 }
 
-class DoipTcpDiagMessagePosAck(
-    val sourceAddress: Short,
-    val targetAddress: Short,
-    val ackCode: Byte,
-    val payload: ByteArray = ByteArray(0)
+public class DoipTcpDiagMessagePosAck(
+    public val sourceAddress: Short,
+    public val targetAddress: Short,
+    public val ackCode: Byte,
+    public val payload: ByteArray = ByteArray(0)
 ) : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(
@@ -247,21 +252,21 @@ class DoipTcpDiagMessagePosAck(
         )
 }
 
-class DoipTcpDiagMessageNegAck(
-    val sourceAddress: Short,
-    val targetAddress: Short,
-    val nackCode: Byte,
-    val payload: ByteArray = ByteArray(0)
+public class DoipTcpDiagMessageNegAck(
+    public val sourceAddress: Short,
+    public val targetAddress: Short,
+    public val nackCode: Byte,
+    public val payload: ByteArray = ByteArray(0)
 ) : DoipTcpMessage() {
     @Suppress("unused")
-    companion object {
-        const val NACK_CODE_INVALID_SOURCE_ADDRESS: Byte = 0x02
-        const val NACK_CODE_UNKNOWN_TARGET_ADDRESS: Byte = 0x03
-        const val NACK_CODE_DIAGNOSTIC_MESSAGE_TOO_LARGE: Byte = 0x04
-        const val NACK_CODE_OUT_OF_MEMORY: Byte = 0x05
-        const val NACK_CODE_TARGET_UNREACHABLE: Byte = 0x06
-        const val NACK_CODE_UNKNOWN_NETWORK: Byte = 0x07
-        const val NACK_CODE_TRANSPORT_PROTOCOL_ERROR: Byte = 0x08
+    public companion object {
+        public const val NACK_CODE_INVALID_SOURCE_ADDRESS: Byte = 0x02
+        public const val NACK_CODE_UNKNOWN_TARGET_ADDRESS: Byte = 0x03
+        public const val NACK_CODE_DIAGNOSTIC_MESSAGE_TOO_LARGE: Byte = 0x04
+        public const val NACK_CODE_OUT_OF_MEMORY: Byte = 0x05
+        public const val NACK_CODE_TARGET_UNREACHABLE: Byte = 0x06
+        public const val NACK_CODE_UNKNOWN_NETWORK: Byte = 0x07
+        public const val NACK_CODE_TRANSPORT_PROTOCOL_ERROR: Byte = 0x08
     }
 
     override val asByteArray: ByteArray

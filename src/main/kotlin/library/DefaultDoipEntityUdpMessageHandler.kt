@@ -7,13 +7,13 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.math.max
 
-open class DefaultDoipEntityUdpMessageHandler(
-    val doipEntity: DoipEntity,
-    val config: DoipEntityConfig
+public open class DefaultDoipEntityUdpMessageHandler(
+    public val doipEntity: DoipEntity,
+    public val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityUdpMessageHandler::class.java)
 
-    companion object {
+    internal companion object {
         fun generateVamByEntityConfig(doipEntity: DoipEntity): List<DoipUdpVehicleAnnouncementMessage> =
             with(doipEntity.config) {
                 listOf(DoipUdpVehicleAnnouncementMessage(vin, logicalAddress, gid, eid)) +
@@ -21,7 +21,7 @@ open class DefaultDoipEntityUdpMessageHandler(
             }
     }
 
-    suspend fun sendVamResponse(
+    protected suspend fun sendVamResponse(
         sendChannel: SendChannel<Datagram>,
         sourceAddress: SocketAddress,
     ) {

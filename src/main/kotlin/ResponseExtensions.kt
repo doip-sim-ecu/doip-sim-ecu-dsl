@@ -1,4 +1,4 @@
-enum class SequenceMode {
+public enum class SequenceMode {
     STOP_AT_END,
     WRAP_AROUND
 }
@@ -8,7 +8,7 @@ enum class SequenceMode {
  * or repeating the last one
  */
 @Suppress("UNUSED_VALUE")
-fun RequestResponseData.sequence(vararg responses: String,
+public fun RequestResponseData.sequence(vararg responses: String,
     mode: SequenceMode = SequenceMode.STOP_AT_END,
     startIndex: Int = 0
 ) {
@@ -24,11 +24,11 @@ fun RequestResponseData.sequence(vararg responses: String,
 /**
  * Returns the given responses, advancing by one after each request, starting at the beginning when the end is reached
  */
-fun RequestResponseData.sequenceWrapAround(vararg responses: String) =
+public fun RequestResponseData.sequenceWrapAround(vararg responses: String): Unit =
     sequence(*responses, mode = SequenceMode.WRAP_AROUND)
 
 /**
  * Returns the given responses, advancing by one after each request, repeating the last one when the end is reached
  */
-fun RequestResponseData.sequenceStopAtEnd(vararg responses: String) =
+public fun RequestResponseData.sequenceStopAtEnd(vararg responses: String): Unit =
     sequence(*responses, mode = SequenceMode.STOP_AT_END)

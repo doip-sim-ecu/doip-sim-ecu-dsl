@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.slf4j.MDCContext
 import nl.altindag.ssl.SSLFactory
 import nl.altindag.ssl.util.PemUtils
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.io.File
@@ -22,24 +23,24 @@ import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.seconds
 
-typealias GID = ByteArray
-typealias EID = ByteArray
-typealias VIN = ByteArray
+public typealias GID = ByteArray
+public typealias EID = ByteArray
+public typealias VIN = ByteArray
 
 
-enum class DoipNodeType(val value: Byte) {
+public enum class DoipNodeType(public val value: Byte) {
     GATEWAY(0),
     NODE(1)
 }
 
 @Suppress("unused")
-enum class TlsMode {
+public enum class TlsMode {
     DISABLED,
     OPTIONAL,
     MANDATORY,
 }
 
-data class TlsOptions(
+public data class TlsOptions(
     val tlsCert: File? = null,
     val tlsKey: File? = null,
     val tlsKeyPassword: String? = null,
@@ -48,23 +49,23 @@ data class TlsOptions(
 )
 
 @Suppress("unused")
-open class DoipEntityConfig(
-    val name: String,
-    val logicalAddress: Short,
-    val gid: GID,
-    val eid: EID,
-    val vin: VIN,
-    val maxDataSize: Int = Int.MAX_VALUE,
-    val localAddress: String = "0.0.0.0",
-    val localPort: Int = 13400,
-    val broadcastEnabled: Boolean = true,
-    val broadcastAddress: String = "255.255.255.255",
-    val pendingNrcSendInterval: kotlin.time.Duration = 2.seconds,
-    val tlsMode: TlsMode = TlsMode.DISABLED,
-    val tlsPort: Int = 3496,
-    val tlsOptions: TlsOptions = TlsOptions(),
-    val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
-    val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
+public open class DoipEntityConfig(
+    public val name: String,
+    public val logicalAddress: Short,
+    public val gid: GID,
+    public val eid: EID,
+    public val vin: VIN,
+    public val maxDataSize: Int = Int.MAX_VALUE,
+    public val localAddress: String = "0.0.0.0",
+    public val localPort: Int = 13400,
+    public val broadcastEnabled: Boolean = true,
+    public val broadcastAddress: String = "255.255.255.255",
+    public val pendingNrcSendInterval: kotlin.time.Duration = 2.seconds,
+    public val tlsMode: TlsMode = TlsMode.DISABLED,
+    public val tlsPort: Int = 3496,
+    public val tlsOptions: TlsOptions = TlsOptions(),
+    public val ecuConfigList: MutableList<EcuConfig> = mutableListOf(),
+    public val nodeType: DoipNodeType = DoipNodeType.GATEWAY,
 ) {
     init {
         if (name.isEmpty()) {
@@ -85,22 +86,22 @@ open class DoipEntityConfig(
 /**
  * DoIP-Entity
  */
-open class DoipEntity(
-    val config: DoipEntityConfig,
+public open class DoipEntity(
+    public val config: DoipEntityConfig,
 ) : DiagnosticMessageHandler {
-    val name: String =
+    public val name: String =
         config.name
 
-    protected val logger = LoggerFactory.getLogger(DoipEntity::class.java)
+    protected val logger: Logger = LoggerFactory.getLogger(DoipEntity::class.java)
 
     protected var targetEcusByPhysical: Map<Short, SimulatedEcu> = emptyMap()
     protected var targetEcusByFunctional: MutableMap<Short, MutableList<SimulatedEcu>> = mutableMapOf()
 
-    val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
+    public val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
 
     private val _ecus: MutableList<SimulatedEcu> = mutableListOf()
 
-    val ecus: List<SimulatedEcu>
+    public val ecus: List<SimulatedEcu>
         get() = _ecus
 
     protected open fun createEcu(config: EcuConfig): SimulatedEcu =
@@ -194,7 +195,7 @@ open class DoipEntity(
         }
     }
 
-    open fun findEcuByName(name: String): SimulatedEcu? =
+    public open fun findEcuByName(name: String): SimulatedEcu? =
         this.ecus.firstOrNull { it.name == name }
 
     protected open fun CoroutineScope.handleTcpSocket(socket: DoipTcpSocket) {
@@ -292,7 +293,7 @@ open class DoipEntity(
         }
     }
 
-    fun start() {
+    public fun start() {
         this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
 
         targetEcusByPhysical = this.ecus.associateBy { it.config.physicalAddress }

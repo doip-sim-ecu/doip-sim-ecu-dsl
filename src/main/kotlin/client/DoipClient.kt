@@ -7,20 +7,21 @@ import io.ktor.network.sockets.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import library.*
-import library.DoipUdpMessageHandler.Companion.logger
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.nio.ByteBuffer
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 import kotlin.time.Duration
 
-class DoipClient(
+public class DoipClient(
     private val broadcastAddress: SocketAddress = InetSocketAddress("255.255.255.255", 13400),
 ) : Closeable, AutoCloseable {
     private lateinit var udpServerSocket: BoundDatagramSocket
     private val _doipEntities: MutableMap<Short, DoipEntityAnnouncement> = mutableMapOf()
 
-    val doipEntities: Map<Short, DoipEntityAnnouncement>
+    public val doipEntities: Map<Short, DoipEntityAnnouncement>
         get() = _doipEntities.toMap()
 
     init {
@@ -28,7 +29,7 @@ class DoipClient(
         sendVirs()
     }
 
-    fun connectToEntity(
+    public fun connectToEntity(
         address: SocketAddress,
         testerAddress: Short = 0xe80.toShort(),
         timeout: Duration = Duration.INFINITE
@@ -44,7 +45,7 @@ class DoipClient(
         }
     }
 
-    fun waitForVAM(timeout: Duration = Duration.INFINITE, logicalAddress: Short? = null): Boolean =
+    public fun waitForVAM(timeout: Duration = Duration.INFINITE, logicalAddress: Short? = null): Boolean =
         runBlocking {
             withTimeoutOrNull(timeout) {
                 val job = launch {
@@ -113,9 +114,13 @@ class DoipClient(
     override fun close() {
         udpServerSocket.close()
     }
+
+    private companion object {
+        private val logger: Logger = LoggerFactory.getLogger(DoipClient::class.java)
+    }
 }
 
-class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) {
+public class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) {
     private val writeChannel = socket.openWriteChannel()
     private val readChannel = socket.openReadChannel()
 
@@ -147,7 +152,7 @@ class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) 
 //        }
 //    }
 
-    fun sendDiagnosticMessage(
+    public fun sendDiagnosticMessage(
         targetAddress: Short,
         message: ByteArray,
         waitForResponse: Boolean = true,
@@ -184,9 +189,9 @@ class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) 
     }
 }
 
-data class DoipEntityAnnouncement(val sourceAddress: SocketAddress, val message: DoipUdpVehicleAnnouncementMessage)
+public data class DoipEntityAnnouncement(val sourceAddress: SocketAddress, val message: DoipUdpVehicleAnnouncementMessage)
 
 private class DoipClientUdpMessageHandler : DoipUdpMessageHandler
 
-class ConnectException(msg: String) : RuntimeException(msg)
+public class ConnectException(msg: String) : RuntimeException(msg)
 

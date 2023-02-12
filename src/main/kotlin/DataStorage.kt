@@ -1,7 +1,7 @@
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
-class StoragePropertyDelegate<T>(
+public class StoragePropertyDelegate<T>(
     private val storage: MutableMap<String, Any?>,
     private val initialValue: () -> T) : ReadWriteProperty<Nothing?, T> {
 
@@ -18,20 +18,20 @@ class StoragePropertyDelegate<T>(
     }
 }
 
-open class DataStorage {
+public open class DataStorage {
     private val internalDataStorage: MutableMap<String, Any?> = mutableMapOf()
 
     /**
      * Create a persistent property by means of delegation, with an initival value
      * calculated by initialValue
      */
-    fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
+    public fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =
         StoragePropertyDelegate(this.internalDataStorage, initialValue)
 
     /**
      * Clear all stored properties
      */
-    fun clearStoredProperties() =
+    public fun clearStoredProperties(): Unit =
         internalDataStorage.clear()
 }
 
