@@ -515,6 +515,12 @@ public open class EcuData(
 internal val gateways: MutableList<GatewayData> = mutableListOf()
 internal val gatewayInstances: MutableList<SimGateway> = mutableListOf()
 
+public fun gatewayInstances(): List<SimGateway> =
+    gatewayInstances.toList()
+
+public fun gateways(): List<GatewayData> =
+    gateways.toList()
+
 /**
  * Defines a DoIP-Gateway and the ECUs behind it
  */
