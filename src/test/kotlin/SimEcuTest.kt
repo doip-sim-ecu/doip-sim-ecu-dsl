@@ -173,6 +173,7 @@ class SimEcuTest {
         ecu.addOrReplaceEcuInterceptor("TESTBEFORE", 500.milliseconds) { beforeInterceptor = true; false; }
         ecu.addOrReplaceEcuInterceptor("TEST", 200.milliseconds) { intercepted = true; true }
         ecu.addOrReplaceEcuInterceptor("TESTAFTER", 500.milliseconds) { afterInterceptor = true; false }
+        val autoNamedInterceptor = ecu.addOrReplaceEcuInterceptor { false }
 
         ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
         // sendResponse didn't get called again, because there's one true interceptor, therefore no response was sent
@@ -186,6 +187,7 @@ class SimEcuTest {
         beforeInterceptor = false
         intercepted = false
         ecu.removeInterceptor("TESTREMOVE")
+        ecu.removeInterceptor(autoNamedInterceptor)
         // sendResponse did get called again, because there's no true-interceptor anymore
         ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
         verify(ecu, times(2)).sendResponse(any(), any())

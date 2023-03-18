@@ -12,7 +12,7 @@ internal class EcuTimerTask(private val action: TimerTask.() -> Unit) : TimerTas
         try {
             action()
         } catch (e: Exception) {
-            logger.error("Error while executing timer: " + e.stackTraceToString())
+            logger.error("Error while executing timer: " + e.message, e)
         } finally {
             _canBeRemoved = true
         }

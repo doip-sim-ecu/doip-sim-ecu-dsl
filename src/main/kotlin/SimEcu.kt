@@ -280,7 +280,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         alsoCallWhenEcuIsBusy: Boolean = false,
         interceptor: InterceptorRequestHandler
     ): String {
-        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy) in ecu $name"}
+        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy) in ecu ${this.name}"}
 
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
@@ -312,7 +312,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         duration: Duration = Duration.INFINITE,
         interceptor: InterceptorResponseHandler
     ): String {
-        logger.traceIf { "Adding outbound interceptor '$name' for $duration in ecu $name"}
+        logger.traceIf { "Adding outbound interceptor '$name' for $duration in ecu ${this.name}"}
 
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
@@ -338,7 +338,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
      * Please note that the internal resolution for delay is milliseconds
      */
     public fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
-        logger.traceIf { "Adding or replacing timer '$name' for $name to be executed after $delay"}
+        logger.traceIf { "Adding or replacing timer '$name' for ${this.name} to be executed after $delay"}
 
         synchronized(mainTimer) {
             timers[name]?.cancel()
@@ -359,7 +359,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
      * Explicitly cancel a running timer
      */
     public fun cancelTimer(name: String) {
-        logger.traceIf { "Cancelling timer '$name' for $name" }
+        logger.traceIf { "Cancelling timer '$name' for ${this.name}" }
         synchronized(mainTimer) {
             timers[name]?.cancel()
             timers.remove(name)
