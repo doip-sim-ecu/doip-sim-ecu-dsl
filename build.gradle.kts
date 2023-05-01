@@ -38,7 +38,7 @@ dependencies {
     implementation("org.bouncycastle:bctls-jdk15on:1.70") // Bouncy Castle Licence (~MIT)
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.25")
 }
