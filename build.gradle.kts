@@ -40,7 +40,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
-    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.26")
+    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.26.1")
 }
 
 tasks.test {
