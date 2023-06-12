@@ -34,7 +34,7 @@ dependencies {
 
     implementation("org.apache.commons:commons-collections4:4.4")
 
-    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:7.5.0") // Apache-2.0
+    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.1.1") // Apache-2.0
     implementation("org.bouncycastle:bctls-jdk15on:1.70") // Bouncy Castle Licence (~MIT)
 
     testImplementation(kotlin("test"))
