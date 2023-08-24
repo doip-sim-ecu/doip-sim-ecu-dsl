@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.io.File
 import java.io.OutputStream
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.SocketException
 import java.nio.file.Paths
@@ -57,6 +58,7 @@ public open class DoipEntityConfig(
     public val vin: VIN,
     public val maxDataSize: Int = Int.MAX_VALUE,
     public val localAddress: String = "0.0.0.0",
+    public val bindOnAnyForUdpAdditional: Boolean = true,
     public val localPort: Int = 13400,
     public val broadcastEnabled: Boolean = true,
     public val broadcastAddress: String = "255.255.255.255",
@@ -321,6 +323,32 @@ public open class DoipEntity(
                 logger.info("Listening on udp: ${serverSocket.localAddress}")
                 startVamTimer(serverSocket)
                 val udpMessageHandler = createDoipUdpMessageHandler()
+
+                if (config.localAddress != "0.0.0.0") {
+                    logger.info("Also listening on udp 0.0.0.0 for broadcasts")
+                    val localAddress = InetSocketAddress("0.0.0.0", 13400)
+                    val anyServerSocket =
+                        aSocket(ActorSelectorManager(Dispatchers.IO))
+                            .udp()
+                            .bind(localAddress = localAddress) {
+                                broadcast = true
+                                reuseAddress = true
+                            }
+                    thread(start = true, isDaemon = true) {
+                        runBlocking {
+                            while (!anyServerSocket.isClosed) {
+                                val datagram = anyServerSocket.receive()
+                                if (datagram.address is InetSocketAddress) {
+                                    if (datagram.address == localAddress) {
+                                        continue
+                                    }
+                                }
+                                handleUdpMessage(udpMessageHandler, datagram, anyServerSocket)
+                            }
+                        }
+                    }
+                }
+
                 while (!serverSocket.isClosed) {
                     val datagram = serverSocket.receive()
                     handleUdpMessage(udpMessageHandler, datagram, serverSocket)

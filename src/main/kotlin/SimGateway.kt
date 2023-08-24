@@ -15,6 +15,12 @@ public open class GatewayData(name: String) : RequestsData(name) {
     public var localAddress: String = "0.0.0.0"
 
     /**
+     * Should udp be bound additionally on any?
+     * There's an issue when binding it to an network interface of not receiving 255.255.255.255 broadcasts
+     */
+    public var bindOnAnyForUdpAdditional: Boolean = true
+
+    /**
      * Network port this gateway should bind on (default: 13400)
      */
     public var localPort: Int = 13400
@@ -102,6 +108,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
         gid = this.gid,
         eid = this.eid,
         localAddress = this.localAddress,
+        bindOnAnyForUdpAdditional = this.bindOnAnyForUdpAdditional,
         localPort = this.localPort,
         logicalAddress = this.logicalAddress,
         broadcastEnabled = this.broadcastEnable,
