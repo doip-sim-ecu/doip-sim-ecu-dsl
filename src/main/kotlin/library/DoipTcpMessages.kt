@@ -151,6 +151,10 @@ public open class DoipTcpConnectionMessageHandler(
         logger.traceIf { "# handleTcpDiagMessageNegAck $message for ${message.targetAddress}" }
     }
 
+    public open suspend fun connectionClosed(socket: DoipTcpSocket, exception: Exception?) {
+        logger.traceIf { "# connectionClosed" }
+    }
+
     private companion object {
         private val logger: Logger = LoggerFactory.getLogger(DoipTcpConnectionMessageHandler::class.java)
     }

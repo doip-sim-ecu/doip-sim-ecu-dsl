@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.io.File
 import java.io.OutputStream
-import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.SocketException
 import java.nio.file.Paths
@@ -214,13 +213,15 @@ public open class DoipEntity(
                         tcpMessageHandler.handleTcpMessage(message, output)
                     } catch (e: ClosedReceiveChannelException) {
                         // ignore - socket was closed
-                        logger.debug("Socket was closed by remote ${socket.remoteAddress}")
+                        logger.debugIf { "Socket was closed by remote ${socket.remoteAddress}" }
                         withContext(Dispatchers.IO) {
+                            tcpMessageHandler.connectionClosed(socket, e)
                             socket.runCatching { this.close() }
                         }
                     } catch (e: SocketException) {
                         logger.error("Socket error: ${e.message} -> closing socket")
                         withContext(Dispatchers.IO) {
+                            tcpMessageHandler.connectionClosed(socket, e)
                             socket.runCatching { this.close() }
                         }
                     } catch (e: HeaderNegAckException) {
@@ -230,6 +231,7 @@ public open class DoipEntity(
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
                             withContext(Dispatchers.IO) {
+                                tcpMessageHandler.connectionClosed(socket, e)
                                 socket.runCatching { this.close() }
                             }
                         }
@@ -240,6 +242,7 @@ public open class DoipEntity(
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
                             withContext(Dispatchers.IO) {
+                                tcpMessageHandler.connectionClosed(socket, e)
                                 socket.runCatching { this.close() }
                             }
                         }
@@ -250,6 +253,9 @@ public open class DoipEntity(
             } finally {
                 try {
                     withContext(Dispatchers.IO) {
+                        if (!socket.isClosed) {
+                            tcpMessageHandler.connectionClosed(socket, null)
+                        }
                         socket.close()
                     }
                 } finally {
