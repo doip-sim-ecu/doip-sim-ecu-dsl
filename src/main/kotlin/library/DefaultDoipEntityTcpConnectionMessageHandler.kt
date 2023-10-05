@@ -19,11 +19,6 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
 ) : DoipTcpConnectionMessageHandler(maxPayloadLength) {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
-    private var _registeredSourceAddress: Short? = null
-
-    public fun getRegisteredSourceAddress(): Short? =
-        _registeredSourceAddress
-
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
         runBlocking {
             MDC.put("ecu", doipEntity.name)
@@ -58,11 +53,11 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
                 return
             }
 
-            if (_registeredSourceAddress == null) {
-                _registeredSourceAddress = message.sourceAddress
+            if (registeredSourceAddress == null) {
+                registeredSourceAddress = message.sourceAddress
             }
 
-            if (_registeredSourceAddress != message.sourceAddress) {
+            if (registeredSourceAddress != message.sourceAddress) {
                 logger.error("Routing activation for ${message.sourceAddress} denied (Different source address already registered)")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(
@@ -72,8 +67,8 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
                     ).asByteArray
                 )
             } else if (
-                doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this) &&
-                doipEntity.ecus.all { it.config.additionalVam == null }
+                doipEntity.ecus.all { it.config.additionalVam == null } &&
+                doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this)
             ) {
                 logger.error("Routing activation for ${message.sourceAddress} denied (Has already an active connection)")
                 output.writeFully(
@@ -102,7 +97,7 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
     }
 
     override suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: OutputStream) {
-        if (_registeredSourceAddress != message.sourceAddress) {
+        if (registeredSourceAddress != message.sourceAddress) {
             val reject = DoipTcpDiagMessageNegAck(
                 message.targetAddress,
                 message.sourceAddress,
@@ -151,7 +146,7 @@ public interface DiagnosticMessageHandler {
 
 public fun DoipEntity.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?): Boolean =
     this.connectionHandlers.any {
-        (it as DefaultDoipEntityTcpConnectionMessageHandler).getRegisteredSourceAddress() == sourceAddress
+        it.registeredSourceAddress == sourceAddress
                 && it != exclude
     }
 

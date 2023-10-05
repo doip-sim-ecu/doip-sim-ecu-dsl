@@ -12,6 +12,14 @@ public abstract class DoipTcpMessage : DoipMessage()
 public open class DoipTcpConnectionMessageHandler(
     public val maxPayloadLength: Int = Int.MAX_VALUE
 ) {
+    private var _registeredSourceAddress: Short? = null
+
+    public var registeredSourceAddress: Short?
+        get() = _registeredSourceAddress
+        protected set(value) {
+            _registeredSourceAddress = value
+        }
+
 
     public open suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage {
         logger.traceIf { "# receiveTcpData" }
@@ -122,6 +130,7 @@ public open class DoipTcpConnectionMessageHandler(
         output: OutputStream
     ) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
+        registeredSourceAddress = message.sourceAddress
     }
 
     protected open suspend fun handleTcpRoutingActivationResponse(
