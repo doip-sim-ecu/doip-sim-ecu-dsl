@@ -58,18 +58,6 @@ class SimDslTest {
     }
 
     @Test
-    fun `test dsl insertAtTop`() {
-        gateway("GW") {
-            request(byteArrayOf(0x10), "REQ1") { respond(byteArrayOf(0x50)) }
-            request("10", "REQ2") { respond("50") }
-            request("10 []", "REQ3", insertAtTop = true) { ack() }
-        }
-        assertThat(gateways.size).isEqualTo(1)
-        assertThat(gateways[0].requests[0].requestBytes).isEqualTo(byteArrayOf(0x10))
-        assertThat(gateways[0].requests[0].onlyStartsWith).isEqualTo(true)
-    }
-
-    @Test
     fun `test multibyte ack`() {
         gateway("GW") {
             ecu("ECU") {

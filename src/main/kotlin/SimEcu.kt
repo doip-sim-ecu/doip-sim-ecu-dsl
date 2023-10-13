@@ -43,7 +43,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
     public val logger: Logger = LoggerFactory.getLogger(SimEcu::class.java)
 
-    public val requests: MutableList<RequestMatcher>
+    public val requests: RequestList
         get() = data.requests
 
     public val ackBytesMap: Map<Byte, Int>
@@ -213,48 +213,40 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
         // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
 
-        for (requestIter in data.requests) {
-            val matches = requestIter.matches(request.message)
-
-            logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
-
-            if (!matches) {
-                continue
-            }
-
-            val responseData = ResponseData(caller = requestIter, request = request, ecu = this)
+        val handled = data.requests.findMessageAndHandle(name, request.message) { matcher ->
+            val responseData = ResponseData(caller = matcher, request = request, ecu = this)
             try {
-                requestIter.responseHandler.invoke(responseData)
+                matcher.responseHandler.invoke(responseData)
                 handlePending(request, responseData)
+
+                if (responseData.continueMatching) {
+                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> Continue matching" }
+                    return@findMessageAndHandle false
+                } else if (responseData.response.isNotEmpty()) {
+                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
+                    sendResponse(request, responseData.response)
+                } else {
+                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> No response" }
+                }
             } catch (e: NrcException) {
                 handlePending(request, responseData)
                 val response = byteArrayOf(0x7F, request.message[0], e.code)
-                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${response.toHexString(limit = 10)}'" }
+                logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> Send response '${response.toHexString(limit = 10)}'" }
                 sendResponse(request, response)
-                return
             } catch (e: Exception) {
                 logger.errorIf(e) { "An error occurred while processing a request for $name: '${request.message.toHexString(limit = 10)}'  -> Sending NRC" }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))
-                return
             }
-
-            if (responseData.continueMatching) {
-                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Continue matching" }
-                continue
-            } else if (responseData.response.isNotEmpty()) {
-                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
-                sendResponse(request, responseData.response)
-            } else {
-                logger.logForRequest(requestIter) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$requestIter' -> No response" }
-            }
-            return
+            return@findMessageAndHandle true
         }
 
-        if (this.data.nrcOnNoMatch) {
-            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
-            sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
-        } else {
-            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
+        if (!handled) {
+            if (this.data.nrcOnNoMatch) {
+                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
+                sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
+            } else {
+                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
+            }
         }
     }
 

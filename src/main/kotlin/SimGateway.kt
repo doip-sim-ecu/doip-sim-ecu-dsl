@@ -137,7 +137,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
 }
 
 public class SimGateway(private val data: GatewayData) : DoipEntity<SimEcu>(data.toGatewayConfig()) {
-    public val requests: List<RequestMatcher>
+    public val requests: RequestList
         get() = data.requests
 
     override fun createEcu(config: EcuConfig): SimEcu {

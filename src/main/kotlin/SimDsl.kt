@@ -345,7 +345,7 @@ public open class RequestsData(
     /**
      * List of all defined requests in the order they were defined
      */
-    public val requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
+    public val requests: RequestList = RequestList(requests)
 
     /**
      * List of defined reset handlers
@@ -375,10 +375,6 @@ public open class RequestsData(
          */
         loglevel: LogLevel = LogLevel.DEBUG,
         /**
-         * Insert at top
-         */
-        insertAtTop: Boolean = false,
-        /**
          * Handler that is called when the request is matched
          */
         response: RequestResponseHandler = {}
@@ -390,11 +386,7 @@ public open class RequestsData(
             loglevel = loglevel,
             responseHandler = response
         )
-        if (insertAtTop) {
-            requests.add(0, req)
-        } else {
-            requests.add(req)
-        }
+        requests.add(req)
         return req
     }
 
@@ -422,10 +414,6 @@ public open class RequestsData(
          */
         loglevel: LogLevel = LogLevel.DEBUG,
         /**
-         * Insert at top
-         */
-        insertAtTop: Boolean = false,
-        /**
          * Handler that is called when the request is matched
          */
         response: RequestResponseHandler = {}
@@ -433,7 +421,7 @@ public open class RequestsData(
         val trimmed = reqHex.trim()
         val isOpenEnded = trimmed.endsWith("[]") || trimmed.endsWith(".*")
 
-        request(trimmed.decodeHex(), name, onlyStartsWith = isOpenEnded, loglevel, insertAtTop, response)
+        request(trimmed.decodeHex(), name, onlyStartsWith = isOpenEnded, loglevel, response)
     }
 
     public fun onReset(name: String? = null, handler: (SimEcu) -> Unit) {
