@@ -136,11 +136,11 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
     return config
 }
 
-public class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatewayConfig()) {
+public class SimGateway(private val data: GatewayData) : DoipEntity<SimEcu>(data.toGatewayConfig()) {
     public val requests: List<RequestMatcher>
         get() = data.requests
 
-    override fun createEcu(config: EcuConfig): SimulatedEcu {
+    override fun createEcu(config: EcuConfig): SimEcu {
         // To be able to handle requests for the gateway itself, insert a dummy ecu with the gateways logicalAddress
         if (config.name == data.name) {
             val ecu = EcuData(
@@ -162,10 +162,6 @@ public class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatew
         return SimEcu(ecuData)
     }
 
-    override fun findEcuByName(name: String): SimEcu? {
-        return super.findEcuByName(name) as SimEcu?
-    }
-
     public fun reset(recursiveEcus: Boolean = true) {
         runBlocking {
             MDC.put("ecu", name)
@@ -174,7 +170,7 @@ public class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatew
                 logger.infoIf { "Resetting gateway" }
                 requests.forEach { it.reset() }
                 if (recursiveEcus) {
-                    ecus.forEach { (it as SimEcu).reset() }
+                    ecus.forEach { it.reset() }
                 }
             }
         }

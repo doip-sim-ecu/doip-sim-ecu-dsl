@@ -87,7 +87,7 @@ public open class DoipEntityConfig(
 /**
  * DoIP-Entity
  */
-public open class DoipEntity(
+public abstract class DoipEntity<out T: SimulatedEcu> (
     public val config: DoipEntityConfig,
 ) : DiagnosticMessageHandler {
     public val name: String =
@@ -95,18 +95,17 @@ public open class DoipEntity(
 
     protected val logger: Logger = LoggerFactory.getLogger(DoipEntity::class.java)
 
-    protected var targetEcusByLogical: Map<Short, SimulatedEcu> = emptyMap()
-    protected var targetEcusByFunctional: MutableMap<Short, MutableList<SimulatedEcu>> = mutableMapOf()
+    protected var targetEcusByLogical: Map<Short, @UnsafeVariance T> = emptyMap()
+    protected var targetEcusByFunctional: MutableMap<Short, MutableList<@UnsafeVariance T>> = mutableMapOf()
 
     public val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
 
-    private val _ecus: MutableList<SimulatedEcu> = mutableListOf()
+    private val _ecus: MutableList<T> = mutableListOf()
 
-    public val ecus: List<SimulatedEcu>
+    public val ecus: List<T>
         get() = _ecus
 
-    protected open fun createEcu(config: EcuConfig): SimulatedEcu =
-        SimulatedEcu(config)
+    protected abstract fun createEcu(config: EcuConfig): T
 
     protected open fun createDoipUdpMessageHandler(): DoipUdpMessageHandler =
         DefaultDoipEntityUdpMessageHandler(
@@ -196,8 +195,8 @@ public open class DoipEntity(
         }
     }
 
-    public open fun findEcuByName(name: String): SimulatedEcu? =
-        this.ecus.firstOrNull { it.name == name }
+    public open fun findEcuByName(name: String, ignoreCase: Boolean = true): T? =
+        this.ecus.firstOrNull { name.equals(it.name, ignoreCase = ignoreCase) }
 
     protected open fun CoroutineScope.handleTcpSocket(socket: DoipTcpSocket) {
         launch {
@@ -330,7 +329,7 @@ public open class DoipEntity(
                 startVamTimer(serverSocket)
                 val udpMessageHandler = createDoipUdpMessageHandler()
 
-                if (config.localAddress != "0.0.0.0") {
+                if (config.localAddress != "0.0.0.0" && config.bindOnAnyForUdpAdditional) {
                     logger.info("Also listening on udp 0.0.0.0 for broadcasts")
                     val localAddress = InetSocketAddress("0.0.0.0", 13400)
                     val anyServerSocket =

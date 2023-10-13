@@ -11,7 +11,7 @@ import org.slf4j.MDC
 import java.io.OutputStream
 
 public open class DefaultDoipEntityTcpConnectionMessageHandler(
-    public val doipEntity: DoipEntity,
+    public val doipEntity: DoipEntity<*>,
     public val socket: DoipTcpSocket,
     maxPayloadLength: Int,
     public val logicalAddress: Short,
@@ -144,7 +144,7 @@ public interface DiagnosticMessageHandler {
     public suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream)
 }
 
-public fun DoipEntity.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?): Boolean =
+public fun DoipEntity<*>.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?): Boolean =
     this.connectionHandlers.any {
         it.registeredSourceAddress == sourceAddress
                 && it != exclude

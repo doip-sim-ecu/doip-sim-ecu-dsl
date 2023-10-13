@@ -8,13 +8,13 @@ import org.slf4j.LoggerFactory
 import kotlin.math.max
 
 public open class DefaultDoipEntityUdpMessageHandler(
-    public val doipEntity: DoipEntity,
+    public val doipEntity: DoipEntity<*>,
     public val config: DoipEntityConfig
 ) : DoipUdpMessageHandler {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityUdpMessageHandler::class.java)
 
     internal companion object {
-        fun generateVamByEntityConfig(doipEntity: DoipEntity): List<DoipUdpVehicleAnnouncementMessage> =
+        fun generateVamByEntityConfig(doipEntity: DoipEntity<*>): List<DoipUdpVehicleAnnouncementMessage> =
             with(doipEntity.config) {
                 listOf(DoipUdpVehicleAnnouncementMessage(vin, logicalAddress, gid, eid)) +
                         doipEntity.ecus.filter { it.config.additionalVam != null }.map { it.config.additionalVam!!.toVam(it.config, doipEntity.config) }
