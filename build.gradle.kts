@@ -13,7 +13,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.9.20"
+version = "0.10.0"
 
 repositories {
     gradlePluginPortal()
@@ -54,6 +54,11 @@ java {
 
 kotlin {
     explicitApi()
+//    sourceSets.all {
+//        languageSettings {
+//            languageVersion = "2.0"
+//        }
+//    }
 }
 
 tasks.withType<JavaCompile>().configureEach {

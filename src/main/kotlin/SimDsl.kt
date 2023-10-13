@@ -1,6 +1,5 @@
 import library.*
 import java.util.*
-import kotlin.IllegalArgumentException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -258,19 +257,11 @@ public open class ResponseData<T>(
  */
 public class RequestMatcher(
     public val name: String?,
-    public val requestBytes: ByteArray?,
-    public val requestRegex: Regex?,
+    public val requestBytes: ByteArray,
+    public val onlyStartsWith: Boolean = false,
     public val loglevel: LogLevel = LogLevel.DEBUG,
     public val responseHandler: RequestResponseHandler
 ) : DataStorage() {
-    init {
-        if (requestBytes == null && requestRegex == null) {
-            throw IllegalArgumentException("requestBytes or requestRegex must be not null")
-        } else if (requestBytes != null && requestRegex != null) {
-            throw IllegalArgumentException("Only requestBytes or requestRegex must be set")
-        }
-    }
-
     /**
      * Reset persistent storage for this request
      */
@@ -284,12 +275,12 @@ public class RequestMatcher(
         if (!name.isNullOrEmpty()) {
             sb.append("$name; ")
         }
-        if (requestBytes != null) {
+        if (onlyStartsWith) {
+            sb.append("Bytes: ${requestBytes.toHexString(limit = 10)} []")
+        } else {
             sb.append("Bytes: ${requestBytes.toHexString(limit = 10)}")
-        } else if (requestRegex != null) {
-            sb.append("Pattern: ${requestRegex.pattern}")
         }
-        sb.append(" }")
+        sb.append("}")
         return sb.toString()
     }
 }
@@ -314,6 +305,21 @@ public enum class LogLevel {
     TRACE,
 }
 
+private val DefaultAckBytesMap: Map<Byte, Int> = mapOf(
+    // default is 2
+    0x22.toByte() to 3,
+    0x2e.toByte() to 3,
+
+    0x31.toByte() to 4, // routine control
+
+    0x34.toByte() to 1,  // request download
+    0x35.toByte() to 1,  // request upload
+//    0x36.toByte() to 2, // transfer data
+    0x37.toByte() to 1, // transfer exit
+
+    0x14.toByte() to 1, // clear dtc
+)
+
 public open class RequestsData(
     public val name: String,
     /**
@@ -322,15 +328,11 @@ public open class RequestsData(
     public var nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
-    /**
-     * Maximum length of data converted into a hex-string for incoming requests
-     */
-    public var requestRegexMatchBytes: Int = 10,
 
     /**
      * Map of Request SID to number of ack response byte count
      */
-    public var ackBytesLengthMap: Map<Byte, Int> = mapOf(),
+    public var ackBytesLengthMap: Map<Byte, Int> = DefaultAckBytesMap,
 ) {
     /**
      * List of all defined requests in the order they were defined
@@ -343,28 +345,23 @@ public open class RequestsData(
     public val resetHandler: MutableList<ResetHandler> = mutableListOf(*resetHandler.toTypedArray())
 
 
-    private fun regexifyRequestHex(requestHex: String) =
-        Regex(
-            pattern = requestHex
-                .replace(" ", "")
-                .uppercase()
-                .replace("[]", ".*"),
-//            option = RegexOption.IGNORE_CASE
-        )
-
     /**
      * Define request-matcher & response-handler for a gateway or ecu by using an
      * exact matching byte-array
      */
     public fun request(
         /**
-         * Byte-Array to exactly match the request
+         * Byte-Array to match the request
          */
         request: ByteArray,
         /**
          * Name of the expression to be shown in logs
          */
         name: String? = null,
+        /**
+         * Defines if request is only for the start or for an exact match
+         */
+        onlyStartsWith: Boolean = false,
         /**
          * The loglevel used to log when the request matches and its responses
          */
@@ -381,55 +378,7 @@ public open class RequestsData(
         val req = RequestMatcher(
             name = name,
             requestBytes = request,
-            requestRegex = null,
-            loglevel = loglevel,
-            responseHandler = response
-        )
-        if (insertAtTop) {
-            requests.add(0, req)
-        } else {
-            requests.add(req)
-        }
-        return req
-    }
-
-    /**
-     * Define request-matcher & response-handler for a gateway or ecu by using a
-     * regular expression. Incoming request are normalized into a string
-     * by converting the incoming data into uppercase hexadecimal
-     * without any spaces. The regular expression defined here is then
-     * used to match against this string
-     *
-     * Note: Take the maximal string length [requestRegexMatchBytes] into
-     * account
-     *
-     */
-    public fun request(
-        /**
-         * Regular expression to match the request - see [requestRegexMatchBytes] and normalization
-         */
-        reqRegex: Regex,
-        /**
-         * Name of the expression to be shown in logs
-         */
-        name: String? = null,
-        /**
-         * The loglevel used to log when the request matches and its responses
-         */
-        loglevel: LogLevel = LogLevel.DEBUG,
-        /**
-         * Insert at top
-         */
-        insertAtTop: Boolean = false,
-        /**
-         * Handler that is called when the request is matched
-         */
-        response: RequestResponseHandler = {}
-    ): RequestMatcher {
-        val req = RequestMatcher(
-            name = name,
-            requestBytes = null,
-            requestRegex = reqRegex,
+            onlyStartsWith = onlyStartsWith,
             loglevel = loglevel,
             responseHandler = response
         )
@@ -448,13 +397,12 @@ public open class RequestsData(
      * A static request is only hexadecimal digits and whitespaces, and will be converted
      * into a call to the [request]-Method that takes an ByteArray
      *
-     * A dynamic match is detected when the string includes "[", "." or "|". The string
-     * is automatically converted into a regular expression by replacing all "[]" with ".*",
-     * turning it into uppercase, and removing all spaces.
+     * A dynamic match is detected when the string ends with "[]" or ".*". The hex data only
+     * has matched to the start of the incoming request then.
      */
     public fun request(
         /**
-         * Hex-String to exactly match the request
+         * Hex-String to match the request
          */
         reqHex: String,
         /**
@@ -474,19 +422,15 @@ public open class RequestsData(
          */
         response: RequestResponseHandler = {}
     ) {
-        if (isRegex(reqHex)) {
-            request(regexifyRequestHex(reqHex), name, loglevel, insertAtTop, response)
-        } else {
-            request(reqHex.decodeHex(), name, loglevel, insertAtTop, response)
-        }
+        val trimmed = reqHex.trim()
+        val isOpenEnded = trimmed.endsWith("[]") || trimmed.endsWith(".*")
+
+        request(trimmed.decodeHex(), name, onlyStartsWith = isOpenEnded, loglevel, insertAtTop, response)
     }
 
     public fun onReset(name: String? = null, handler: (SimEcu) -> Unit) {
         resetHandler.add(ResetHandler(name, handler))
     }
-
-    private fun isRegex(value: String) =
-        value.contains("[") || value.contains(".") || value.contains("|")
 }
 
 /**
@@ -501,14 +445,12 @@ public open class EcuData(
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
-    requestRegexMatchBytes: Int = 10,
     ackBytesLengthMap: Map<Byte, Int> = mapOf(),
 ) : RequestsData(
     name = name,
     nrcOnNoMatch = nrcOnNoMatch,
     requests = requests,
     resetHandler = resetHandler,
-    requestRegexMatchBytes = requestRegexMatchBytes,
     ackBytesLengthMap = ackBytesLengthMap,
 )
 

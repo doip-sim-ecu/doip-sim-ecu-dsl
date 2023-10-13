@@ -14,6 +14,18 @@ public fun Int.toByteArray(): ByteArray =
 public fun Short.toByteArray(): ByteArray =
     byteArrayOf((this.toInt() and 0xFF00 shr 8).toByte(), this.toByte())
 
+public fun ByteArray.startsWith(prefix: ByteArray): Boolean {
+    if (prefix.size > this.size) {
+        return false
+    }
+    for (i in prefix.indices) {
+        if (prefix[i] != this[i]) {
+            return false
+        }
+    }
+    return true
+}
+
 /**
  * Convenience function to create a doip message
  */

@@ -26,7 +26,7 @@ class SimDslTest {
             request(byteArrayOf(0x10), "REQ1") { respond(byteArrayOf(0x50)) }
             request("10", "REQ2") { respond("50") }
             request("10 []", "REQ3") { ack() }
-            request(Regex("10.*"), "REQ4") {
+            request("10.*", "REQ4") {
                 nrc()
                 addOrReplaceEcuTimer(name = "TEST", delay = 100.milliseconds) {
                     // do nothing
@@ -40,7 +40,7 @@ class SimDslTest {
                 request(byteArrayOf(0x10), "REQ1") { ack() }
                 request("10", "REQ2") { ack() }
                 request("10 []", "REQ3") { ack() }
-                request(Regex("10.*"), "REQ4") { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
+                request("10.*", "REQ4") { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
                 additionalVam = EcuAdditionalVamData(eid = "1234".decodeHex())
             }
         }
@@ -65,7 +65,8 @@ class SimDslTest {
             request("10 []", "REQ3", insertAtTop = true) { ack() }
         }
         assertThat(gateways.size).isEqualTo(1)
-        assertThat(gateways[0].requests[0].requestRegex?.pattern).isEqualTo("10.*")
+        assertThat(gateways[0].requests[0].requestBytes).isEqualTo(byteArrayOf(0x10))
+        assertThat(gateways[0].requests[0].onlyStartsWith).isEqualTo(true)
     }
 
     @Test
@@ -118,11 +119,11 @@ class SimDslTest {
     @Test
     fun `test request matcher list extensions`() {
         val list = listOf(
-            RequestMatcher("TEST1", byteArrayOf(11), null) { },
-            RequestMatcher("TEST2", byteArrayOf(12), null) { },
-            RequestMatcher("TEST3", byteArrayOf(13), null) { },
-            RequestMatcher("TEST4", byteArrayOf(14), null) { },
-            RequestMatcher("TEST5", byteArrayOf(15), null) { }
+            RequestMatcher("TEST1", byteArrayOf(11)) { },
+            RequestMatcher("TEST2", byteArrayOf(12)) { },
+            RequestMatcher("TEST3", byteArrayOf(13)) { },
+            RequestMatcher("TEST4", byteArrayOf(14)) { },
+            RequestMatcher("TEST5", byteArrayOf(15)) { }
         )
         assertThat(list.size).isEqualTo(5)
         assertThat(list.findByName("TEST3")?.name).isEqualTo("TEST3")

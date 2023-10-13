@@ -150,7 +150,6 @@ public class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatew
                 requests = data.requests,
                 nrcOnNoMatch =  data.nrcOnNoMatch,
                 resetHandler = data.resetHandler,
-                requestRegexMatchBytes = data.requestRegexMatchBytes,
                 ackBytesLengthMap = data.ackBytesLengthMap,
                 pendingNrcSendInterval = data.pendingNrcSendInterval,
             )

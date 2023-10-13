@@ -23,8 +23,8 @@ class SimGatewayTest {
                 it.requests.add(
                     RequestMatcher(
                         name= "ALL",
-                        requestBytes = null,
-                        requestRegex = Regex(".*"),
+                        requestBytes = byteArrayOf(),
+                        onlyStartsWith = true,
                         responseHandler = {
                             this.ack()
                         }

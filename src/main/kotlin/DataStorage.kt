@@ -22,7 +22,7 @@ public open class DataStorage {
     private val internalDataStorage: MutableMap<String, Any?> = mutableMapOf()
 
     /**
-     * Create a persistent property by means of delegation, with an initival value
+     * Create a persistent property by means of delegation, with an initial value
      * calculated by initialValue
      */
     public fun <T> storedProperty(initialValue: () -> T): StoragePropertyDelegate<T> =

@@ -1,6 +1,7 @@
 import assertk.assertThat
 import assertk.assertions.*
 import library.UdsMessage
+import library.decodeHex
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.*
@@ -20,8 +21,8 @@ class SimEcuTest {
             ecuData(
                 name = "TEST",
                 requests = listOf(
-                    RequestMatcher("TEST", byteArrayOf(0x00, 0x10, 0x20), null) { first = true },
-                    RequestMatcher("TEST2", byteArrayOf(0x00, 0x10), null) { second = true }
+                    RequestMatcher("TEST", byteArrayOf(0x00, 0x10, 0x20)) { first = true },
+                    RequestMatcher("TEST2", byteArrayOf(0x00, 0x10)) { second = true }
                 )
             )
         )
@@ -46,8 +47,8 @@ class SimEcuTest {
             ecuData(
                 name = "TEST",
                 requests = listOf(
-                    RequestMatcher("TEST", byteArrayOf(0x00, 0x10), null) { first = true; continueMatching(true) },
-                    RequestMatcher("TEST2", byteArrayOf(0x00, 0x10), null) { second = true }
+                    RequestMatcher("TEST", byteArrayOf(0x00, 0x10)) { first = true; continueMatching(true) },
+                    RequestMatcher("TEST2", byteArrayOf(0x00, 0x10)) { second = true }
                 )
             )
         ))
@@ -67,8 +68,8 @@ class SimEcuTest {
             ecuData(
                 name = "TEST",
                 requests = listOf(
-                    RequestMatcher("TEST", byteArrayOf(0x00, 0x10), null) { first = true; ack() },
-                    RequestMatcher("TEST2", byteArrayOf(0x00, 0x10), null) { second = true; nrc() }
+                    RequestMatcher("TEST", byteArrayOf(0x00, 0x10)) { first = true; ack() },
+                    RequestMatcher("TEST2", byteArrayOf(0x00, 0x10)) { second = true; nrc() }
                 )
             )
         ))
@@ -80,7 +81,7 @@ class SimEcuTest {
     }
 
     @Test
-    fun `test request matching regex string`() {
+    fun `test request matching start string`() {
         var first = false
         var second = false
 
@@ -88,8 +89,8 @@ class SimEcuTest {
             ecuData(
                 name = "TEST",
                 requests = listOf(
-                    RequestMatcher("TEST", null, Regex("1020.*")) { first = true },
-                    RequestMatcher("TEST2", null, Regex("10.*")) { second = true },
+                    RequestMatcher("TEST", "1020".decodeHex(), true) { first = true },
+                    RequestMatcher("TEST2", "10".decodeHex(), true) { second = true },
                 )
             )
         )
@@ -107,13 +108,13 @@ class SimEcuTest {
     }
 
     @Test
-    fun `test request matching regex long request`() {
+    fun `test request matching start long request`() {
         var called = false
         val ecu = SimEcu(
             ecuData(
                 name = "TEST",
                 requests = listOf(
-                    RequestMatcher("TEST", null, Regex("1020.*")) { called = true },
+                    RequestMatcher("TEST", "1020".decodeHex(), true) { called = true },
                 )
             )
         )
@@ -131,8 +132,8 @@ class SimEcuTest {
     @Test
     fun `test request matching no match`() {
         val requests = listOf(
-            RequestMatcher(null, byteArrayOf(0x10, 0x20), null) { },
-            RequestMatcher("TEST2", byteArrayOf(0x10, 0x30), null) { },
+            RequestMatcher(null, byteArrayOf(0x10, 0x20)) { },
+            RequestMatcher("TEST2", byteArrayOf(0x10, 0x30)) { },
         )
         val ecuWithNrc = spy(SimEcu(
             ecuData(
@@ -240,7 +241,7 @@ class SimEcuTest {
         val ecu = SimEcu(ecuData(name = "TEST"))
         var noBusyCalled = false
         var busyCalled = false
-        ecu.requests.add(RequestMatcher("TEST", byteArrayOf(0x10, 0x03), null) { println("WAITING"); sleep(1500); println("DONE") })
+        ecu.requests.add(RequestMatcher("TEST", byteArrayOf(0x10, 0x03)) { println("WAITING"); sleep(1500); println("DONE") })
         ecu.addOrReplaceEcuInterceptor("NOBUSY", 3500.milliseconds) { println("NOTBUSY"); noBusyCalled = true; false; }
         ecu.addOrReplaceEcuInterceptor("BUSY", 3500.milliseconds, true) { println("BUSY ${it.isBusy}"); if (it.isBusy) busyCalled = true; false; }
 
@@ -265,8 +266,8 @@ class SimEcuTest {
             name = "TEST",
             requests = listOf(
                 // continueMatching is prioritized higher than ack()/responses
-                RequestMatcher("TEST", byteArrayOf(0x00, 0x10), null) { first = true; ack(); continueMatching() },
-                RequestMatcher("TEST2", byteArrayOf(0x00, 0x10), null) { second = true },
+                RequestMatcher("TEST", byteArrayOf(0x00, 0x10)) { first = true; ack(); continueMatching() },
+                RequestMatcher("TEST2", byteArrayOf(0x00, 0x10)) { second = true },
             )
         ))
 
@@ -282,7 +283,7 @@ class SimEcuTest {
         val ecu = SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                     ack()
                     addOrReplaceEcuTimer("TESTER PRESENT", 200.milliseconds) {
                         timerCalled = true
@@ -312,7 +313,7 @@ class SimEcuTest {
         val ecu = SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                     ack()
                     var requestCounter by caller.storedProperty { 0 }
                     assertThat(requestCounter).isEqualTo(counter)
@@ -336,14 +337,13 @@ class SimEcuTest {
         val ecu = SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                     ack()
                     var firstRequestCalled: Boolean by this.ecu.storedProperty { false }
                     assertThat(firstRequestCalled).isEqualTo(false)
-                    @Suppress("UNUSED_VALUE")
                     firstRequestCalled = true
                 },
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x01), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x01)) {
                     ack()
                     val firstRequestCalled: Boolean by this.ecu.storedProperty { false }
                     assertThat(firstRequestCalled).isEqualTo(true)
@@ -370,7 +370,7 @@ class SimEcuTest {
         val ecu = spy(SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                   sequenceStopAtEnd(
                       "7E 3E",
                       "7F 10")
@@ -395,7 +395,7 @@ class SimEcuTest {
         val ecu = spy(SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                     sequenceWrapAround(
                         "7E 3E",
                         "7F 10")
@@ -424,7 +424,7 @@ class SimEcuTest {
         val ecu = spy(SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                   throw NrcException(0x99.toByte())
                 },
             )
@@ -442,7 +442,7 @@ class SimEcuTest {
         val ecu = spy(SimEcu(ecuData(
             name = "TEST",
             requests = listOf(
-                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00), null) {
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
                     pendingFor(950.milliseconds) {
                         invokeAfterCalled = true
                     }
