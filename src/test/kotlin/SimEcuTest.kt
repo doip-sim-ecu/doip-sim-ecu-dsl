@@ -465,7 +465,7 @@ class SimEcuTest {
 
     private fun ecuData(
         name: String,
-        physicalAddress: Short = 0x0001,
+        logicalAddress: Short = 0x0001,
         functionalAddress: Short = 0x0002,
         nrcOnNoMatch: Boolean = true,
         pendingNrcSendInterval: Duration = 100.milliseconds,
@@ -473,7 +473,7 @@ class SimEcuTest {
     ): EcuData =
         EcuData(
             name = name,
-            physicalAddress = physicalAddress,
+            logicalAddress = logicalAddress,
             functionalAddress = functionalAddress,
             nrcOnNoMatch = nrcOnNoMatch,
             requests = requests,

@@ -10,7 +10,7 @@ public data class EcuAdditionalVamData(
             eid = this.eid,
             gid = this.gid ?: entityConfig.gid,
             vin = this.vin ?: entityConfig.vin,
-            logicalAddress = ecuConfig.physicalAddress,
+            logicalAddress = ecuConfig.logicalAddress,
         )
 
     override fun equals(other: Any?): Boolean {

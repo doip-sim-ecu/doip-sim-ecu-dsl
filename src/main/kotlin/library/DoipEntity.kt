@@ -95,7 +95,7 @@ public open class DoipEntity(
 
     protected val logger: Logger = LoggerFactory.getLogger(DoipEntity::class.java)
 
-    protected var targetEcusByPhysical: Map<Short, SimulatedEcu> = emptyMap()
+    protected var targetEcusByLogical: Map<Short, SimulatedEcu> = emptyMap()
     protected var targetEcusByFunctional: MutableMap<Short, MutableList<SimulatedEcu>> = mutableMapOf()
 
     public val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
@@ -170,10 +170,10 @@ public open class DoipEntity(
     }
 
     override fun existsTargetAddress(targetAddress: Short): Boolean =
-        targetEcusByPhysical.containsKey(targetAddress) || targetEcusByFunctional.containsKey(targetAddress)
+        targetEcusByLogical.containsKey(targetAddress) || targetEcusByFunctional.containsKey(targetAddress)
 
     override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream) {
-        val ecu = targetEcusByPhysical[diagMessage.targetAddress]
+        val ecu = targetEcusByLogical[diagMessage.targetAddress]
         ecu?.run {
             runBlocking {
                 MDC.put("ecu", ecu.name)
@@ -304,7 +304,7 @@ public open class DoipEntity(
     public fun start() {
         this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
 
-        targetEcusByPhysical = this.ecus.associateBy { it.config.physicalAddress }
+        targetEcusByLogical = this.ecus.associateBy { it.config.logicalAddress }
 
         targetEcusByFunctional = mutableMapOf()
         _ecus.forEach {

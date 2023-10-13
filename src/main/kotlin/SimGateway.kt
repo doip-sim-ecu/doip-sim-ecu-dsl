@@ -125,7 +125,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
     // Add the gateway itself as an ecu, so it too can receive requests
     val gatewayEcuConfig = EcuConfig(
         name = this.name,
-        physicalAddress = this.logicalAddress,
+        logicalAddress = this.logicalAddress,
         functionalAddress = this.functionalAddress,
         pendingNrcSendInterval = this.pendingNrcSendInterval,
     )
@@ -145,7 +145,7 @@ public class SimGateway(private val data: GatewayData) : DoipEntity(data.toGatew
         if (config.name == data.name) {
             val ecu = EcuData(
                 name = data.name,
-                physicalAddress = data.logicalAddress,
+                logicalAddress = data.logicalAddress,
                 functionalAddress = data.functionalAddress,
                 requests = data.requests,
                 nrcOnNoMatch =  data.nrcOnNoMatch,

@@ -30,7 +30,7 @@ public class ResponseInterceptorData(name: String, interceptor: InterceptorRespo
 internal fun EcuData.toEcuConfig(): EcuConfig =
     EcuConfig(
         name = name,
-        physicalAddress = physicalAddress,
+        logicalAddress = logicalAddress,
         functionalAddress = functionalAddress,
         pendingNrcSendInterval = pendingNrcSendInterval,
         additionalVam = additionalVam,

@@ -438,7 +438,7 @@ public open class RequestsData(
  */
 public open class EcuData(
     name: String,
-    public var physicalAddress: Short = 0,
+    public var logicalAddress: Short = 0,
     public var functionalAddress: Short = 0,
     public var pendingNrcSendInterval: Duration = 2.seconds,
     public var additionalVam: EcuAdditionalVamData? = null,
