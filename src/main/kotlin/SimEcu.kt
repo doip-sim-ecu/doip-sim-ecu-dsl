@@ -214,16 +214,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
 
         for (requestIter in data.requests) {
-            val matches = try {
-                if (requestIter.onlyStartsWith) {
-                    request.message.startsWith(requestIter.requestBytes)
-                } else {
-                    request.message.contentEquals(requestIter.requestBytes)
-                }
-            } catch (e: Exception) {
-                logger.error("Error while matching requests for $name: ${e.message}", e)
-                throw e
-            }
+            val matches = requestIter.matches(request.message)
 
             logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
 

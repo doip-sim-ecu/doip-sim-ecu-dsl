@@ -13,15 +13,11 @@ public fun String.decodeHex(): ByteArray {
     var counter = 0
     for (i in this.indices) {
         val c = this[i]
-        nibble = if (c in '0'..'9') {
-            c - '0'
-        } else if (c in 'A'..'F') {
-            c - 'A' + 10
-        } else if (c in 'a'..'f') {
-            c - 'a' + 10
-        } else {
-            // Non-hex character, ignore
-            continue
+        nibble = when (c) {
+            in '0'..'9' -> c - '0'
+            in 'A'..'F' -> c - 'A' + 10
+            in 'a'..'f' -> c - 'a' + 10
+            else -> continue // ignore non-hex chars
         }
 
         if (counter++ % 2 == 0) {
@@ -56,7 +52,11 @@ public fun String.encodedAsHexString(separator: String = " "): String =
 
 private val nibbleToHex = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
-public fun ByteArray.toHexString(separator: String = " ", limit: Int = Integer.MAX_VALUE, limitExceededSuffix: String = "..."): String {
+public fun ByteArray.toHexString(
+    separator: String = " ",
+    limit: Int = Integer.MAX_VALUE,
+    limitExceededSuffix: String = "..."
+): String {
     val len = min(limit, this.size)
     if (len == 0) {
         if (this.size > limit) {

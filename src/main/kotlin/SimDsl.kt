@@ -269,6 +269,14 @@ public class RequestMatcher(
         clearStoredProperties()
     }
 
+    public fun matches(request: ByteArray): Boolean {
+        return if (onlyStartsWith) {
+                request.startsWith(requestBytes)
+            } else {
+                request.contentEquals(requestBytes)
+            }
+    }
+
     override fun toString(): String {
         val sb = StringBuilder()
         sb.append("{ ")
