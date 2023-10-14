@@ -106,9 +106,15 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
             output.writeFully(reject.asByteArray)
             return
         }
-        logger.traceIf { "# handleTcpDiagMessage $message for ${message.targetAddress}" }
+        if (logger.isTraceEnabled) {
+            // performance critical, use explicit check instead of traceIf
+            logger.trace("# handleTcpDiagMessage $message for ${message.targetAddress}")
+        }
         if (diagMessageHandler.existsTargetAddress(message.targetAddress)) {
-            logger.traceIf { "# targetAddress ${message.targetAddress} exists, sending positive ack" }
+            if (logger.isTraceEnabled) {
+                // performance critical, use explicit check instead of traceIf
+                logger.trace("# targetAddress ${message.targetAddress} exists, sending positive ack")
+            }
             // Acknowledge message
             val ack = DoipTcpDiagMessagePosAck(
                 message.targetAddress,

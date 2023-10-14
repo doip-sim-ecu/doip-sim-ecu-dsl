@@ -13,6 +13,8 @@ class RequestListPerformanceTest {
     private lateinit var requestList: RequestList
     private lateinit var generatedRequests: List<ByteArray>
 
+    private val repetitions = 15
+
     @BeforeEach
     fun setUp() {
         val servicesList = mapOf(
@@ -31,15 +33,18 @@ class RequestListPerformanceTest {
                 l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(0x36, *ar))
+                l.add(byteArrayOf(0x36, *ar))
             }
             l
         }.flatten()
 
         requestList = RequestList(
-            listOf(RequestMatcher("data", byteArrayOf(0x36), true) {})
-                    + generatedRequests
+            listOf(RequestMatcher("data", byteArrayOf(0x36), true) {}) +
+            generatedRequests
                 .filter { it[0] != 0x36.toByte() }
-                .map { RequestMatcher(it.toHexString(), it) { } })
+                .map { RequestMatcher(it.toHexString(), it) { } }
+        )
+
     }
 
     @Test
@@ -47,7 +52,7 @@ class RequestListPerformanceTest {
         RequestList.indexActive = false
         val c = AtomicInteger(0)
         val duration = measureTime {
-            for (i in 0..0) {
+            for (i in 0 until repetitions) {
                 generatedRequests.forEach {
                     c.incrementAndGet()
                     assertThat(requestList.findMessageAndHandle("TEST", it) {
@@ -56,7 +61,7 @@ class RequestListPerformanceTest {
                 }
             }
         }
-        println("duration non indexed ${duration.inWholeMilliseconds} ms for ${c.get()} accesses")
+        println("duration non indexed $duration for ${c.get()} accesses")
     }
 
     @Test
@@ -64,7 +69,7 @@ class RequestListPerformanceTest {
         RequestList.indexActive = true
         val c = AtomicInteger(0)
         val duration = measureTime {
-            for (i in 0..0) {
+            for (i in 0 until repetitions) {
                 generatedRequests.forEach {
                     c.incrementAndGet()
                     assertThat(requestList.findMessageAndHandle("TEST", it) {
@@ -73,6 +78,6 @@ class RequestListPerformanceTest {
                 }
             }
         }
-        println("duration indexed ${duration.inWholeMilliseconds} ms for ${c.get()} accesses")
+        println("duration indexed $duration for ${c.get()} accesses")
     }
 }

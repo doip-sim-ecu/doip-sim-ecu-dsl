@@ -96,7 +96,10 @@ public class RequestList(
             for (requestIter in requests) {
                 val matches = requestIter.matches(message)
 
-                logger.traceIf { "Request for ${ecuName}: '${message.toHexString(limit = 10)}' try match '$requestIter' -> $matches" }
+                if (logger.isTraceEnabled) {
+                    // performance critical, use explicit check instead of traceIf
+                    logger.trace("Request for ${ecuName}: '${message.toHexString(limit = 10)}' try match '$requestIter' -> $matches")
+                }
 
                 if (matches) {
                     val wasHandled = handlerOnMatch.invoke(requestIter)

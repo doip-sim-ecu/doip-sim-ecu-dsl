@@ -209,7 +209,10 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
             return
         }
 
-        logger.traceIf { "Incoming request for $name (${request.targetAddress}) - ${request.message.toHexString()}" }
+        if (logger.isTraceEnabled) {
+            // performance critical, use explicit check instead of traceIf
+            logger.trace("Incoming request for $name (${request.targetAddress}) - ${request.message.toHexString()}")
+        }
 
         // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
 
