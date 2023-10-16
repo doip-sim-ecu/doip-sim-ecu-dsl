@@ -13,7 +13,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.10.0"
+version = "0.10.1"
 
 repositories {
     gradlePluginPortal()

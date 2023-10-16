@@ -441,7 +441,7 @@ public open class EcuData(
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
-    ackBytesLengthMap: Map<Byte, Int> = mapOf(),
+    ackBytesLengthMap: Map<Byte, Int> = DefaultAckBytesMap,
 ) : RequestsData(
     name = name,
     nrcOnNoMatch = nrcOnNoMatch,
