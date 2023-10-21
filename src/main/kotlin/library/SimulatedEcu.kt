@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 
 public open class SimulatedEcu(public val config: EcuConfig) {
+    /**
+     * Name of the ECU
+     */
     public val name: String =
         config.name
 

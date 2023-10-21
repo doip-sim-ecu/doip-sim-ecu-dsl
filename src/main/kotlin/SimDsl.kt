@@ -222,7 +222,7 @@ public open class ResponseData<T>(
      * is responded to (see [RequestsData.ackBytesLengthMap])
      */
     public fun ack(payload: String): Unit =
-        ack(payload, ecu.ackBytesMap[message[0]] ?: 2)
+        ack(payload, ecu.ackBytesLengthMap[message[0]] ?: 2)
 
     /**
      * Acknowledge a request with the given payload.
@@ -231,7 +231,7 @@ public open class ResponseData<T>(
      * is responded to (see [RequestsData.ackBytesLengthMap])
      */
     public fun ack(payload: ByteArray = ByteArray(0)): Unit =
-        ack(payload, ecu.ackBytesMap[message[0]] ?: 2)
+        ack(payload, ecu.ackBytesLengthMap[message[0]] ?: 2)
 
     /**
      * Send a negative response code (NRC) in response to the request
@@ -313,7 +313,7 @@ public enum class LogLevel {
     TRACE,
 }
 
-private val DefaultAckBytesMap: Map<Byte, Int> = mapOf(
+public val DefaultAckBytesLengthMap: Map<Byte, Int> = mapOf(
     // default is 2
     0x22.toByte() to 3,
     0x2e.toByte() to 3,
@@ -340,7 +340,7 @@ public open class RequestsData(
     /**
      * Map of Request SID to number of ack response byte count
      */
-    public var ackBytesLengthMap: Map<Byte, Int> = DefaultAckBytesMap,
+    public var ackBytesLengthMap: Map<Byte, Int> = DefaultAckBytesLengthMap,
 ) {
     /**
      * List of all defined requests in the order they were defined
@@ -441,7 +441,7 @@ public open class EcuData(
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
-    ackBytesLengthMap: Map<Byte, Int> = DefaultAckBytesMap,
+    ackBytesLengthMap: Map<Byte, Int> = DefaultAckBytesLengthMap,
 ) : RequestsData(
     name = name,
     nrcOnNoMatch = nrcOnNoMatch,
@@ -473,14 +473,10 @@ public fun reset() {
 }
 
 @Suppress("unused")
-public fun stop() {
-//    gatewayInstances.forEach { it.stop() }
-    gatewayInstances.clear()
-}
-
-@Suppress("unused")
 public fun start() {
     gatewayInstances.addAll(gateways.map { SimGateway(it) })
 
-    gatewayInstances.forEach { it.start() }
+    gatewayInstances.forEach {
+        it.start()
+    }
 }

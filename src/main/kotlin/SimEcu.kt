@@ -46,10 +46,10 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     public val requests: RequestList
         get() = data.requests
 
-    public val ackBytesMap: Map<Byte, Int>
+    public val ackBytesLengthMap: Map<Byte, Int>
         get() = data.ackBytesLengthMap
 
-    private val interceptors = Collections.synchronizedMap(LinkedHashMap<String, RequestInterceptorData>())
+    private val inboundInterceptors = Collections.synchronizedMap(LinkedHashMap<String, RequestInterceptorData>())
     private val outboundInterceptors = Collections.synchronizedMap(LinkedHashMap<String, ResponseInterceptorData>())
 
     private val mainTimer: Timer by lazy { Timer("$name-Timer", true) }
@@ -135,14 +135,14 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     }
 
     private fun handleInboundInterceptors(request: UdsMessage, busy: Boolean): Boolean {
-        if (this.interceptors.isEmpty()) {
+        if (this.inboundInterceptors.isEmpty()) {
             return false
         }
 
         var hasExpiredEntries = false
 
-        synchronized (this.interceptors) {
-            this.interceptors.forEach {
+        synchronized (this.inboundInterceptors) {
+            this.inboundInterceptors.forEach {
                 if (!it.value.isExpired()) {
                     if (!busy || it.value.alsoCallWhenEcuIsBusy) {
                         val responseData = InterceptorRequestData(
@@ -179,10 +179,10 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
             }
 
             if (hasExpiredEntries) {
-                this.interceptors
+                this.inboundInterceptors
                     .filterValues { it.isExpired() }
                     .forEach {
-                        this.interceptors.remove(it.key)
+                        this.inboundInterceptors.remove(it.key)
                     }
             }
         }
@@ -267,8 +267,8 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         // expires at expirationTime
         val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
 
-        synchronized (interceptors) {
-            interceptors[name] = RequestInterceptorData(
+        synchronized (inboundInterceptors) {
+            inboundInterceptors[name] = RequestInterceptorData(
                 name = name,
                 interceptor = interceptor,
                 alsoCallWhenEcuIsBusy = alsoCallWhenEcuIsBusy,
@@ -282,7 +282,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
      * Remove an interceptor by name
      */
     public fun removeInterceptor(name: String): RequestInterceptorData? =
-        interceptors.remove(name)
+        inboundInterceptors.remove(name)
 
     /**
      * Adds an outbound interceptor to the ecu.
@@ -370,7 +370,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
             launch(MDCContext()) {
                 logger.debug("Resetting interceptors, timers and stored data")
 
-                interceptors.clear()
+                inboundInterceptors.clear()
 
                 synchronized(mainTimer) {
                     timers.forEach { it.value.cancel() }
