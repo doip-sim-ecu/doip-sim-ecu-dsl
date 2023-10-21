@@ -26,7 +26,7 @@ public open class DoipTcpConnectionMessageHandler(
         val protocolVersion = brc.readByte()
         val inverseProtocolVersion = brc.readByte()
         if (protocolVersion != inverseProtocolVersion.inv()) {
-            val available =  brc.availableForRead
+            val available = brc.availableForRead
             val data = ByteArray(min(available, 2000))
             brc.readFully(data)
             throw IncorrectPatternFormat("Invalid header $protocolVersion != $inverseProtocolVersion xor 0xFF -- $available bytes available - first ${data.size}: ${data.toHexString()}")

@@ -5,7 +5,9 @@ import assertk.assertThat
 import assertk.assertions.isTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.measureTime
 
@@ -13,7 +15,7 @@ class RequestListPerformanceTest {
     private lateinit var requestList: RequestList
     private lateinit var generatedRequests: List<ByteArray>
 
-    private val repetitions = 15
+    private val repetitions = 150
 
     @BeforeEach
     fun setUp() {
@@ -48,31 +50,14 @@ class RequestListPerformanceTest {
     }
 
     @Test
-    fun `test non indexed`() {
-        RequestList.indexActive = false
-        val c = AtomicInteger(0)
-        val duration = measureTime {
-            for (i in 0 until repetitions) {
-                generatedRequests.forEach {
-                    c.incrementAndGet()
-                    assertThat(requestList.findMessageAndHandle("TEST", it) {
-                        true
-                    }).isTrue()
-                }
-            }
-        }
-        println("duration non indexed $duration for ${c.get()} accesses")
-    }
-
-    @Test
+    @Timeout(value = 1, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     fun `test indexed`() {
-        RequestList.indexActive = true
         val c = AtomicInteger(0)
         val duration = measureTime {
             for (i in 0 until repetitions) {
                 generatedRequests.forEach {
                     c.incrementAndGet()
-                    assertThat(requestList.findMessageAndHandle("TEST", it) {
+                    assertThat(requestList.findMessageAndHandle(it) {
                         true
                     }).isTrue()
                 }

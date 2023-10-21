@@ -209,14 +209,9 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
             return
         }
 
-        if (logger.isTraceEnabled) {
-            // performance critical, use explicit check instead of traceIf
-            logger.trace("Incoming request for $name (${request.targetAddress}) - ${request.message.toHexString()}")
-        }
+        logger.traceIf { "Incoming request for $name (${request.targetAddress}) - ${request.message.toHexString()}" }
 
-        // Note: We could build a lookup map to directly find the correct RequestMatcher for a binary input
-
-        val handled = data.requests.findMessageAndHandle(name, request.message) { matcher ->
+        val handled = data.requests.findMessageAndHandle(request.message) { matcher ->
             val responseData = ResponseData(caller = matcher, request = request, ecu = this)
             try {
                 matcher.responseHandler.invoke(responseData)
@@ -257,6 +252,9 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
      * Adds an interceptor to the ecu.
      *
      * Interceptors are executed before request matching
+     *
+     * When alsoCallWhenEcuIsBusy is set, the interceptor is also called, when the ECU is busy. This can be used to
+     * implement an S3 Timeout for example.
      */
     public fun addOrReplaceEcuInterceptor(
         name: String = UUID.randomUUID().toString(),
@@ -392,7 +390,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     }
 }
 
-private fun Logger.logForRequest(request: RequestMatcher, t: Throwable? = null, supplier: () -> String) =
+private inline fun Logger.logForRequest(request: RequestMatcher, t: Throwable? = null, supplier: () -> String) =
     when (request.loglevel) {
         LogLevel.ERROR -> this.errorIf(t, supplier)
         LogLevel.INFO -> this.infoIf(t, supplier)

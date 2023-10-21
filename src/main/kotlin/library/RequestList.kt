@@ -1,14 +1,11 @@
 package library
 
 import RequestMatcher
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 public class RequestList(
     requests: List<RequestMatcher>
 ) : MutableList<RequestMatcher> {
     public companion object {
-        public var indexActive: Boolean = true
         private val mask: Array<Int> = arrayOf(
             0xFFFFFFFF.toInt(),
             0xFFFFFF00.toInt(),
@@ -18,123 +15,116 @@ public class RequestList(
         )
     }
 
-    private val logger: Logger = LoggerFactory.getLogger(RequestList::class.java)
-
-    private val requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
+    private val _requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
 
     private var index: Map<Int, List<RequestMatcher>>? = null
 
     override val size: Int
-        get() = requests.size
+        get() = _requests.size
 
     override fun contains(element: RequestMatcher): Boolean =
-        requests.contains(element)
+        _requests.contains(element)
 
     override fun containsAll(elements: Collection<RequestMatcher>): Boolean =
-        requests.containsAll(elements)
+        _requests.containsAll(elements)
 
     override fun get(index: Int): RequestMatcher =
-        requests[index]
+        _requests[index]
 
     override fun indexOf(element: RequestMatcher): Int =
-        requests.indexOf(element)
+        _requests.indexOf(element)
 
     override fun isEmpty(): Boolean =
-        requests.isEmpty()
+        _requests.isEmpty()
 
     override fun iterator(): MutableIterator<RequestMatcher> =
-        requests.iterator()
+        _requests.iterator()
 
     override fun lastIndexOf(element: RequestMatcher): Int =
-        requests.lastIndexOf(element)
+        _requests.lastIndexOf(element)
 
     override fun add(element: RequestMatcher): Boolean =
-        requests.add(element).also { updateIndex() }
+        _requests.add(element).also { updateIndex() }
 
     override fun add(index: Int, element: RequestMatcher): Unit =
-        requests.add(index, element).also { updateIndex() }
+        _requests.add(index, element).also { updateIndex() }
 
     override fun addAll(index: Int, elements: Collection<RequestMatcher>): Boolean =
-        requests.addAll(index, elements).also { updateIndex() }
+        _requests.addAll(index, elements).also { updateIndex() }
 
     override fun addAll(elements: Collection<RequestMatcher>): Boolean =
-        requests.addAll(elements).also { updateIndex() }
+        _requests.addAll(elements).also { updateIndex() }
 
     override fun clear(): Unit =
-        requests.clear().also { updateIndex() }
+        _requests.clear().also { updateIndex() }
 
     override fun listIterator(): MutableListIterator<RequestMatcher> =
-        requests.listIterator()
+        _requests.listIterator()
 
     override fun listIterator(index: Int): MutableListIterator<RequestMatcher> =
-        requests.listIterator(index)
+        _requests.listIterator(index)
 
     override fun remove(element: RequestMatcher): Boolean =
-        requests.remove(element).also { updateIndex() }
+        _requests.remove(element).also { updateIndex() }
 
     override fun removeAll(elements: Collection<RequestMatcher>): Boolean =
-        requests.removeAll(elements).also { updateIndex() }
+        _requests.removeAll(elements).also { updateIndex() }
 
     override fun removeAt(index: Int): RequestMatcher =
-        requests.removeAt(index).also { updateIndex() }
+        _requests.removeAt(index).also { updateIndex() }
 
     override fun retainAll(elements: Collection<RequestMatcher>): Boolean =
-        requests.retainAll(elements).also { updateIndex() }
+        _requests.retainAll(elements).also { updateIndex() }
 
     override fun set(index: Int, element: RequestMatcher): RequestMatcher =
-        requests.set(index, element).also { updateIndex() }
+        _requests.set(index, element).also { updateIndex() }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<RequestMatcher> =
-        requests.subList(fromIndex, toIndex)
+        _requests.subList(fromIndex, toIndex)
 
+    /**
+     * Looks up the message in the requests, and executes handlerOnMatch on the matching entries, until handlerOnMatch
+     * returns true
+     */
     public fun findMessageAndHandle(
-        ecuName: String,
         message: ByteArray,
         handlerOnMatch: (RequestMatcher) -> Boolean
     ): Boolean {
-        if (!indexActive) {
-            for (requestIter in requests) {
-                val matches = requestIter.matches(message)
+        /** How indexing works:
+         *  We create an index based on (up to) the first 4 bytes of the request definition, and put it into a map<int, list<request>>.
+         *  Since most request definitions should be only for the uds services with their did/rid without large payloads,
+         *  this should scale fairly well for not having to iterate through long lists of requests.
+         */
+        var index = this.index
+        if (index == null) {
+            // create the index, if none exists
+            index = _requests.groupBy { it.requestBytes.toIntWithZeroForEmpty() }
+            this.index = index
+        }
 
-                if (logger.isTraceEnabled) {
-                    // performance critical, use explicit check instead of traceIf
-                    logger.trace("Request for ${ecuName}: '${message.toHexString(limit = 10)}' try match '$requestIter' -> $matches")
-                }
-
-                if (matches) {
-                    val wasHandled = handlerOnMatch.invoke(requestIter)
-                    if (!wasHandled) {
-                        continue
-                    }
+        // convert the request message into the search pattern for the index
+        val searchPattern = message.toIntWithZeroForEmpty()
+        for (maskedBytes in 0..4) {
+            // since the request definition may be shorter than the actual request, we start with
+            // the highest amount possibly matching bytes, and mask out more and more bytes
+            index[searchPattern and mask[maskedBytes]]?.forEach {
+                val wasHandled = handlerOnMatch.invoke(it)
+                if (wasHandled) {
                     return true
                 }
             }
-            return false
-        } else {
-            var index = this.index
-            if (index == null) {
-                index = requests.groupBy { it.requestBytes.toIntWithZeroForEmpty() }
-                this.index = index
-            }
-
-            val searchPattern = message.toIntWithZeroForEmpty()
-            for (maskedBytes in 0..4) {
-                index[searchPattern and mask[maskedBytes]]?.forEach {
-                    val wasHandled = handlerOnMatch.invoke(it)
-                    if (wasHandled) {
-                        return true
-                    }
-                }
-            }
-
-            return false
         }
+
+        return false
     }
 
     private fun updateIndex() {
         index = null
     }
 
+    /**
+     * Converts up to the first 4 bytes of the byte-array into an int
+     */
     private fun ByteArray.toIntWithZeroForEmpty(): Int =
         when (this.size) {
             0 -> 0
