@@ -16,8 +16,10 @@ public class RequestList(
     }
 
     private val _requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
+    private val _runtimeAddedRequests: MutableList<RequestMatcher> = mutableListOf()
 
     private var index: Map<Int, List<RequestMatcher>>? = null
+    private var isRuntime: Boolean = false
 
     override val size: Int
         get() = _requests.size
@@ -43,20 +45,38 @@ public class RequestList(
     override fun lastIndexOf(element: RequestMatcher): Int =
         _requests.lastIndexOf(element)
 
-    override fun add(element: RequestMatcher): Boolean =
-        _requests.add(element).also { updateIndex() }
+    override fun add(element: RequestMatcher): Boolean {
+        val result = _requests.add(element)
+        addToRuntime(element)
+        updateIndex()
+        return result
+    }
 
-    override fun add(index: Int, element: RequestMatcher): Unit =
-        _requests.add(index, element).also { updateIndex() }
+    override fun add(index: Int, element: RequestMatcher) {
+        _requests.add(index, element)
+        addToRuntime(element)
+        updateIndex()
+    }
 
-    override fun addAll(index: Int, elements: Collection<RequestMatcher>): Boolean =
-        _requests.addAll(index, elements).also { updateIndex() }
+    override fun addAll(index: Int, elements: Collection<RequestMatcher>): Boolean {
+        val result = _requests.addAll(index, elements)
+        addToRuntime(elements)
+        updateIndex()
+        return result
+    }
 
-    override fun addAll(elements: Collection<RequestMatcher>): Boolean =
-        _requests.addAll(elements).also { updateIndex() }
+    override fun addAll(elements: Collection<RequestMatcher>): Boolean {
+        val result = _requests.addAll(elements)
+        addToRuntime(elements)
+        updateIndex()
+        return result
+    }
 
-    override fun clear(): Unit =
-        _requests.clear().also { updateIndex() }
+    override fun clear() {
+        _requests.clear()
+        _runtimeAddedRequests.clear()
+        updateIndex()
+    }
 
     override fun listIterator(): MutableListIterator<RequestMatcher> =
         _requests.listIterator()
@@ -64,23 +84,35 @@ public class RequestList(
     override fun listIterator(index: Int): MutableListIterator<RequestMatcher> =
         _requests.listIterator(index)
 
-    override fun remove(element: RequestMatcher): Boolean =
-        _requests.remove(element).also { updateIndex() }
+    override fun remove(element: RequestMatcher): Boolean {
+        val result = _requests.remove(element)
+        _runtimeAddedRequests.remove(element)
+        updateIndex()
+        return result
+    }
 
-    override fun removeAll(elements: Collection<RequestMatcher>): Boolean =
-        _requests.removeAll(elements).also { updateIndex() }
+    override fun removeAll(elements: Collection<RequestMatcher>): Boolean {
+        val result = _requests.removeAll(elements)
+        _runtimeAddedRequests.removeAll(elements)
+        updateIndex()
+        return result
+    }
 
-    override fun removeAt(index: Int): RequestMatcher =
-        _requests.removeAt(index).also { updateIndex() }
+    override fun removeAt(index: Int): RequestMatcher {
+        val result = _requests.removeAt(index)
+        _runtimeAddedRequests.remove(result)
+        updateIndex()
+        return result
+    }
 
     override fun retainAll(elements: Collection<RequestMatcher>): Boolean =
-        _requests.retainAll(elements).also { updateIndex() }
+        throw UnsupportedOperationException("not supported")
 
     override fun set(index: Int, element: RequestMatcher): RequestMatcher =
-        _requests.set(index, element).also { updateIndex() }
+        throw UnsupportedOperationException("not supported")
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<RequestMatcher> =
-        _requests.subList(fromIndex, toIndex)
+        throw UnsupportedOperationException("not supported")
 
     /**
      * Looks up the message in the requests, and executes handlerOnMatch on the matching entries, until handlerOnMatch
@@ -118,6 +150,19 @@ public class RequestList(
         return false
     }
 
+    internal fun simStarted() {
+        isRuntime = true
+    }
+
+    /**
+     * Removes requests which were added at runtime
+     */
+    public fun reset() {
+        _requests.removeAll(_runtimeAddedRequests)
+        _runtimeAddedRequests.clear()
+        updateIndex()
+    }
+
     private fun updateIndex() {
         index = null
     }
@@ -133,4 +178,16 @@ public class RequestList(
             3 -> (this[0].toInt() and 0xFF shl 24) or (this[1].toInt() and 0xFF shl 16) or (this[2].toInt() and 0xFF shl 8)
             else -> (this[0].toInt() and 0xFF shl 24) or (this[1].toInt() and 0xFF shl 16) or (this[2].toInt() and 0xFF shl 8) or (this[3].toInt() and 0xFF)
         }
+
+    private fun addToRuntime(element: RequestMatcher) {
+        if (isRuntime) {
+            _runtimeAddedRequests.add(element)
+        }
+    }
+
+    private fun addToRuntime(elements: Collection<RequestMatcher>) {
+        if (isRuntime) {
+            _runtimeAddedRequests.addAll(elements)
+        }
+    }
 }

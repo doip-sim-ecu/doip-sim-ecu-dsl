@@ -16,6 +16,10 @@ public open class SimulatedEcu(public val config: EcuConfig) {
 
     private val isBusy: AtomicBoolean = AtomicBoolean(false)
 
+    internal open fun simStarted() {
+
+    }
+
     /**
      * Handler for an incoming diagnostic message when the ECU isn't busy
      */

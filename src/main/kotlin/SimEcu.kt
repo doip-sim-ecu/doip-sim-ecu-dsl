@@ -55,6 +55,10 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     private val mainTimer: Timer by lazy { Timer("$name-Timer", true) }
     private val timers = ConcurrentHashMap<String, EcuTimerTask>()
 
+    override fun simStarted() {
+        requests.simStarted()
+    }
+
     public fun sendResponse(request: UdsMessage, response: ByteArray) {
         if (handleOutboundInterceptors(request, response)) {
             return
@@ -360,6 +364,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     public fun clearStoredProperties(): Unit =
         internalDataStorage.clear()
 
+
     /**
      * Resets all the ECUs stored properties, timers, interceptors and requests
      */
@@ -379,6 +384,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
                 clearStoredProperties()
                 data.requests.forEach { it.reset() }
+                data.requests.reset()
                 data.resetHandler.forEach {
                     if (it.name != null) {
                         logger.traceIf { "Calling onReset-Handler" }

@@ -313,6 +313,7 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
             } else {
                 list.add(it)
             }
+            it.simStarted()
         }
 
         thread(name = "UDP") {
