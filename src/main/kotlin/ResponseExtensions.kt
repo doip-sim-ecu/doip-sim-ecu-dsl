@@ -7,7 +7,6 @@ public enum class SequenceMode {
  * Returns the given responses, advancing by one after each request, either wrapping around to the beginning,
  * or repeating the last one
  */
-@Suppress("UNUSED_VALUE")
 public fun RequestResponseData.sequence(vararg responses: String,
     mode: SequenceMode = SequenceMode.STOP_AT_END,
     startIndex: Int = 0

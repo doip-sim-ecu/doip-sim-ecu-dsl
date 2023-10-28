@@ -21,7 +21,7 @@ public class InterceptorResponseData(
     ecu: SimEcu
 ) : ResponseData<ResponseInterceptorData>(caller, request, ecu)
 
-public open class NrcException(public val code: Byte): Exception()
+public open class NrcException(public val code: Byte) : Exception()
 
 @Suppress("unused")
 public object NrcError {
@@ -103,7 +103,8 @@ public class RequestMessage(udsMessage: UdsMessage, public val isBusy: Boolean) 
         udsMessage.targetAddress,
         udsMessage.targetAddressType,
         udsMessage.message,
-        udsMessage.output)
+        udsMessage.output
+    )
 
 /**
  * Define the response to be sent after the function returns
@@ -271,10 +272,10 @@ public class RequestMatcher(
 
     public fun matches(request: ByteArray): Boolean {
         return if (onlyStartsWith) {
-                request.startsWith(requestBytes)
-            } else {
-                request.contentEquals(requestBytes)
-            }
+            request.startsWith(requestBytes)
+        } else {
+            request.contentEquals(requestBytes)
+        }
     }
 
     override fun toString(): String {
@@ -288,7 +289,7 @@ public class RequestMatcher(
         } else {
             sb.append("Bytes: ${requestBytes.toHexString(limit = 10)}")
         }
-        sb.append("}")
+        sb.append(" }")
         return sb.toString()
     }
 }
@@ -311,6 +312,12 @@ public enum class LogLevel {
     INFO,
     DEBUG,
     TRACE,
+}
+
+public enum class DuplicateStrategy {
+    ERROR,
+    REPLACE,
+    APPEND,
 }
 
 public val DefaultAckBytesLengthMap: Map<Byte, Int> = mapOf(
@@ -371,6 +378,10 @@ public open class RequestsData(
          */
         onlyStartsWith: Boolean = false,
         /**
+         * Specifies how a duplicated request matcher should be handled
+         */
+        duplicateStrategy: DuplicateStrategy = DuplicateStrategy.ERROR,
+        /**
          * The loglevel used to log when the request matches and its responses
          */
         loglevel: LogLevel = LogLevel.DEBUG,
@@ -386,7 +397,29 @@ public open class RequestsData(
             loglevel = loglevel,
             responseHandler = response
         )
-        requests.add(req)
+        when (duplicateStrategy) {
+            DuplicateStrategy.APPEND -> requests.add(req)
+            DuplicateStrategy.ERROR -> {
+                val duplicate = requests.firstOrNull {
+                    it.onlyStartsWith == req.onlyStartsWith && it.requestBytes.contentEquals(req.requestBytes)
+                }
+                if (duplicate != null) {
+                    throw IllegalArgumentException("The request is duplicated, existing request: $duplicate - use different duplicateStrategy, or change requestBytes")
+                }
+                requests.add(req)
+            }
+
+            DuplicateStrategy.REPLACE -> {
+                val duplicate = requests.filter {
+                    it.onlyStartsWith == req.onlyStartsWith && it.requestBytes.contentEquals(req.requestBytes)
+                }
+                if (duplicate.isNotEmpty()) {
+                    requests.removeAll(duplicate)
+                }
+                requests.add(req)
+            }
+        }
+
         return req
     }
 
@@ -410,6 +443,10 @@ public open class RequestsData(
          */
         name: String? = null,
         /**
+         * Specifies how a duplicated request matcher should be handled
+         */
+        duplicateStrategy: DuplicateStrategy = DuplicateStrategy.ERROR,
+        /**
          * The loglevel used to log when the request matches and its responses
          */
         loglevel: LogLevel = LogLevel.DEBUG,
@@ -418,10 +455,17 @@ public open class RequestsData(
          */
         response: RequestResponseHandler = {}
     ) {
-        val trimmed = reqHex.trim()
-        val isOpenEnded = trimmed.endsWith("[]") || trimmed.endsWith(".*")
+        val trimmed = reqHex.trimEnd()
+        val isOpenEnded = trimmed.endsWith("[]") || trimmed.endsWith(".*") || trimmed.endsWith("..")
 
-        request(trimmed.decodeHex(), name, onlyStartsWith = isOpenEnded, loglevel, response)
+        request(
+            request = trimmed.decodeHex(),
+            name = name,
+            onlyStartsWith = isOpenEnded,
+            duplicateStrategy = duplicateStrategy,
+            loglevel = loglevel,
+            response = response
+        )
     }
 
     public fun onReset(name: String? = null, handler: (SimEcu) -> Unit) {

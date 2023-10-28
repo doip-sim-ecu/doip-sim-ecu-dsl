@@ -8,12 +8,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.slf4j.MDCContext
 import nl.altindag.ssl.SSLFactory
-import nl.altindag.ssl.util.PemUtils
+import nl.altindag.ssl.pem.util.PemUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.io.File
-import java.io.OutputStream
 import java.net.InetAddress
 import java.net.SocketException
 import java.nio.file.Paths
@@ -87,7 +86,7 @@ public open class DoipEntityConfig(
 /**
  * DoIP-Entity
  */
-public abstract class DoipEntity<out T: SimulatedEcu> (
+public abstract class DoipEntity<out T : SimulatedEcu>(
     public val config: DoipEntityConfig,
 ) : DiagnosticMessageHandler {
     public val name: String =
@@ -171,7 +170,7 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
     override fun existsTargetAddress(targetAddress: Short): Boolean =
         targetEcusByLogical.containsKey(targetAddress) || targetEcusByFunctional.containsKey(targetAddress)
 
-    override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream) {
+    override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel) {
         val ecu = targetEcusByLogical[diagMessage.targetAddress]
         ecu?.run {
             runBlocking {
@@ -203,7 +202,7 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
             logger.debugIf { "New incoming data connection from ${socket.remoteAddress}" }
             val tcpMessageHandler = createDoipTcpMessageHandler(socket)
             val input = socket.openReadChannel()
-            val output = socket.openOutputStream()
+            val output = socket.openWriteChannel()
             try {
                 connectionHandlers.add(tcpMessageHandler)
                 while (!socket.isClosed) {
@@ -304,15 +303,9 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
         this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
 
         targetEcusByLogical = this.ecus.associateBy { it.config.logicalAddress }
+        targetEcusByFunctional = _ecus.groupByTo(mutableMapOf()) { it.config.functionalAddress }
 
-        targetEcusByFunctional = mutableMapOf()
         _ecus.forEach {
-            val list = targetEcusByFunctional[it.config.functionalAddress]
-            if (list == null) {
-                targetEcusByFunctional[it.config.functionalAddress] = mutableListOf(it)
-            } else {
-                list.add(it)
-            }
             it.simStarted()
         }
 
@@ -324,6 +317,8 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
                         .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
                             broadcast = true
                             reuseAddress = true
+                            reusePort = true
+                            typeOfService = TypeOfService.IPTOS_RELIABILITY
 //                            socket.joinGroup(multicastAddress)
                         }
                 logger.info("Listening on udp: ${serverSocket.localAddress}")
@@ -339,6 +334,8 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
                             .bind(localAddress = localAddress) {
                                 broadcast = true
                                 reuseAddress = true
+                                reusePort = true
+                                typeOfService = TypeOfService.IPTOS_RELIABILITY
                             }
                     thread(start = true, isDaemon = true) {
                         runBlocking {
@@ -430,8 +427,8 @@ public abstract class DoipEntity<out T: SimulatedEcu> (
                             tlsOptions.tlsCiphers.filter { supportedCipherSuites.contains(it) }.toTypedArray()
                     }
 
-                    logger.debug("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
-                    logger.debug("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
+                    logger.info("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
+                    logger.info("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
 
                     while (!tlsServerSocket.isClosed) {
                         withContext(Dispatchers.IO) {

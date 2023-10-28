@@ -18,6 +18,7 @@ public fun ByteArray.startsWith(prefix: ByteArray): Boolean {
     if (prefix.size > this.size) {
         return false
     }
+
     for (i in prefix.indices) {
         if (prefix[i] != this[i]) {
             return false
@@ -32,7 +33,7 @@ public fun ByteArray.startsWith(prefix: ByteArray): Boolean {
 public fun doipMessage(payloadType: Short, vararg data: Byte): ByteArray {
     val bb = ByteBuffer.allocate(8 + data.size)
     if (payloadType == TYPE_UDP_VIR || payloadType == TYPE_UDP_VIR_EID || payloadType == TYPE_UDP_VIR_VIN) {
-        /// Protocol version for vehicle identification request messages
+        // Protocol version for vehicle identification request messages is 0xFF
         bb.put(0xFF.toByte())
         bb.put(0x00)
     } else {

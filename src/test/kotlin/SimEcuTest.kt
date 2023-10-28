@@ -1,11 +1,11 @@
 import assertk.assertThat
 import assertk.assertions.*
+import io.ktor.utils.io.*
 import library.UdsMessage
 import library.decodeHex
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.*
-import java.io.ByteArrayOutputStream
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
 import kotlin.time.Duration
@@ -491,6 +491,6 @@ class SimEcuTest {
             targetAddress = targetAddress,
             targetAddressType = targetAddressType,
             message = data,
-            output = Mockito.mock(ByteArrayOutputStream::class.java)
+            output = Mockito.mock(ByteWriteChannel::class.java)
         )
 }

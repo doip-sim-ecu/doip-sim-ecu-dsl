@@ -1,14 +1,14 @@
 package library
 
+import io.ktor.utils.io.*
 import kotlinx.coroutines.*
-import java.io.OutputStream
 
 public open class UdsMessage(
     public val sourceAddress: Short,
     public val targetAddress: Short,
     public val targetAddressType: Int,
     public val message: ByteArray,
-    public val output: OutputStream
+    public val output: ByteWriteChannel
 ) {
     public companion object {
         public const val PHYSICAL: Int = 0
@@ -24,7 +24,7 @@ public open class UdsMessage(
     }
 }
 
-public fun DoipTcpDiagMessage.toUdsMessage(addressType: Int, output: OutputStream): UdsMessage =
+public fun DoipTcpDiagMessage.toUdsMessage(addressType: Int, output: ByteWriteChannel): UdsMessage =
     UdsMessage(
         sourceAddress = this.sourceAddress,
         targetAddress = this.targetAddress,

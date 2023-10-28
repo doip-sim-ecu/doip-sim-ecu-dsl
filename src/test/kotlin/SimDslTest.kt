@@ -2,6 +2,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import io.ktor.utils.io.*
 import library.EcuAdditionalVamData
 import library.UdsMessage
 import library.decodeHex
@@ -9,7 +10,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
-import java.io.ByteArrayOutputStream
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -24,9 +24,9 @@ class SimDslTest {
     fun `test dsl`() {
         gateway("GW") {
             request(byteArrayOf(0x10), "REQ1") { respond(byteArrayOf(0x50)) }
-            request("10", "REQ2") { respond("50") }
+            request("10", "REQ2", duplicateStrategy = DuplicateStrategy.APPEND) { respond("50") }
             request("10 []", "REQ3") { ack() }
-            request("10.*", "REQ4") {
+            request("10.*", "REQ4", duplicateStrategy = DuplicateStrategy.APPEND) {
                 nrc()
                 addOrReplaceEcuTimer(name = "TEST", delay = 100.milliseconds) {
                     // do nothing
@@ -37,10 +37,10 @@ class SimDslTest {
             }
 
             ecu("ECU1") {
-                request(byteArrayOf(0x10), "REQ1") { ack() }
-                request("10", "REQ2") { ack() }
+                request(byteArrayOf(0x10),"REQ1") { ack() }
+                request("10", "REQ2", duplicateStrategy = DuplicateStrategy.APPEND) { ack() }
                 request("10 []", "REQ3") { ack() }
-                request("10.*", "REQ4") { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
+                request("10.*", "REQ4", duplicateStrategy = DuplicateStrategy.APPEND) { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
                 additionalVam = EcuAdditionalVamData(eid = "1234".decodeHex())
             }
         }
@@ -73,7 +73,7 @@ class SimDslTest {
             0x2,
             UdsMessage.PHYSICAL,
             byteArrayOf(0x22, 0x10, 0x20),
-            Mockito.mock(ByteArrayOutputStream::class.java)
+            Mockito.mock(ByteWriteChannel::class.java)
         )
         val simEcu = SimEcu(ecuData)
         val responseData = RequestResponseData(ecuData.requests[0], msg, simEcu)

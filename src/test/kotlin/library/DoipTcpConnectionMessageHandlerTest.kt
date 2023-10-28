@@ -5,8 +5,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.io.ByteArrayOutputStream
-import java.lang.IllegalArgumentException
+import org.mockito.kotlin.mock
 import kotlin.random.Random
 
 class DoipTcpConnectionMessageHandlerTest {
@@ -14,7 +13,7 @@ class DoipTcpConnectionMessageHandlerTest {
     fun `test tcp message handler`() {
         val tcpMessageHandler = DoipTcpConnectionMessageHandler()
         val data = Random.nextBytes(10)
-        val out = ByteArrayOutputStream()
+        val out = mock<ByteWriteChannel>()
         runBlocking {
             tcpMessageHandler.handleTcpMessage(DoipTcpHeaderNegAck(0x11), out)
             tcpMessageHandler.handleTcpMessage(DoipTcpAliveCheckRequest(), out)

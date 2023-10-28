@@ -3,7 +3,6 @@ package library
 import io.ktor.utils.io.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.OutputStream
 import java.lang.Integer.min
 import kotlin.experimental.inv
 
@@ -107,7 +106,7 @@ public open class DoipTcpConnectionMessageHandler(
         }
     }
 
-    public open suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
+    public open suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpMessage $message" }
         when (message) {
             is DoipTcpHeaderNegAck -> handleTcpHeaderNegAck(message, output)
@@ -121,13 +120,13 @@ public open class DoipTcpConnectionMessageHandler(
         }
     }
 
-    protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: OutputStream) {
+    protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpHeaderNegAck $message" }
     }
 
     protected open suspend fun handleTcpRoutingActivationRequest(
         message: DoipTcpRoutingActivationRequest,
-        output: OutputStream
+        output: ByteWriteChannel
     ) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         registeredSourceAddress = message.sourceAddress
@@ -135,28 +134,28 @@ public open class DoipTcpConnectionMessageHandler(
 
     protected open suspend fun handleTcpRoutingActivationResponse(
         message: DoipTcpRoutingActivationResponse,
-        output: OutputStream
+        output: ByteWriteChannel
     ) {
         logger.traceIf { "# handleTcpRoutingActivationResponse $message" }
     }
 
-    protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: OutputStream) {
+    protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpAliveCheckRequest $message" }
     }
 
-    protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: OutputStream) {
+    protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpAliveCheckResponse $message" }
     }
 
-    protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: OutputStream) {
+    protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpDiagMessage $message for ${message.targetAddress}" }
     }
 
-    protected open suspend fun handleTcpDiagMessagePosAck(message: DoipTcpDiagMessagePosAck, output: OutputStream) {
+    protected open suspend fun handleTcpDiagMessagePosAck(message: DoipTcpDiagMessagePosAck, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpDiagMessagePosAck $message for ${message.targetAddress}" }
     }
 
-    protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: OutputStream) {
+    protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpDiagMessageNegAck $message for ${message.targetAddress}" }
     }
 

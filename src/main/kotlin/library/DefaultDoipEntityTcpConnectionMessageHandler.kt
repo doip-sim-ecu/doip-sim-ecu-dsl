@@ -1,14 +1,12 @@
 package library
 
-import kotlinx.coroutines.Dispatchers
+import io.ktor.utils.io.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
-import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
-import java.io.OutputStream
 
 public open class DefaultDoipEntityTcpConnectionMessageHandler(
     public val doipEntity: DoipEntity<*>,
@@ -19,7 +17,7 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
 ) : DoipTcpConnectionMessageHandler(maxPayloadLength) {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
-    override suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputStream) {
+    override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
         runBlocking {
             MDC.put("ecu", doipEntity.name)
             launch(MDCContext()) {
@@ -28,7 +26,10 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
         }
     }
 
-    override suspend fun handleTcpRoutingActivationRequest(message: DoipTcpRoutingActivationRequest, output: OutputStream) {
+    override suspend fun handleTcpRoutingActivationRequest(
+        message: DoipTcpRoutingActivationRequest,
+        output: ByteWriteChannel
+    ) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         if (message.activationType != 0x00.toByte() && message.activationType != 0x01.toByte()) {
             logger.error("Routing activation for ${message.sourceAddress} denied (Unknown type: ${message.activationType})")
@@ -91,12 +92,12 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
         }
     }
 
-    override suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: OutputStream) {
+    override suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpAliveCheckRequest $message" }
         output.writeFully(DoipTcpAliveCheckResponse(logicalAddress).asByteArray)
     }
 
-    override suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: OutputStream) {
+    override suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
         if (registeredSourceAddress != message.sourceAddress) {
             val reject = DoipTcpDiagMessageNegAck(
                 message.targetAddress,
@@ -141,16 +142,14 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
 
 public interface DiagnosticMessageHandler {
     public fun existsTargetAddress(targetAddress: Short): Boolean
-    public suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputStream)
+    public suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel)
 }
 
-public fun DoipEntity<*>.hasAlreadyActiveConnection(sourceAddress: Short, exclude: DoipTcpConnectionMessageHandler?): Boolean =
+public fun DoipEntity<*>.hasAlreadyActiveConnection(
+    sourceAddress: Short,
+    exclude: DoipTcpConnectionMessageHandler?
+): Boolean =
     this.connectionHandlers.any {
         it.registeredSourceAddress == sourceAddress
                 && it != exclude
-    }
-
-public suspend fun OutputStream.writeFully(byteArray: ByteArray): Unit =
-    withContext(Dispatchers.IO) {
-        this@writeFully.write(byteArray)
     }
