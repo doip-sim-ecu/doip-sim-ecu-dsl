@@ -113,6 +113,7 @@ internal class OutputStreamByteWriteChannel(private val outputStream: OutputStre
         }
     }
 
+    @Suppress("DEPRECATION")
     override suspend fun writeAvailable(src: ChunkBuffer): Int {
         TODO("Not yet implemented")
     }
@@ -145,6 +146,7 @@ internal class OutputStreamByteWriteChannel(private val outputStream: OutputStre
         TODO("Not yet implemented")
     }
 
+    @Suppress("DEPRECATION")
     override suspend fun writeFully(src: Buffer) {
         TODO("Not yet implemented")
     }
@@ -175,6 +177,7 @@ internal class OutputStreamByteWriteChannel(private val outputStream: OutputStre
         TODO("Not yet implemented")
     }
 
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     override suspend fun writeSuspendSession(visitor: suspend WriterSuspendSession.() -> Unit) {
         TODO("Not yet implemented")
     }

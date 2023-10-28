@@ -1,6 +1,6 @@
 package library
 
-public abstract class DoipUdpMessage : DoipMessage()
+public abstract class DoipUdpMessage : DoipMessage
 
 public class DoipUdpHeaderNegAck(public val code: Byte) : DoipUdpMessage() {
     @Suppress("unused")

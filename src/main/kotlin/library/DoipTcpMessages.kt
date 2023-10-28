@@ -6,8 +6,9 @@ import org.slf4j.LoggerFactory
 import java.lang.Integer.min
 import kotlin.experimental.inv
 
-public abstract class DoipTcpMessage : DoipMessage()
+public abstract class DoipTcpMessage : DoipMessage
 
+@Suppress("MemberVisibilityCanBePrivate")
 public open class DoipTcpConnectionMessageHandler(
     public val maxPayloadLength: Int = Int.MAX_VALUE
 ) {
@@ -168,6 +169,7 @@ public open class DoipTcpConnectionMessageHandler(
     }
 }
 
+@Suppress("MemberVisibilityCanBePrivate")
 public class DoipTcpHeaderNegAck(
     public val code: Byte
 ) : DoipTcpMessage() {
@@ -175,6 +177,7 @@ public class DoipTcpHeaderNegAck(
         get() = doipMessage(TYPE_HEADER_NACK, code)
 }
 
+@Suppress("MemberVisibilityCanBePrivate")
 public class DoipTcpRoutingActivationRequest(
     public val sourceAddress: Short,
     public val activationType: Byte = ACTIVATION_TYPE_DEFAULT,
@@ -235,6 +238,7 @@ public class DoipTcpAliveCheckRequest : DoipTcpMessage() {
         get() = doipMessage(TYPE_TCP_ALIVE_REQ)
 }
 
+@Suppress("MemberVisibilityCanBePrivate")
 public class DoipTcpAliveCheckResponse(public val sourceAddress: Short) : DoipTcpMessage() {
     override val asByteArray: ByteArray
         get() = doipMessage(TYPE_TCP_ALIVE_RES, *sourceAddress.toByteArray())

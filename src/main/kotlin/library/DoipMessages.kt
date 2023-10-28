@@ -19,7 +19,7 @@ public const val TYPE_TCP_DIAG_MESSAGE: Short = 0x8001.toShort()
 public const val TYPE_TCP_DIAG_MESSAGE_POS_ACK: Short = 0x8002.toShort()
 public const val TYPE_TCP_DIAG_MESSAGE_NEG_ACK: Short = 0x8003.toShort()
 
-public abstract class DoipMessage {
-    public abstract val asByteArray: ByteArray
+public interface DoipMessage {
+    public val asByteArray: ByteArray
 }
 

@@ -15,7 +15,7 @@ class RequestListPerformanceTest {
     private lateinit var requestList: RequestList
     private lateinit var generatedRequests: List<ByteArray>
 
-    private val repetitions = 150
+    private val repetitions = 1500
 
     @BeforeEach
     fun setUp() {
@@ -31,9 +31,9 @@ class RequestListPerformanceTest {
             for (i in 0..200) {
                 val ar = ByteArray(it.value)
                 rnd.nextBytes(ar)
+                l.add(byteArrayOf(0x36, *ar))
+                l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(it.key.toByte(), *ar))
-                l.add(byteArrayOf(0x36, *ar))
-                l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(0x36, *ar))
             }

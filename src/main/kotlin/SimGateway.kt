@@ -136,6 +136,7 @@ private fun GatewayData.toGatewayConfig(): DoipEntityConfig {
     return config
 }
 
+@Suppress("MemberVisibilityCanBePrivate")
 public class SimGateway(private val data: GatewayData) : DoipEntity<SimEcu>(data.toGatewayConfig()) {
     public val requests: RequestList
         get() = data.requests

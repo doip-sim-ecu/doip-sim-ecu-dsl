@@ -12,10 +12,7 @@ public class UnknownPayloadType(message: String) : HeaderNegAckException(message
 
 public object DoipUdpMessageParser {
     private fun checkSyncPattern(protocolVersion: Byte, inverseProtocolVersion: Byte): Boolean {
-        if (protocolVersion != inverseProtocolVersion.inv()) {
-            return false
-        }
-        return true
+        return protocolVersion == inverseProtocolVersion.inv()
     }
 
     private fun <T> checkPayloadLength(

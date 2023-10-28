@@ -86,6 +86,7 @@ public open class DoipEntityConfig(
 /**
  * DoIP-Entity
  */
+@Suppress("MemberVisibilityCanBePrivate")
 public abstract class DoipEntity<out T : SimulatedEcu>(
     public val config: DoipEntityConfig,
 ) : DiagnosticMessageHandler {

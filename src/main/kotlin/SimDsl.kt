@@ -1,3 +1,5 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 import library.*
 import java.util.*
 import kotlin.time.Duration
@@ -23,7 +25,7 @@ public class InterceptorResponseData(
 
 public open class NrcException(public val code: Byte) : Exception()
 
-@Suppress("unused")
+@Suppress("unused", "ConstPropertyName")
 public object NrcError {
     // Common Response Codes
     public const val GeneralReject: Byte = 0x10

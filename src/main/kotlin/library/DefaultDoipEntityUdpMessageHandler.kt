@@ -21,6 +21,7 @@ public open class DefaultDoipEntityUdpMessageHandler(
             }
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     protected suspend fun sendVamResponse(
         sendChannel: SendChannel<Datagram>,
         sourceAddress: SocketAddress,

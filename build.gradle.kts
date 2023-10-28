@@ -29,11 +29,12 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.9") // MIT
 
     implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.2.0") // Apache-2.0
-    implementation("org.bouncycastle:bctls-jdk15on:1.70") // Bouncy Castle License (~MIT)
+    implementation("org.bouncycastle:bctls-jdk18on:1.76") // Bouncy Castle License (~MIT)
 
     testImplementation(kotlin("test"))
-    testRuntimeOnly("ch.qos.logback:logback-classic:1.3.4") // EPL-1.0
+    testRuntimeOnly("ch.qos.logback:logback-classic:1.3.11") // EPL-1.0
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    // version 5.x requires jdk 11
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.27.0")
 }
@@ -89,7 +90,7 @@ publishing {
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                     }
                 }
             }
