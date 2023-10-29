@@ -17,7 +17,7 @@ There's another example of how a [DoIP ECU UDS simulation](https://github.com/do
 could be used in a test setup (e.g. with additional REST interface).  
 
 ### Requirements
-The doip-library & DSL is written in Kotlin/JVM 1.7.0 with the ktor-network 2.0.2 library. 
+The doip-library & DSL is written in Kotlin/JVM with the ktor-network library. 
  
 An ecu-simulation that utilizes this library will therefore require usage of compatible versions 
 of these dependencies.

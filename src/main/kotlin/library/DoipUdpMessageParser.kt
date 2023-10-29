@@ -15,7 +15,7 @@ public object DoipUdpMessageParser {
         return protocolVersion == inverseProtocolVersion.inv()
     }
 
-    private fun <T> checkPayloadLength(
+    private inline fun <T> checkPayloadLength(
         expectedLength: Int,
         payloadLength: Int,
         brp: ByteReadPacket,
@@ -45,61 +45,71 @@ public object DoipUdpMessageParser {
         val payloadLength = brp.readInt()
 
         return when (payloadType) {
-            TYPE_HEADER_NACK -> checkPayloadLength(1, payloadLength, brp) { DoipUdpHeaderNegAck(brp.readByte()) }
+            TYPE_HEADER_NACK ->
+                checkPayloadLength(1, payloadLength, brp) { DoipUdpHeaderNegAck(brp.readByte()) }
 
-            TYPE_UDP_VIR -> checkPayloadLength(0, payloadLength, brp) { DoipUdpVehicleInformationRequest() }
+            TYPE_UDP_VIR ->
+                checkPayloadLength(0, payloadLength, brp) { DoipUdpVehicleInformationRequest() }
 
-            TYPE_UDP_VIR_EID -> checkPayloadLength(
-                6,
-                payloadLength,
-                brp,
-            ) { DoipUdpVehicleInformationRequestWithEid(brp.readBytes(6)) }
+            TYPE_UDP_VIR_EID ->
+                checkPayloadLength(
+                    6,
+                    payloadLength,
+                    brp,
+                ) { DoipUdpVehicleInformationRequestWithEid(brp.readBytes(6)) }
 
-            TYPE_UDP_VIR_VIN -> checkPayloadLength(
-                17,
-                payloadLength,
-                brp
-            ) { DoipUdpVehicleInformationRequestWithVIN(brp.readBytes(17)) }
+            TYPE_UDP_VIR_VIN ->
+                checkPayloadLength(
+                    17,
+                    payloadLength,
+                    brp
+                ) { DoipUdpVehicleInformationRequestWithVIN(brp.readBytes(17)) }
 
-            TYPE_UDP_VAM -> checkPayloadLength(
-                33,
-                payloadLength,
-                brp
-            ) {
-                DoipUdpVehicleAnnouncementMessage(
-                    vin = brp.readBytes(17),
-                    logicalAddress = brp.readShort(),
-                    eid = brp.readBytes(6),
-                    gid = brp.readBytes(6),
-                    furtherActionRequired = brp.readByte(),
-                    syncStatus = brp.readByte()
-                )
-            }
+            TYPE_UDP_VAM ->
+                checkPayloadLength(
+                    33,
+                    payloadLength,
+                    brp
+                ) {
+                    DoipUdpVehicleAnnouncementMessage(
+                        vin = brp.readBytes(17),
+                        logicalAddress = brp.readShort(),
+                        eid = brp.readBytes(6),
+                        gid = brp.readBytes(6),
+                        furtherActionRequired = brp.readByte(),
+                        syncStatus = brp.readByte()
+                    )
+                }
 
-            TYPE_UDP_ENTITY_STATUS_REQ -> checkPayloadLength(0, payloadLength, brp) { DoipUdpEntityStatusRequest() }
+            TYPE_UDP_ENTITY_STATUS_REQ ->
+                checkPayloadLength(0, payloadLength, brp) { DoipUdpEntityStatusRequest() }
 
-            TYPE_UDP_ENTITY_STATUS_RES -> checkPayloadLength(7, payloadLength, brp) {
-                DoipUdpEntityStatusResponse(
-                    nodeType = brp.readByte(),
-                    numberOfSockets = brp.readByte(),
-                    currentNumberOfSockets = brp.readByte(),
-                    maxDataSize = brp.readInt()
-                )
-            }
+            TYPE_UDP_ENTITY_STATUS_RES ->
+                checkPayloadLength(7, payloadLength, brp) {
+                    DoipUdpEntityStatusResponse(
+                        nodeType = brp.readByte(),
+                        numberOfSockets = brp.readByte(),
+                        currentNumberOfSockets = brp.readByte(),
+                        maxDataSize = brp.readInt()
+                    )
+                }
 
-            TYPE_UDP_DIAG_POWER_MODE_REQ -> checkPayloadLength(
-                0,
-                payloadLength,
-                brp
-            ) { DoipUdpDiagnosticPowerModeRequest() }
+            TYPE_UDP_DIAG_POWER_MODE_REQ ->
+                checkPayloadLength(
+                    0,
+                    payloadLength,
+                    brp
+                ) { DoipUdpDiagnosticPowerModeRequest() }
 
-            TYPE_UDP_DIAG_POWER_MODE_RES -> checkPayloadLength(
-                1,
-                payloadLength,
-                brp
-            ) { DoipUdpDiagnosticPowerModeResponse(brp.readByte()) }
+            TYPE_UDP_DIAG_POWER_MODE_RES ->
+                checkPayloadLength(
+                    1,
+                    payloadLength,
+                    brp
+                ) { DoipUdpDiagnosticPowerModeResponse(brp.readByte()) }
 
-            else -> throw UnknownPayloadType("$payloadType is an unknown payload type")
+            else ->
+                throw UnknownPayloadType("$payloadType is an unknown payload type")
         }
     }
 }

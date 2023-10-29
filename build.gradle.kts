@@ -4,6 +4,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
+    id("org.cyclonedx.bom") version "1.8.0"
     id("net.researchgate.release") version "3.0.2"
     signing
     `maven-publish`
@@ -112,12 +113,13 @@ publishing {
     }
 }
 
-//licenseReport {
-//    outputDir = "$projectDir/build/licenses"
-//    projects = arrayOf(project, *project.subprojects.toTypedArray())
-//    configurations = arrayOf("runtimeClasspath")
-//    renderers = arrayOf(com.github.jk1.license.render.JsonReportRenderer("licenses.json", true))
-//}
+tasks.cyclonedxBom {
+    setIncludeConfigs(listOf("runtimeClasspath"))
+    setIncludeLicenseText(false)
+    outputName.set("sbom")
+    outputFormat.set("all")
+    includeBomSerialNumber.set(true)
+}
 
 allOpen {
     annotation("helper.Open")

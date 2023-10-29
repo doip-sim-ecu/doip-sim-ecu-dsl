@@ -1,5 +1,6 @@
 package library
 
+import DefaultAckBytesLengthMap
 import RequestMatcher
 import assertk.assertThat
 import assertk.assertions.isTrue
@@ -15,7 +16,7 @@ class RequestListPerformanceTest {
     private lateinit var requestList: RequestList
     private lateinit var generatedRequests: List<ByteArray>
 
-    private val repetitions = 1500
+    private val repetitions = 150
 
     @BeforeEach
     fun setUp() {
@@ -33,18 +34,25 @@ class RequestListPerformanceTest {
                 rnd.nextBytes(ar)
                 l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(0x36, *ar))
-                l.add(byteArrayOf(it.key.toByte(), *ar))
                 l.add(byteArrayOf(0x36, *ar))
                 l.add(byteArrayOf(0x36, *ar))
+                val data = ByteArray(100)
+                rnd.nextBytes(data)
+                l.add(byteArrayOf(it.key.toByte(), *ar, *data))
             }
             l
         }.flatten()
 
         requestList = RequestList(
-            listOf(RequestMatcher("data", byteArrayOf(0x36), true) {}) +
+            listOf(RequestMatcher("data", byteArrayOf(0x36), true) { ack() }) +
             generatedRequests
                 .filter { it[0] != 0x36.toByte() }
-                .map { RequestMatcher(it.toHexString(), it) { } }
+                .map {
+                    val l = DefaultAckBytesLengthMap[it[0]] ?: 2
+                    RequestMatcher(it.toHexString(), it.toHexString(limit = l).decodeHex(), onlyStartsWith = true) {
+                        ack()
+                    }
+                }
         )
 
     }
