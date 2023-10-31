@@ -3,7 +3,7 @@
 title request handling in the sim
 
 participant tester
-participant TcpConnectionMessageHandler as mh
+participant "TcpConnectionMessageHandler\nfor DoipEntity" as mh
 participant "simulated ecu" as ecu
 participant RequestResponseHandler as rh
 

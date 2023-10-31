@@ -1,0 +1,66 @@
+@startuml
+
+title overview of major object relationships
+
+object "DoipEntity / Gateway" as DoipEntity
+object SimEcu
+object RequestMatcher
+object RequestResponseHandler
+object InboundInterceptor
+object OutboundInterceptor
+object InterceptorResponseHandler
+
+note right of DoipEntity : one per IP address
+note right of SimEcu : for all ecus behind gateway\nplus additional SimEcu with\nlogical address for DoipEntity
+
+object DoipEntity {
+    name: string
+    logical address: short
+    functional address: short
+    ip: network interface/string
+}
+
+object SimEcu {
+    name: string
+    logical address: short
+    functional address: short
+    additional vam: vam to be sent additionally
+    storedProperty: storage for data
+}
+
+object RequestMatcher {
+    name: string
+    match bytes: byte array
+    only match start: boolean
+}
+
+object InboundInterceptor {
+    name: string
+    duration: time
+}
+
+object OutboundInterceptor {
+    name: string
+    duration: time
+}
+
+object RequestResponseHandler {
+    storedProperty: storage for data
+    code: lambda
+}
+
+object InterceptorResponseHandler {
+    storedProperty: storage for data
+    code: lambda
+}
+
+DoipEntity "1" o-- "n" SimEcu
+SimEcu "1" o-- "n" InboundInterceptor
+SimEcu "1" o-- "n" RequestMatcher
+RequestMatcher "1" o-- "1" RequestResponseHandler
+SimEcu "1" o-- "n" OutboundInterceptor
+
+InboundInterceptor "1" o-- "1" InterceptorResponseHandler
+OutboundInterceptor "1" o-- "1" InterceptorResponseHandler
+
+@enduml
