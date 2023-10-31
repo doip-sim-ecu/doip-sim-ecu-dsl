@@ -120,6 +120,9 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     private fun handlePending(request: UdsMessage, responseData: ResponseData<RequestMatcher>) {
         val pendingFor = responseData.pendingFor ?: return
 
+        // this code will send pending nrcs every `config.pendingNrcSendInterval`, until
+        // the pendingFor duration is reached. Afterward the `pendingForCallback` is invoked,
+        // which may again change the final response in ResponseData
         val pending = byteArrayOf(0x7f, request.message[0], NrcError.RequestCorrectlyReceivedButResponseIsPending)
         val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
         while (System.currentTimeMillis() < end) {

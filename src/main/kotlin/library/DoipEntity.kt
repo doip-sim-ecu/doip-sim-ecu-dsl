@@ -131,7 +131,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                 return@fixedRateTimer
             }
             vams.forEach { vam ->
-                logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()}")
+                logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()} as broadcast")
                 runBlocking(Dispatchers.IO) {
                     MDC.put("ecu", name)
                     launch(MDCContext()) {
@@ -318,7 +318,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                         .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
                             broadcast = true
                             reuseAddress = true
-                            reusePort = true
+//                            reusePort = true // not supported on windows
                             typeOfService = TypeOfService.IPTOS_RELIABILITY
 //                            socket.joinGroup(multicastAddress)
                         }
@@ -335,7 +335,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                             .bind(localAddress = localAddress) {
                                 broadcast = true
                                 reuseAddress = true
-                                reusePort = true
+//                                reusePort = true // not supported on windows
                                 typeOfService = TypeOfService.IPTOS_RELIABILITY
                             }
                     thread(start = true, isDaemon = true) {

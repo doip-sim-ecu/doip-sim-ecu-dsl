@@ -28,7 +28,7 @@ public open class DefaultDoipEntityUdpMessageHandler(
     ) {
         val vams = generateVamByEntityConfig(doipEntity)
         vams.forEach { vam ->
-            logger.info("Sending VAM for ${vam.logicalAddress.toString(16)}")
+            logger.info("Sending VIR-Response (VAM) for ${vam.logicalAddress.toString(16)} to $sourceAddress")
             sendChannel.send(
                 Datagram(
                     packet = ByteReadPacket(vam.asByteArray),

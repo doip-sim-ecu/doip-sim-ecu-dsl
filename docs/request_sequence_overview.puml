@@ -1,0 +1,53 @@
+@startuml
+
+title request handling in the sim
+
+participant tester
+participant TcpConnectionMessageHandler as mh
+participant "simulated ecu" as ecu
+participant RequestResponseHandler as rh
+
+tester -> mh : DoIP\nDiagnostic message
+
+activate mh
+mh -> mh : look up logical address in\nlist of ecus + gateway
+
+alt logical address not found
+mh -> tester : Diagnostic message NACK\n(Unknown target address)
+
+else logical address found
+
+mh -> tester : Diagnostic message ACK
+
+mh -> ecu : uds message
+activate ecu
+
+ecu -> ecu : process inbound\ninterceptors
+ecu -> ecu : find matching request\nhandler in request list
+
+alt matcher not found
+
+ecu -> ecu : create nrc message\nresponse
+
+
+else matcher found
+
+ecu -> rh : call handle request\non request matcher,\ninvokes\nRequestResponseHandler
+activate rh
+
+rh -> ecu : uds response
+deactivate rh
+
+end
+end
+
+ecu -> ecu : process outbound\ninterceptors
+ecu -> mh : uds response message
+
+deactivate ecu
+
+mh -> tester : Diagnostic message\nwith response
+
+deactivate mh
+
+@enduml
