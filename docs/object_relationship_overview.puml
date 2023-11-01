@@ -1,6 +1,6 @@
 @startuml
 
-title overview of major object relationships
+title high-level overview of object relationships
 
 object "DoipEntity / Gateway" as DoipEntity
 object SimEcu
