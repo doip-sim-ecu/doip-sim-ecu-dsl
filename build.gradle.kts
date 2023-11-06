@@ -34,7 +34,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testRuntimeOnly("ch.qos.logback:logback-classic:1.3.11") // EPL-1.0
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     // version 5.x requires jdk 11
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.27.0")
