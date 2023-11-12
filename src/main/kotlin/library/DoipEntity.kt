@@ -214,13 +214,13 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                         // ignore - socket was closed
                         logger.debugIf { "Socket was closed by remote ${socket.remoteAddress}" }
                         withContext(Dispatchers.IO) {
-                            tcpMessageHandler.connectionClosed(socket, e)
+                            tcpMessageHandler.connectionClosed(e)
                             socket.runCatching { this.close() }
                         }
                     } catch (e: SocketException) {
                         logger.error("Socket error: ${e.message} -> closing socket")
                         withContext(Dispatchers.IO) {
-                            tcpMessageHandler.connectionClosed(socket, e)
+                            tcpMessageHandler.connectionClosed(e)
                             socket.runCatching { this.close() }
                         }
                     } catch (e: HeaderNegAckException) {
@@ -230,7 +230,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
                             withContext(Dispatchers.IO) {
-                                tcpMessageHandler.connectionClosed(socket, e)
+                                tcpMessageHandler.connectionClosed(e)
                                 socket.runCatching { this.close() }
                             }
                         }
@@ -241,7 +241,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                                 DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
                             output.writeFully(response)
                             withContext(Dispatchers.IO) {
-                                tcpMessageHandler.connectionClosed(socket, e)
+                                tcpMessageHandler.connectionClosed(e)
                                 socket.runCatching { this.close() }
                             }
                         }
@@ -252,10 +252,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
             } finally {
                 try {
                     withContext(Dispatchers.IO) {
-                        if (!socket.isClosed) {
-                            tcpMessageHandler.connectionClosed(socket, null)
-                        }
-                        socket.close()
+                        tcpMessageHandler.closeSocket()
                     }
                 } finally {
                     connectionHandlers.remove(tcpMessageHandler)

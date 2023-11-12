@@ -10,11 +10,11 @@ import org.slf4j.MDC
 
 public open class DefaultDoipEntityTcpConnectionMessageHandler(
     public val doipEntity: DoipEntity<*>,
-    public val socket: DoipTcpSocket,
+    socket: DoipTcpSocket,
     maxPayloadLength: Int,
     public val logicalAddress: Short,
     public val diagMessageHandler: DiagnosticMessageHandler
-) : DoipTcpConnectionMessageHandler(maxPayloadLength) {
+) : DoipTcpConnectionMessageHandler(socket, maxPayloadLength) {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {

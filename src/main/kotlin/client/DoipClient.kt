@@ -39,7 +39,7 @@ public class DoipClient(
                 val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
                     .tcp()
                     .connect(address)
-                val connection = DoipEntityTcpConnection(socket, testerAddress)
+                val connection = DoipEntityTcpConnection(DelegatedKtorSocket(socket), testerAddress)
                 connection
             }
         }
@@ -120,7 +120,7 @@ public class DoipClient(
     }
 }
 
-public class DoipEntityTcpConnection(socket: Socket, private val testerAddress: Short) {
+public class DoipEntityTcpConnection(private val socket: DoipTcpSocket, private val testerAddress: Short) {
     private val writeChannel = socket.openWriteChannel()
     private val readChannel = socket.openReadChannel()
 
@@ -129,7 +129,7 @@ public class DoipEntityTcpConnection(socket: Socket, private val testerAddress: 
             writeChannel.writeFully(ByteBuffer.wrap(DoipTcpRoutingActivationRequest(testerAddress).asByteArray))
             writeChannel.flush()
 
-            val msg = DoipTcpConnectionMessageHandler().receiveTcpData(readChannel) as DoipTcpRoutingActivationResponse
+            val msg = DoipTcpConnectionMessageHandler(socket).receiveTcpData(readChannel) as DoipTcpRoutingActivationResponse
             if (msg.responseCode != DoipTcpRoutingActivationResponse.RC_OK) {
                 throw ConnectException("Routing activation failed (${msg.responseCode})")
             }
@@ -167,7 +167,7 @@ public class DoipEntityTcpConnection(socket: Socket, private val testerAddress: 
             )
             writeChannel.writeFully(ByteBuffer.wrap(request.asByteArray))
             writeChannel.flush()
-            val handler = DoipTcpConnectionMessageHandler()
+            val handler = DoipTcpConnectionMessageHandler(socket)
             val diagResponse = handler.receiveTcpData(readChannel)
 
             if (diagResponse is DoipTcpDiagMessagePosAck) {

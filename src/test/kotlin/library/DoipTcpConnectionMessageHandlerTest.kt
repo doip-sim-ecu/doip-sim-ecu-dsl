@@ -11,7 +11,7 @@ import kotlin.random.Random
 class DoipTcpConnectionMessageHandlerTest {
     @Test
     fun `test tcp message handler`() {
-        val tcpMessageHandler = DoipTcpConnectionMessageHandler()
+        val tcpMessageHandler = DoipTcpConnectionMessageHandler(mock())
         val data = Random.nextBytes(10)
         val out = mock<ByteWriteChannel>()
         runBlocking {
@@ -28,7 +28,7 @@ class DoipTcpConnectionMessageHandlerTest {
 
     @Test
     fun `test receive`() {
-        val tcpMessageHandler = DoipTcpConnectionMessageHandler()
+        val tcpMessageHandler = DoipTcpConnectionMessageHandler(mock())
         val data = Random.nextBytes(10)
         runBlocking {
             tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpHeaderNegAck(0x11).asByteArray))

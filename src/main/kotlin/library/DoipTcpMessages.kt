@@ -10,6 +10,7 @@ public abstract class DoipTcpMessage : DoipMessage
 
 @Suppress("MemberVisibilityCanBePrivate")
 public open class DoipTcpConnectionMessageHandler(
+    public val socket: DoipTcpSocket,
     public val maxPayloadLength: Int = Int.MAX_VALUE
 ) {
     private var _registeredSourceAddress: Short? = null
@@ -160,8 +161,21 @@ public open class DoipTcpConnectionMessageHandler(
         logger.traceIf { "# handleTcpDiagMessageNegAck $message for ${message.targetAddress}" }
     }
 
-    public open suspend fun connectionClosed(socket: DoipTcpSocket, exception: Exception?) {
+    public open suspend fun connectionClosed(exception: Exception?) {
         logger.traceIf { "# connectionClosed" }
+    }
+
+    public open suspend fun closeSocket() {
+        if (socket.isClosed) {
+            return
+        }
+        try {
+            logger.info("Closing connection $socket")
+            socket.close()
+            connectionClosed(null)
+        } catch (e: Exception) {
+            connectionClosed(e)
+        }
     }
 
     private companion object {
