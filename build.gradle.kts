@@ -30,7 +30,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.9") // MIT
 
     implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.2.0") // Apache-2.0
-    implementation("org.bouncycastle:bctls-jdk18on:1.76") // Bouncy Castle License (~MIT)
+    implementation("org.bouncycastle:bctls-jdk18on:1.77") // Bouncy Castle License (~MIT)
 
     testImplementation(kotlin("test"))
     testRuntimeOnly("ch.qos.logback:logback-classic:1.3.11") // EPL-1.0
