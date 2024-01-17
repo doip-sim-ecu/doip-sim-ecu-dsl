@@ -1,5 +1,6 @@
 doip-sim-ecu-dsl-test
 build
+bin
 .idea
 .gradle
 *.log

@@ -50,12 +50,14 @@ public fun String.decodeHex(): ByteArray {
 public fun String.encodedAsHexString(separator: String = " "): String =
     this.encodeToByteArray().toHexString(separator)
 
-private val nibbleToHex = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
+private val nibbleToHexUppercase = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
+private val nibbleToHexLowercase = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
 
 public fun ByteArray.toHexString(
     separator: String = " ",
     limit: Int = Integer.MAX_VALUE,
-    limitExceededSuffix: String = "..."
+    limitExceededSuffix: String = "...",
+    useLowerCase: Boolean = false,
 ): String {
     val len = min(limit, this.size)
     if (len == 0) {
@@ -64,6 +66,7 @@ public fun ByteArray.toHexString(
         }
         return ""
     }
+    val nibbleToHex = if (useLowerCase) nibbleToHexLowercase else nibbleToHexUppercase
     val sb = StringBuilder((len * 2) + ((len - 1) * separator.length))
     for (i in 0 until len) {
         if (separator.isNotEmpty() && i > 0) {
@@ -77,5 +80,3 @@ public fun ByteArray.toHexString(
     }
     return sb.toString()
 }
-
-
