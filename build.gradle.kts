@@ -21,7 +21,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.3.7"
+val ktorVersion = "2.3.8"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
@@ -29,11 +29,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")  // Apache-2.0
     implementation("org.slf4j:slf4j-api:2.0.11") // MIT
 
-    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.2.0") // Apache-2.0
+    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.3.0") // Apache-2.0
     implementation("org.bouncycastle:bctls-jdk18on:1.77") // Bouncy Castle License (~MIT)
 
     testImplementation(kotlin("test"))
-    testRuntimeOnly("ch.qos.logback:logback-classic:1.3.11") // EPL-1.0
+    testRuntimeOnly("ch.qos.logback:logback-classic:1.3.14") // EPL-1.0
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     // version 5.x requires jdk 11
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
