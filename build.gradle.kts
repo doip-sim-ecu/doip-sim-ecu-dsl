@@ -27,7 +27,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
     api("io.ktor:ktor-network-jvm:$ktorVersion") // Apache-2.0
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")  // Apache-2.0
-    implementation("org.slf4j:slf4j-api:2.0.11") // MIT
+    implementation("org.slf4j:slf4j-api:2.0.12") // MIT
 
     implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.3.0") // Apache-2.0
     implementation("org.bouncycastle:bctls-jdk18on:1.77") // Bouncy Castle License (~MIT)
