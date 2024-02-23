@@ -98,7 +98,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                             return true
                         }
                     } catch (e: Exception) {
-                        logger.error("Request for $name: '${request.message.toHexString(limit = 10)}' -> Error while processing outbound interceptors for response '${response.toHexString(limit = 10)}'")
+                        logger.error("Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' -> Error while processing outbound interceptors for response '${response.toHexString(limit = 10, limitExceededByteCount = true)}'")
                     }
                 } else {
                     hasExpiredEntries = true
@@ -127,7 +127,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
         while (System.currentTimeMillis() < end) {
             sendResponse(request, pending)
-            logger.logForRequest(responseData.caller) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '${responseData.caller}' -> Pending '${pending.toHexString(limit = 10)}'" }
+            logger.logForRequest(responseData.caller) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '${responseData.caller}' -> Pending '${pending.toHexString(limit = 10, limitExceededByteCount = true)}'" }
             if (end - System.currentTimeMillis() <= config.pendingNrcSendInterval.inWholeMilliseconds) {
                 Thread.sleep(end - System.currentTimeMillis())
             } else {
@@ -137,7 +137,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         try {
             responseData.pendingForCallback.invoke()
         } catch (e: Exception) {
-            logger.error("Request for $name: '${request.message.toHexString(limit = 10)}' matched '${responseData.caller}' -> Error while invoking pending-callback-handler", e)
+            logger.error("Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '${responseData.caller}' -> Error while invoking pending-callback-handler", e)
         }
     }
 
@@ -160,10 +160,10 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                         try {
                             if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
                                 if (responseData.continueMatching) {
-                                    logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10)}' handled by interceptor -> Continue matching" }
+                                    logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' handled by interceptor -> Continue matching" }
                                     return@forEach
                                 } else if (responseData.response.isNotEmpty()) {
-                                    logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' handled by interceptor -> ${responseData.response.toHexString(limit = 10)}" }
+                                    logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' handled by interceptor -> ${responseData.response.toHexString(limit = 10)}" }
                                     runBlocking {
                                         sendResponse(request, responseData.response)
                                     }
@@ -171,7 +171,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                                 return true
                             }
                         } catch (e: NrcException) {
-                            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' handled by interceptor -> NRC ${e.code.toString(16)}" }
+                            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' handled by interceptor -> NRC ${e.code.toString(16)}" }
                             sendResponse(request, byteArrayOf(0x7F, request.message[0], e.code))
                             return true
                         } catch (e: Exception) {
@@ -225,21 +225,21 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                 handlePending(request, responseData)
 
                 if (responseData.continueMatching) {
-                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> Continue matching" }
+                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Continue matching" }
                     return@findMessageAndHandle false
                 } else if (responseData.response.isNotEmpty()) {
-                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> Send response '${responseData.response.toHexString(limit = 10)}'" }
+                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Send response '${responseData.response.toHexString(limit = 10, limitExceededByteCount = true)}'" }
                     sendResponse(request, responseData.response)
                 } else {
-                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> No response" }
+                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> No response" }
                 }
             } catch (e: NrcException) {
                 handlePending(request, responseData)
                 val response = byteArrayOf(0x7F, request.message[0], e.code)
-                logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10)}' matched '$matcher' -> Send NRC response '${response.toHexString(limit = 10)}'" }
+                logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Send NRC response '${response.toHexString(limit = 10)}'" }
                 sendResponse(request, response)
             } catch (e: Exception) {
-                logger.errorIf(e) { "An error occurred while processing a request for $name: '${request.message.toHexString(limit = 10)}'  -> Sending NRC" }
+                logger.errorIf(e) { "An error occurred while processing a request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}'  -> Sending NRC" }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))
             }
             return@findMessageAndHandle true
@@ -247,10 +247,10 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
         if (!handled) {
             if (this.data.nrcOnNoMatch) {
-                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Sending NRC" }
+                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' no matching request found -> Sending NRC" }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
             } else {
-                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
+                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
             }
         }
     }

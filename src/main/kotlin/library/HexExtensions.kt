@@ -58,6 +58,7 @@ public fun ByteArray.toHexString(
     limit: Int = Integer.MAX_VALUE,
     limitExceededSuffix: String = "...",
     useLowerCase: Boolean = false,
+    limitExceededByteCount: Boolean = false,
 ): String {
     val len = min(limit, this.size)
     if (len == 0) {
@@ -77,6 +78,9 @@ public fun ByteArray.toHexString(
     }
     if (this.size > limit) {
         sb.append(limitExceededSuffix)
+        if (limitExceededByteCount) {
+            sb.append(" (${this.size} bytes total)")
+        }
     }
     return sb.toString()
 }
