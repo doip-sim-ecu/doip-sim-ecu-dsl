@@ -105,6 +105,8 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
     public val ecus: List<T>
         get() = _ecus
 
+    private lateinit var udpServerSocket: BoundDatagramSocket
+
     protected abstract fun createEcu(config: EcuConfig): T
 
     protected open fun createDoipUdpMessageHandler(): DoipUdpMessageHandler =
@@ -198,7 +200,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
     public open fun findEcuByName(name: String, ignoreCase: Boolean = true): T? =
         this.ecus.firstOrNull { name.equals(it.name, ignoreCase = ignoreCase) }
 
-    protected open fun CoroutineScope.handleTcpSocket(socket: DoipTcpSocket) {
+    protected open fun CoroutineScope.handleTcpSocket(socket: DoipTcpSocket, disableServerSocketCallback: (kotlin.time.Duration) -> Unit) {
         launch {
             logger.debugIf { "New incoming data connection from ${socket.remoteAddress}" }
             val tcpMessageHandler = createDoipTcpMessageHandler(socket)
@@ -234,6 +236,12 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                                 socket.runCatching { this.close() }
                             }
                         }
+                    } catch (e: DoipEntityHardResetException) {
+                        logger.warn("Simulating Hard Reset on ${this@DoipEntity.name} for ${e.duration.inWholeMilliseconds} ms")
+                        output.flush()
+                        socket.close()
+
+                        disableServerSocketCallback(e.duration)
                     } catch (e: Exception) {
                         if (!socket.isClosed) {
                             logger.error("Unknown error parsing/handling message, sending negative acknowledgment", e)
@@ -297,76 +305,37 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
         }
     }
 
-    public fun start() {
-        this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
+    private val serverSockets: MutableList<ServerSocket> = mutableListOf()
 
-        targetEcusByLogical = this.ecus.associateBy { it.config.logicalAddress }
-        targetEcusByFunctional = _ecus.groupByTo(mutableMapOf()) { it.config.functionalAddress }
-
-        _ecus.forEach {
-            it.simStarted()
-        }
-
-        thread(name = "UDP") {
-            runBlocking {
-                val serverSocket =
-                    aSocket(ActorSelectorManager(Dispatchers.IO))
-                        .udp()
-                        .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
-                            broadcast = true
-                            reuseAddress = true
-//                            reusePort = true // not supported on windows
-                            typeOfService = TypeOfService.IPTOS_RELIABILITY
-//                            socket.joinGroup(multicastAddress)
-                        }
-                logger.info("Listening on udp: ${serverSocket.localAddress}")
-                startVamTimer(serverSocket)
-                val udpMessageHandler = createDoipUdpMessageHandler()
-
-                if (config.localAddress != "0.0.0.0" && config.bindOnAnyForUdpAdditional) {
-                    logger.info("Also listening on udp 0.0.0.0 for broadcasts")
-                    val localAddress = InetSocketAddress("0.0.0.0", 13400)
-                    val anyServerSocket =
-                        aSocket(ActorSelectorManager(Dispatchers.IO))
-                            .udp()
-                            .bind(localAddress = localAddress) {
-                                broadcast = true
-                                reuseAddress = true
-//                                reusePort = true // not supported on windows
-                                typeOfService = TypeOfService.IPTOS_RELIABILITY
-                            }
-                    thread(start = true, isDaemon = true) {
-                        runBlocking {
-                            while (!anyServerSocket.isClosed) {
-                                val datagram = anyServerSocket.receive()
-                                if (datagram.address is InetSocketAddress) {
-                                    if (datagram.address == localAddress) {
-                                        continue
-                                    }
-                                }
-                                handleUdpMessage(udpMessageHandler, datagram, anyServerSocket)
-                            }
-                        }
-                    }
-                }
-
-                while (!serverSocket.isClosed) {
-                    val datagram = serverSocket.receive()
-                    handleUdpMessage(udpMessageHandler, datagram, serverSocket)
-                }
+    public fun pauseTcpServerSockets(duration: kotlin.time.Duration) {
+        logger.warn("Closing serversockets")
+        serverSockets.forEach { try { it.close() } catch (ignored: Exception) {} }
+        serverSockets.clear()
+        logger.warn("Pausing server sockets for ${duration.inWholeMilliseconds} ms")
+        Thread.sleep(duration.inWholeMilliseconds)
+        logger.warn("Restarting server sockets after ${duration.inWholeMilliseconds} ms")
+        runBlocking {
+            launch {
+                startVamTimer(udpServerSocket)
+            }
+            launch {
+                startTcpServerSockets()
             }
         }
+    }
 
+    public fun startTcpServerSockets() {
         thread(name = "TCP") {
             runBlocking {
                 val serverSocket =
                     aSocket(ActorSelectorManager(Dispatchers.IO))
                         .tcp()
                         .bind(InetSocketAddress(config.localAddress, config.localPort))
+                serverSockets.add(serverSocket)
                 logger.info("Listening on tcp: ${serverSocket.localAddress}")
                 while (!serverSocket.isClosed) {
                     val socket = serverSocket.accept()
-                    handleTcpSocket(DelegatedKtorSocket(socket))
+                    handleTcpSocket(DelegatedKtorSocket(socket), ::pauseTcpServerSockets)
                 }
             }
         }
@@ -402,13 +371,15 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                         .withTrustMaterial(trustMaterial)
                         .build()
 
-                    val tlsServerSocket = withContext(Dispatchers.IO) {
+                    val serverSocket = withContext(Dispatchers.IO) {
                         (sslFactory.sslServerSocketFactory.createServerSocket(
                             config.tlsPort,
                             50,
                             InetAddress.getByName(config.localAddress)
-                        ) as SSLServerSocket)
+                        ))
                     }
+                    serverSockets.add(serverSocket as ServerSocket)
+                    val tlsServerSocket = serverSocket as SSLServerSocket
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
 
                     if (tlsOptions.tlsProtocols != null) {
@@ -431,11 +402,74 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
                     while (!tlsServerSocket.isClosed) {
                         withContext(Dispatchers.IO) {
                             val socket = tlsServerSocket.accept() as SSLSocket
-                            handleTcpSocket(SSLDoipTcpSocket(socket))
+                            handleTcpSocket(SSLDoipTcpSocket(socket), ::pauseTcpServerSockets)
                         }
                     }
                 }
             }
         }
+    }
+
+    public fun start() {
+        this._ecus.addAll(this.config.ecuConfigList.map { createEcu(it) })
+
+        targetEcusByLogical = this.ecus.associateBy { it.config.logicalAddress }
+        targetEcusByFunctional = _ecus.groupByTo(mutableMapOf()) { it.config.functionalAddress }
+
+        _ecus.forEach {
+            it.simStarted()
+        }
+
+        thread(name = "UDP") {
+            runBlocking {
+                udpServerSocket =
+                    aSocket(ActorSelectorManager(Dispatchers.IO))
+                        .udp()
+                        .bind(localAddress = InetSocketAddress(config.localAddress, 13400)) {
+                            broadcast = true
+                            reuseAddress = true
+//                            reusePort = true // not supported on windows
+                            typeOfService = TypeOfService.IPTOS_RELIABILITY
+//                            socket.joinGroup(multicastAddress)
+                        }
+                logger.info("Listening on udp: ${udpServerSocket.localAddress}")
+                startVamTimer(udpServerSocket)
+                val udpMessageHandler = createDoipUdpMessageHandler()
+
+                if (config.localAddress != "0.0.0.0" && config.bindOnAnyForUdpAdditional) {
+                    logger.info("Also listening on udp 0.0.0.0 for broadcasts")
+                    val localAddress = InetSocketAddress("0.0.0.0", 13400)
+                    val anyServerSocket =
+                        aSocket(ActorSelectorManager(Dispatchers.IO))
+                            .udp()
+                            .bind(localAddress = localAddress) {
+                                broadcast = true
+                                reuseAddress = true
+//                                reusePort = true // not supported on windows
+                                typeOfService = TypeOfService.IPTOS_RELIABILITY
+                            }
+                    thread(start = true, isDaemon = true) {
+                        runBlocking {
+                            while (!anyServerSocket.isClosed) {
+                                val datagram = anyServerSocket.receive()
+                                if (datagram.address is InetSocketAddress) {
+                                    if (datagram.address == localAddress) {
+                                        continue
+                                    }
+                                }
+                                handleUdpMessage(udpMessageHandler, datagram, anyServerSocket)
+                            }
+                        }
+                    }
+                }
+
+                while (!udpServerSocket.isClosed) {
+                    val datagram = udpServerSocket.receive()
+                    handleUdpMessage(udpMessageHandler, datagram, udpServerSocket)
+                }
+            }
+        }
+
+        startTcpServerSockets()
     }
 }

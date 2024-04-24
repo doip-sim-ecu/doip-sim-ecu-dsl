@@ -150,10 +150,14 @@ public open class ResponseData<T>(
     public val pendingForCallback: () -> Unit
         get() = _pendingForCallback
 
+    public val hardResetEntityFor: Duration?
+        get() = _hardResetEntityFor
+
     private var _response: ByteArray = ByteArray(0)
     private var _continueMatching: Boolean = false
     private var _pendingFor: Duration? = null
     private var _pendingForCallback: () -> Unit = {}
+    private var _hardResetEntityFor: Duration? = null
 
     /**
      * See [SimEcu.addOrReplaceTimer]
@@ -249,9 +253,22 @@ public open class ResponseData<T>(
         _continueMatching = continueMatching
     }
 
+    /**
+     * Sends a busy wait (NRC 0x78, received but pending) for duration, before calling
+     * callback, and sending the reply
+     */
     public fun pendingFor(duration: Duration, callback: () -> Unit = {}) {
         _pendingFor = duration
         _pendingForCallback = callback
+    }
+
+    /**
+     * Pretend to hard-reset entity by disconnecting the current, nd  not being reachable for duration,
+     * and sending a vam after being reachable again
+     */
+    @ExperimentalDoipDslApi
+    public fun hardResetEntityFor(duration: Duration) {
+        _hardResetEntityFor = duration
     }
 }
 

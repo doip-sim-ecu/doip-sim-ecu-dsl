@@ -223,7 +223,6 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
             try {
                 matcher.responseHandler.invoke(responseData)
                 handlePending(request, responseData)
-
                 if (responseData.continueMatching) {
                     logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Continue matching" }
                     return@findMessageAndHandle false
@@ -233,11 +232,16 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                 } else {
                     logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> No response" }
                 }
+
+                throwDoipEntityExceptionsIfNecessary(matcher, request, responseData)
             } catch (e: NrcException) {
                 handlePending(request, responseData)
                 val response = byteArrayOf(0x7F, request.message[0], e.code)
                 logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Send NRC response '${response.toHexString(limit = 10)}'" }
                 sendResponse(request, response)
+            } catch (e: DoipEntityHardResetException) {
+                // handled outside
+                throw e
             } catch (e: Exception) {
                 logger.errorIf(e) { "An error occurred while processing a request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}'  -> Sending NRC" }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))
@@ -253,6 +257,19 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                 logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
             }
         }
+    }
+
+    protected fun throwDoipEntityExceptionsIfNecessary(
+        matcher: RequestMatcher,
+        request: UdsMessage,
+        responseData: ResponseData<RequestMatcher>
+    ) {
+        if (responseData.hardResetEntityFor != null) {
+            logger.logForRequest(matcher) { "Simulating hard reset for ${matcher.name}" }
+            val duration = responseData.hardResetEntityFor!!
+            throw DoipEntityHardResetException(this, duration, "Simulating Hard Reset for ${duration.inWholeMilliseconds} ms")
+        }
+
     }
 
     /**
