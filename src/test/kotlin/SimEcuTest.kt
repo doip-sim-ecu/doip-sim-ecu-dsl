@@ -1,15 +1,19 @@
 import assertk.assertThat
 import assertk.assertions.*
 import io.ktor.utils.io.*
+import library.DoipEntityHardResetException
+import library.ExperimentalDoipDslApi
 import library.UdsMessage
 import library.decodeHex
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
 import org.mockito.kotlin.*
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class SimEcuTest {
     @Test
@@ -461,6 +465,23 @@ class SimEcuTest {
         assertThat(captor.lastValue).containsExactly(0x7e, 0x00)
         assertThat(values.size).isBetween(10, 11)
         assertThat(invokeAfterCalled).isTrue()
+    }
+
+    @OptIn(ExperimentalDoipDslApi::class)
+    @Test
+    fun `test hard reset`() {
+        val ecu = spy(SimEcu(ecuData(
+            name = "TEST",
+            requests = listOf(
+                RequestMatcher("TEST", byteArrayOf(0x3E, 0x00)) {
+                    hardResetEntityFor(5.seconds)
+                    ack()
+                },
+            )
+        )))
+        assertThrows<DoipEntityHardResetException> {
+            ecu.handleRequest(req(byteArrayOf(0x3e, 0x00)))
+        }
     }
 
     private fun ecuData(
