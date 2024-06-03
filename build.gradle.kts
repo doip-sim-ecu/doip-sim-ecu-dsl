@@ -14,7 +14,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.12.0"
+version = "0.12.1"
 
 repositories {
     gradlePluginPortal()
@@ -113,13 +113,13 @@ publishing {
     }
 }
 
-tasks.cyclonedxBom {
-    setIncludeConfigs(listOf("runtimeClasspath"))
-    setIncludeLicenseText(false)
-    outputName.set("sbom")
-    outputFormat.set("all")
-    includeBomSerialNumber.set(true)
-}
+//tasks.cyclonedxBom {
+//    setIncludeConfigs(listOf("runtimeClasspath"))
+//    setIncludeLicenseText(false)
+//    outputName.set("sbom")
+//    outputFormat.set("all")
+//    includeBomSerialNumber.set(true)
+//}
 
 allOpen {
     annotation("helper.Open")

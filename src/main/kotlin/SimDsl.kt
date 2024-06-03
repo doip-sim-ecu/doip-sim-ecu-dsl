@@ -147,6 +147,12 @@ public open class ResponseData<T>(
     public val pendingFor: Duration?
         get() = _pendingFor
 
+    public val pendingForInterval: Duration?
+        get() = _pendingForInterval
+
+    public val pendingForNrc: Byte?
+        get() = _pendingForNrc
+
     public val pendingForCallback: () -> Unit
         get() = _pendingForCallback
 
@@ -156,6 +162,8 @@ public open class ResponseData<T>(
     private var _response: ByteArray = ByteArray(0)
     private var _continueMatching: Boolean = false
     private var _pendingFor: Duration? = null
+    private var _pendingForInterval: Duration? = null
+    private var _pendingForNrc: Byte? = null
     private var _pendingForCallback: () -> Unit = {}
     private var _hardResetEntityFor: Duration? = null
 
@@ -260,6 +268,20 @@ public open class ResponseData<T>(
     public fun pendingFor(duration: Duration, callback: () -> Unit = {}) {
         _pendingFor = duration
         _pendingForCallback = callback
+    }
+
+    /**
+     * Overrides the default interval for sending pending NRC
+     */
+    public fun pendingForInterval(duration: Duration) {
+        _pendingForInterval = duration
+    }
+
+    /**
+     * Changes the default busy wait NRC (0x78) to something different
+     */
+    public fun pendingForNrc(nrc: Byte) {
+        _pendingForNrc = nrc
     }
 
     /**

@@ -119,19 +119,20 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
     private fun handlePending(request: UdsMessage, responseData: ResponseData<RequestMatcher>) {
         val pendingFor = responseData.pendingFor ?: return
-
+        val pendingForInterval = responseData.pendingForInterval?.inWholeMilliseconds ?: config.pendingNrcSendInterval.inWholeMilliseconds
         // this code will send pending nrcs every `config.pendingNrcSendInterval`, until
         // the pendingFor duration is reached. Afterward the `pendingForCallback` is invoked,
         // which may again change the final response in ResponseData
-        val pending = byteArrayOf(0x7f, request.message[0], NrcError.RequestCorrectlyReceivedButResponseIsPending)
+        val pending = byteArrayOf(0x7f, request.message[0],
+            responseData.pendingForNrc ?: NrcError.RequestCorrectlyReceivedButResponseIsPending)
         val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
         while (System.currentTimeMillis() < end) {
             sendResponse(request, pending)
             logger.logForRequest(responseData.caller) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '${responseData.caller}' -> Pending '${pending.toHexString(limit = 10, limitExceededByteCount = true)}'" }
-            if (end - System.currentTimeMillis() <= config.pendingNrcSendInterval.inWholeMilliseconds) {
+            if (end - System.currentTimeMillis() <= pendingForInterval) {
                 Thread.sleep(end - System.currentTimeMillis())
             } else {
-                Thread.sleep(config.pendingNrcSendInterval.inWholeMilliseconds)
+                Thread.sleep(pendingForInterval)
             }
         }
         try {
