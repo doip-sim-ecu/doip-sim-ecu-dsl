@@ -1,5 +1,4 @@
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import org.gradle.api.logging.Logger
@@ -76,7 +75,7 @@ class NexusClient(private val logger: Logger, private val config: NexusReleaseEx
         val repositories = get<ProfileRepository>("/service/local/staging/profile_repositories")
         return repositories.data
             .filter {
-                (config.stagingId.orNull == null && config.username.get() == it.userId) ||
+                (config.stagingId.orNull == null && config.stagingUserName.get() == it.userId) ||
                         it.repositoryId == config.stagingId.orNull
             }
     }
@@ -119,7 +118,7 @@ class NexusClient(private val logger: Logger, private val config: NexusReleaseEx
         val connection = createUrl(path).openConnection() as HttpURLConnection
         connection.connectTimeout = config.connectTimeout.get().toMillis().toInt()
         connection.requestMethod = method
-        connection.setRequestProperty("Authorization", basicAuth)
+        connection.setRequestProperty("Authorization", bearerAuth)
         connection.setRequestProperty("Accept", "application/json")
         if (method != "GET") {
             connection.setRequestProperty("Content-Type", "application/json")
@@ -142,9 +141,9 @@ class NexusClient(private val logger: Logger, private val config: NexusReleaseEx
         URL(this.scheme, this.authority, path)
     }
 
-    private val basicAuth: String
+    private val bearerAuth: String
         get() =
-            "Basic " + "${config.username.get()}:${config.password.get()}".encodeToByteArray().encodeBase64()
+            "Bearer " + "${config.username.get()}:${config.password.get()}".encodeToByteArray().encodeBase64()
 }
 
 class HttpException(

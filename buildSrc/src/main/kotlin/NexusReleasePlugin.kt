@@ -16,6 +16,7 @@ open class NexusReleaseExtension(project: Project) {
     }
 
     val stagingId: Property<String> = project.objects.property(String::class.java)
+    val stagingUserName: Property<String> = project.objects.property(String::class.java)
     val username: Property<String> = project.objects.property(String::class.java)
     val password: Property<String> = project.objects.property(String::class.java)
 

@@ -14,7 +14,7 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.12.1"
+version = "0.12.2"
 
 repositories {
     gradlePluginPortal()
@@ -145,4 +145,5 @@ signing {
 configure<NexusReleaseExtension> {
     username.set(System.getenv("OSSRH_USERNAME"))
     password.set(System.getenv("OSSRH_PASSWORD"))
+    stagingUserName.set(System.getenv("OSSRH_STAGING_USERNAME"))
 }

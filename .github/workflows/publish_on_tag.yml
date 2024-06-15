@@ -32,6 +32,7 @@ jobs:
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        OSSRH_STAGING_USERNAME: ${{ secrets.OSSRH_STAGING_USERNAME }}
     - name: release
       uses: gradle/gradle-build-action@4137be6a8bf7d7133955359dbd952c0ca73b1021
       with:
@@ -41,3 +42,4 @@ jobs:
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        OSSRH_STAGING_USERNAME: ${{ secrets.OSSRH_STAGING_USERNAME }}
