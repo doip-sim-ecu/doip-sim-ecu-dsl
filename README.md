@@ -1,4 +1,4 @@
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.doip-sim-ecu/doip-sim-ecu-dsl/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.doip-sim-ecu/doip-sim-ecu-dsl)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.doip-sim-ecu/doip-sim-ecu-dsl/badge.svg)](https://central.sonatype.com/artifact/io.github.doip-sim-ecu/doip-sim-ecu-dsl)
 [![JitPack](https://jitpack.io/v/doip-sim-ecu/doip-sim-ecu-dsl.svg)](https://jitpack.io/#doip-sim-ecu/doip-sim-ecu-dsl)
 
 # DoIP Simulation ECU DSL
