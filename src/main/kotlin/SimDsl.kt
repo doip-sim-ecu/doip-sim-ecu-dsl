@@ -104,6 +104,7 @@ public class RequestMessage(udsMessage: UdsMessage, public val isBusy: Boolean) 
         udsMessage.sourceAddress,
         udsMessage.targetAddress,
         udsMessage.targetAddressType,
+        udsMessage.targetAddressPhysical,
         udsMessage.message,
         udsMessage.output
     )

@@ -179,7 +179,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
             runBlocking {
                 MDC.put("ecu", ecu.name)
                 launch(MDCContext()) {
-                    onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output))
+                    onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output, ecu.config.logicalAddress))
                 }
             }
             // Exit if the target ecu was found by physical
@@ -191,7 +191,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
             runBlocking {
                 MDC.put("ecu", it.name)
                 launch(MDCContext()) {
-                    it.onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.FUNCTIONAL, output))
+                    it.onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.FUNCTIONAL, output, it.config.logicalAddress))
                 }
             }
         }

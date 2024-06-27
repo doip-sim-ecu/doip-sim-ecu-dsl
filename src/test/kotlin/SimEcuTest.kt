@@ -511,6 +511,7 @@ class SimEcuTest {
             sourceAddress = sourceAddress,
             targetAddress = targetAddress,
             targetAddressType = targetAddressType,
+            targetAddressPhysical = targetAddress,
             message = data,
             output = Mockito.mock(ByteWriteChannel::class.java)
         )

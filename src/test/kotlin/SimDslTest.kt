@@ -72,6 +72,7 @@ class SimDslTest {
             0x1,
             0x2,
             UdsMessage.PHYSICAL,
+            0x2,
             byteArrayOf(0x22, 0x10, 0x20),
             Mockito.mock(ByteWriteChannel::class.java)
         )
