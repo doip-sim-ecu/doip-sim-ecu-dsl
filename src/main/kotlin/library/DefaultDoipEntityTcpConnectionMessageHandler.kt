@@ -4,6 +4,7 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
+import networkInstances
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -11,10 +12,10 @@ import org.slf4j.MDC
 public open class DefaultDoipEntityTcpConnectionMessageHandler(
     public val doipEntity: DoipEntity<*>,
     socket: DoipTcpSocket,
-    maxPayloadLength: Int,
     public val logicalAddress: Short,
-    public val diagMessageHandler: DiagnosticMessageHandler
-) : DoipTcpConnectionMessageHandler(socket, maxPayloadLength) {
+    public var diagMessageHandler: DiagnosticMessageHandler,
+    private val tlsOptions: TlsOptions?,
+) : DoipTcpConnectionMessageHandler(socket) {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
@@ -42,7 +43,7 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
             )
             return
         } else {
-            if (doipEntity.config.tlsMode == TlsMode.MANDATORY && socket.socketType != SocketType.TLS_DATA) {
+            if (tlsOptions != null && tlsOptions.tlsMode == TlsMode.MANDATORY && socket.socketType != SocketType.TLS_DATA) {
                 logger.info("Routing activation for ${message.sourceAddress} denied (TLS required)")
                 output.writeFully(
                     DoipTcpRoutingActivationResponse(
@@ -68,8 +69,8 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
                     ).asByteArray
                 )
             } else if (
-                doipEntity.ecus.all { it.config.additionalVam == null } &&
-                doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this)
+                networkInstances().groupBy { it.data.networkInterface }.all { it.value.all { it.doipEntities.size == 1}}
+                && doipEntity.hasAlreadyActiveConnection(message.sourceAddress, this)
             ) {
                 logger.error("Routing activation for ${message.sourceAddress} denied (Has already an active connection)")
                 output.writeFully(

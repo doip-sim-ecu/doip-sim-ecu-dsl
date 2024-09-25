@@ -28,19 +28,19 @@ class DoipTcpConnectionMessageHandlerTest {
 
     @Test
     fun `test receive`() {
-        val tcpMessageHandler = DoipTcpConnectionMessageHandler(mock())
+        val parser = DoipTcpMessageParser(65535)
         val data = Random.nextBytes(10)
         runBlocking {
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpHeaderNegAck(0x11).asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpAliveCheckRequest().asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpAliveCheckResponse(0x1234.toShort()).asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpDiagMessage(0x1234.toShort(), 0x4321.toShort(), data).asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpDiagMessageNegAck(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpDiagMessagePosAck(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpRoutingActivationResponse(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
-            tcpMessageHandler.receiveTcpData(ByteReadChannel(DoipTcpRoutingActivationRequest(0x11.toShort()).asByteArray))
-            assertThrows<ClosedReceiveChannelException> { tcpMessageHandler.receiveTcpData(ByteReadChannel(byteArrayOf(0x0))) }
-            assertThrows<UnknownPayloadType> { tcpMessageHandler.receiveTcpData(ByteReadChannel(doipMessage(0xffff.toShort()))) }
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpHeaderNegAck(0x11).asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpAliveCheckRequest().asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpAliveCheckResponse(0x1234.toShort()).asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpDiagMessage(0x1234.toShort(), 0x4321.toShort(), data).asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpDiagMessageNegAck(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpDiagMessagePosAck(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpRoutingActivationResponse(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
+            parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpRoutingActivationRequest(0x11.toShort()).asByteArray))
+            assertThrows<ClosedReceiveChannelException> { parser.parseDoipTcpMessage(ByteReadChannel(byteArrayOf(0x0))) }
+            assertThrows<UnknownPayloadType> { parser.parseDoipTcpMessage(ByteReadChannel(doipMessage(0xffff.toShort()))) }
         }
     }
 }

@@ -8,21 +8,12 @@ import kotlin.experimental.inv
 
 public abstract class DoipTcpMessage : DoipMessage
 
-@Suppress("MemberVisibilityCanBePrivate")
-public open class DoipTcpConnectionMessageHandler(
-    public val socket: DoipTcpSocket,
-    public val maxPayloadLength: Int = Int.MAX_VALUE
-) {
-    private var _registeredSourceAddress: Short? = null
+public class DoipTcpMessageParser(private val maxPayloadLength: Int) {
+    private companion object {
+        private val logger: Logger = LoggerFactory.getLogger(DoipTcpMessageParser::class.java)
+    }
 
-    public var registeredSourceAddress: Short?
-        get() = _registeredSourceAddress
-        protected set(value) {
-            _registeredSourceAddress = value
-        }
-
-
-    public open suspend fun receiveTcpData(brc: ByteReadChannel): DoipTcpMessage {
+    public suspend fun parseDoipTcpMessage(brc: ByteReadChannel): DoipTcpMessage {
         logger.traceIf { "# receiveTcpData" }
         val protocolVersion = brc.readByte()
         val inverseProtocolVersion = brc.readByte()
@@ -42,6 +33,7 @@ public open class DoipTcpConnectionMessageHandler(
                 val code = brc.readByte()
                 return DoipTcpHeaderNegAck(code)
             }
+
             TYPE_TCP_ROUTING_REQ -> {
                 val sourceAddress = brc.readShort()
                 val activationType = brc.readByte()
@@ -49,6 +41,7 @@ public open class DoipTcpConnectionMessageHandler(
                 val oemData = if (payloadLength > 7) brc.readInt() else null
                 return DoipTcpRoutingActivationRequest(sourceAddress, activationType, reserved, oemData)
             }
+
             TYPE_TCP_ROUTING_RES -> {
                 val testerAddress = brc.readShort()
                 val entityAddress = brc.readShort()
@@ -62,13 +55,16 @@ public open class DoipTcpConnectionMessageHandler(
                     oemData = oemData
                 )
             }
+
             TYPE_TCP_ALIVE_REQ -> {
                 return DoipTcpAliveCheckRequest()
             }
+
             TYPE_TCP_ALIVE_RES -> {
                 val sourceAddress = brc.readShort()
                 return DoipTcpAliveCheckResponse(sourceAddress)
             }
+
             TYPE_TCP_DIAG_MESSAGE -> {
                 val sourceAddress = brc.readShort()
                 val targetAddress = brc.readShort()
@@ -78,6 +74,7 @@ public open class DoipTcpConnectionMessageHandler(
                     sourceAddress, targetAddress, payload
                 )
             }
+
             TYPE_TCP_DIAG_MESSAGE_POS_ACK -> {
                 val sourceAddress = brc.readShort()
                 val targetAddress = brc.readShort()
@@ -91,6 +88,7 @@ public open class DoipTcpConnectionMessageHandler(
                     payload = payload
                 )
             }
+
             TYPE_TCP_DIAG_MESSAGE_NEG_ACK -> {
                 val sourceAddress = brc.readShort()
                 val targetAddress = brc.readShort()
@@ -104,9 +102,24 @@ public open class DoipTcpConnectionMessageHandler(
                     payload = payload
                 )
             }
+
             else -> throw UnknownPayloadType("Unknown payload type $payloadType")
         }
     }
+}
+
+@Suppress("MemberVisibilityCanBePrivate")
+public open class DoipTcpConnectionMessageHandler(
+    public val socket: DoipTcpSocket,
+) {
+    private var _registeredSourceAddress: Short? = null
+
+    public var registeredSourceAddress: Short?
+        get() = _registeredSourceAddress
+        protected set(value) {
+            _registeredSourceAddress = value
+        }
+
 
     public open suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
         logger.traceIf { "# handleTcpMessage $message" }

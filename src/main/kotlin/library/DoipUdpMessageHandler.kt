@@ -144,7 +144,4 @@ public interface DoipUdpMessageHandler {
             )
         )
     }
-
-    public suspend fun parseMessage(datagram: Datagram): DoipUdpMessage =
-        DoipUdpMessageParser.parseUDP(datagram.packet)
 }

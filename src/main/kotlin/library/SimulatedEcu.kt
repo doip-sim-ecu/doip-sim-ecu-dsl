@@ -17,7 +17,12 @@ public open class SimulatedEcu(public val config: EcuConfig) {
     private val isBusy: AtomicBoolean = AtomicBoolean(false)
 
     internal open fun simStarted() {
+    }
 
+    public open fun reset() {
+    }
+
+    public open fun start() {
     }
 
     /**
