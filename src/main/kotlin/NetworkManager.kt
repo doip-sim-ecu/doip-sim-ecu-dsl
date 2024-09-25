@@ -10,7 +10,7 @@ public open class NetworkManager(
 ) {
     private val log = LoggerFactory.getLogger(NetworkManager::class.java)
 
-    protected fun findInterfaceByName(): NetworkInterface? {
+    protected open fun findInterfaceByName(): NetworkInterface? {
         var foundInterface: NetworkInterface? = null
         NetworkInterface.getNetworkInterfaces()?.let { netIntf ->
             while (netIntf.hasMoreElements()) {
@@ -41,27 +41,30 @@ public open class NetworkManager(
         return foundInterface
     }
 
-    protected fun getAvailableIPAddresses(): List<InetAddress> {
+    protected open fun getAvailableIPAddresses(): Set<InetAddress> {
         if (config.networkInterface.isNullOrBlank() || config.networkInterface == "0.0.0.0") {
-            return listOf(InetAddress.getByName(config.networkInterface))
+            return setOf(InetAddress.getByName("0.0.0.0"))
         }
-        val list = mutableListOf<InetAddress>()
+        val ipAddresses = mutableSetOf<InetAddress>()
         findInterfaceByName()?.let { intf ->
             intf.inetAddresses?.let { inetAddresses ->
                 while (inetAddresses.hasMoreElements()) {
                     val address = inetAddresses.nextElement()
                     if (address is Inet4Address) {
-                        list.add(address)
+                        ipAddresses.add(address)
+                    }
+                    if (config.networkMode == NetworkMode.SINGLE_IP && ipAddresses.isNotEmpty()) {
+                        break
                     }
                 }
             }
         }
-        if (list.isEmpty()) {
+        if (ipAddresses.isEmpty()) {
             InetAddress.getByName(config.networkInterface)?.let { addr ->
-                list.add(addr)
+                ipAddresses.add(addr)
             }
         }
-        return list
+        return ipAddresses
     }
 
     protected open fun buildStartupMap(): Map<String, List<DoipEntity<*>>> {
