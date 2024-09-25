@@ -11,9 +11,11 @@ public typealias InterceptorRequestData = ResponseData<RequestInterceptorData>
 public typealias InterceptorRequestHandler = InterceptorRequestData.(request: RequestMessage) -> Boolean
 public typealias InterceptorResponseHandler = InterceptorResponseData.(response: ByteArray) -> Boolean
 public typealias EcuDataHandler = EcuData.() -> Unit
-public typealias GatewayDataHandler = GatewayData.() -> Unit
+public typealias DoipEntityDataHandler = DoipEntityData.() -> Unit
+public typealias NetworkingDataHandler = NetworkingData.() -> Unit
 public typealias CreateEcuFunc = (name: String, receiver: EcuDataHandler) -> Unit
-public typealias CreateGatewayFunc = (name: String, receiver: GatewayDataHandler) -> Unit
+public typealias CreateDoipEntityFunc = (name: String, receiver: DoipEntityDataHandler) -> Unit
+public typealias CreateNetworkFunc = (receiver: NetworkingDataHandler) -> Unit
 
 @Suppress("unused")
 public class InterceptorResponseData(
@@ -520,10 +522,18 @@ public open class RequestsData(
  */
 public open class EcuData(
     name: String,
+    /**
+     * The logical address under which the gateway shall be reachable
+     */
     public var logicalAddress: Short = 0,
+    /**
+     * The functional address under which the gateway (and other ecus) shall be reachable
+     */
     public var functionalAddress: Short = 0,
+    /**
+     * Interval between sending pending NRC messages (0x78)
+     */
     public var pendingNrcSendInterval: Duration = 2.seconds,
-    public var additionalVam: EcuAdditionalVamData? = null,
     nrcOnNoMatch: Boolean = true,
     requests: List<RequestMatcher> = emptyList(),
     resetHandler: List<ResetHandler> = emptyList(),
@@ -536,33 +546,32 @@ public open class EcuData(
     ackBytesLengthMap = ackBytesLengthMap,
 )
 
-internal val gateways: MutableList<GatewayData> = mutableListOf()
-internal val gatewayInstances: MutableList<SimGateway> = mutableListOf()
+internal val networks: MutableList<NetworkingData> = mutableListOf()
+internal val networkInstances: MutableList<SimDoipNetworking> = mutableListOf()
 
-public fun gatewayInstances(): List<SimGateway> =
-    gatewayInstances.toList()
+public fun networks(): List<NetworkingData> =
+    networks.toList()
 
-public fun gateways(): List<GatewayData> =
-    gateways.toList()
+public fun networkInstances(): List<SimDoipNetworking> =
+    networkInstances.toList()
 
-/**
- * Defines a DoIP-Gateway and the ECUs behind it
- */
-public fun gateway(name: String, receiver: GatewayDataHandler) {
-    val gatewayData = GatewayData(name)
-    receiver.invoke(gatewayData)
-    gateways.add(gatewayData)
+public fun network(receiver: NetworkingDataHandler) {
+    val networkingData = NetworkingData()
+    receiver.invoke(networkingData)
+    networks.add(networkingData)
 }
 
 public fun reset() {
-    gatewayInstances.forEach { it.reset() }
+    networkInstances.forEach { it.reset() }
 }
 
 @Suppress("unused")
 public fun start() {
-    gatewayInstances.addAll(gateways.map { SimGateway(it) })
+    networkInstances.addAll(networks.map { SimDoipNetworking(it) })
 
-    gatewayInstances.forEach {
+    val networkManager = networkInstances.map { NetworkManager(it.data, it.doipEntities) }
+
+    networkManager.forEach {
         it.start()
     }
 }

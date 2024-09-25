@@ -93,11 +93,10 @@ public class DoipClient(
 
         thread(name = "UDP_RECV", isDaemon = true) {
             runBlocking {
-                val handler = DoipClientUdpMessageHandler()
                 while (!udpServerSocket.isClosed) {
                     try {
                         val datagram = udpServerSocket.receive()
-                        val message = handler.parseMessage(datagram)
+                        val message = DoipUdpMessageParser.parseUDP(datagram.packet)
                         if (message is DoipUdpVehicleAnnouncementMessage) {
                             val sourceAddress = datagram.address
                             _doipEntities[message.logicalAddress] = DoipEntityAnnouncement(sourceAddress, message)
@@ -129,7 +128,7 @@ public class DoipEntityTcpConnection(private val socket: DoipTcpSocket, private 
             writeChannel.writeFully(ByteBuffer.wrap(DoipTcpRoutingActivationRequest(testerAddress).asByteArray))
             writeChannel.flush()
 
-            val msg = DoipTcpConnectionMessageHandler(socket).receiveTcpData(readChannel) as DoipTcpRoutingActivationResponse
+            val msg = DoipTcpMessageParser(Int.MAX_VALUE).parseDoipTcpMessage(readChannel) as DoipTcpRoutingActivationResponse
             if (msg.responseCode != DoipTcpRoutingActivationResponse.RC_OK) {
                 throw ConnectException("Routing activation failed (${msg.responseCode})")
             }
@@ -167,15 +166,17 @@ public class DoipEntityTcpConnection(private val socket: DoipTcpSocket, private 
             )
             writeChannel.writeFully(ByteBuffer.wrap(request.asByteArray))
             writeChannel.flush()
-            val handler = DoipTcpConnectionMessageHandler(socket)
-            val diagResponse = handler.receiveTcpData(readChannel)
+
+            val parser = DoipTcpMessageParser(Int.MAX_VALUE)
+
+            val diagResponse = parser.parseDoipTcpMessage(readChannel)
 
             if (diagResponse is DoipTcpDiagMessagePosAck) {
                 if (waitForResponse) {
                     val response = withTimeoutOrNull(timeout = waitTimeout) {
                         var msg: DoipTcpMessage?
                         do {
-                            msg = handler.receiveTcpData(readChannel)
+                            msg = parser.parseDoipTcpMessage(readChannel)
                         } while (msg !is DoipTcpDiagMessage)
                         msg
                     } ?: throw RuntimeException("No response within $waitTimeout")

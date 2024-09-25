@@ -13,20 +13,13 @@ public open class DefaultDoipEntityUdpMessageHandler(
 ) : DoipUdpMessageHandler {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityUdpMessageHandler::class.java)
 
-    internal companion object {
-        fun generateVamByEntityConfig(doipEntity: DoipEntity<*>): List<DoipUdpVehicleAnnouncementMessage> =
-            with(doipEntity.config) {
-                listOf(DoipUdpVehicleAnnouncementMessage(vin, logicalAddress, gid, eid)) +
-                        doipEntity.ecus.filter { it.config.additionalVam != null }.map { it.config.additionalVam!!.toVam(it.config, doipEntity.config) }
-            }
-    }
 
     @Suppress("MemberVisibilityCanBePrivate")
     protected suspend fun sendVamResponse(
         sendChannel: SendChannel<Datagram>,
         sourceAddress: SocketAddress,
     ) {
-        val vams = generateVamByEntityConfig(doipEntity)
+        val vams = doipEntity.generateVehicleAnnouncementMessages()
         vams.forEach { vam ->
             logger.info("Sending VIR-Response (VAM) for ${vam.logicalAddress.toString(16)} to $sourceAddress")
             sendChannel.send(

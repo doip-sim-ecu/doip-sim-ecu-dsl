@@ -16,58 +16,69 @@ import kotlin.time.Duration.Companion.seconds
 class SimDslTest {
     @AfterEach
     fun tearDown() {
-        gateways.clear()
-        gatewayInstances.clear()
+        networks.clear()
     }
 
     @Test
     fun `test dsl`() {
-        gateway("GW") {
-            request(byteArrayOf(0x10), "REQ1") { respond(byteArrayOf(0x50)) }
-            request("10", "REQ2", duplicateStrategy = DuplicateStrategy.APPEND) { respond("50") }
-            request("10 []", "REQ3") { ack() }
-            request("10.*", "REQ4", duplicateStrategy = DuplicateStrategy.APPEND) {
-                nrc()
-                addOrReplaceEcuTimer(name = "TEST", delay = 100.milliseconds) {
-                    // do nothing
+        network {
+            gateway("GW") {
+                request(byteArrayOf(0x10), "REQ1") { respond(byteArrayOf(0x50)) }
+                request("10", "REQ2", duplicateStrategy = DuplicateStrategy.APPEND) { respond("50") }
+                request("10 []", "REQ3") { ack() }
+                request("10.*", "REQ4", duplicateStrategy = DuplicateStrategy.APPEND) {
+                    nrc()
+                    addOrReplaceEcuTimer(name = "TEST", delay = 100.milliseconds) {
+                        // do nothing
+                    }
+                }
+
+                onReset("RESETIT") {
+                }
+
+                ecu("ECU1") {
+                    request(byteArrayOf(0x10), "REQ1") { ack() }
+                    request("10", "REQ2", duplicateStrategy = DuplicateStrategy.APPEND) { ack() }
+                    request("10 []", "REQ3") { ack() }
+                    request(
+                        "10.*",
+                        "REQ4",
+                        duplicateStrategy = DuplicateStrategy.APPEND
+                    ) { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
                 }
             }
-
-            onReset("RESETIT") {
-            }
-
-            ecu("ECU1") {
-                request(byteArrayOf(0x10),"REQ1") { ack() }
-                request("10", "REQ2", duplicateStrategy = DuplicateStrategy.APPEND) { ack() }
-                request("10 []", "REQ3") { ack() }
-                request("10.*", "REQ4", duplicateStrategy = DuplicateStrategy.APPEND) { nrc(); addOrReplaceEcuInterceptor(duration = 1.seconds) { false } }
-                additionalVam = EcuAdditionalVamData(eid = "1234".decodeHex())
-            }
         }
-        assertThat(gateways.size).isEqualTo(1)
-        assertThat(gateways[0].name).isEqualTo("GW")
-        assertThat(gateways[0].requests.size).isEqualTo(4)
-        assertThat(gateways[0].resetHandler.size).isEqualTo(1)
+        assertThat(networks.size).isEqualTo(1)
 
-        assertThat(gateways[0].ecus.size).isEqualTo(1)
-        assertThat(gateways[0].ecus[0].name).isEqualTo("ECU1")
-        assertThat(gateways[0].ecus[0].requests.size).isEqualTo(4)
-        assertThat(gateways[0].ecus[0].additionalVam!!.eid).isEqualTo("1234".decodeHex())
+        val doipEntities = networks().first()._doipEntities
+        assertThat(doipEntities.size).isEqualTo(1)
+        assertThat(doipEntities[0].name).isEqualTo("GW")
+        assertThat(doipEntities[0].requests.size).isEqualTo(4)
+        assertThat(doipEntities[0].resetHandler.size).isEqualTo(1)
 
-        assertThat(gatewayInstances.size).isEqualTo(0)
+        assertThat(doipEntities[0].ecus.size).isEqualTo(1)
+        assertThat(doipEntities[0].ecus[0].name).isEqualTo("ECU1")
+        assertThat(doipEntities[0].ecus[0].requests.size).isEqualTo(4)
+
+        assertThat(networkInstances.size).isEqualTo(0)
     }
 
     @Test
     fun `test multibyte ack`() {
-        gateway("GW") {
-            ecu("ECU") {
-                ackBytesLengthMap = mapOf(0x22.toByte() to 3)
-                request(byteArrayOf(0x22, 0x10, 0x20), "REQ2") { ack() }
+        network {
+            gateway("GW") {
+                ecu("ECU") {
+                    ackBytesLengthMap = mapOf(0x22.toByte() to 3)
+                    request(byteArrayOf(0x22, 0x10, 0x20), "REQ2") { ack() }
+                }
             }
         }
 
-        assertThat(gateways.size).isEqualTo(1)
-        val ecuData = gateways[0].ecus[0]
+        assertThat(networks.size).isEqualTo(1)
+
+        val doipEntities = networks().first()._doipEntities
+        assertThat(doipEntities.size).isEqualTo(1)
+        val ecuData = doipEntities[0].ecus[0]
         val msg = UdsMessage(
             0x1,
             0x2,
@@ -95,14 +106,22 @@ class SimDslTest {
             assertThat(createEcuFunc).isNotNull()
         }
 
-        fun createGwFunc(createGwFunc: CreateGatewayFunc) {
+        fun createGwFunc(createGwFunc: CreateDoipEntityFunc) {
             assertThat(createGwFunc).isNotNull()
             createGwFunc("TEST") {
                 createEcuFunc(::ecu)
             }
         }
 
-        createGwFunc(::gateway)
+        fun createNetwork(createNetwork: CreateNetworkFunc) {
+            assertThat(createNetwork).isNotNull()
+            createNetwork {
+                createGwFunc(::gateway)
+            }
+        }
+
+
+        createNetwork(::network)
     }
 
     @Test

@@ -1,6 +1,5 @@
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import client.ConnectException
 import client.DoipClient
 import io.ktor.network.sockets.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
@@ -13,18 +12,17 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Disabled("only for manual testing")
-class SimGatewayTest {
+class SimDoipEntityTest {
     @Test
     fun `test byte read channel`() {
-        val doipEntity = SimGateway(
-            GatewayData(
+        val doipEntity = SimDoipEntity(
+            DoipEntityData(
                 name = "TEST"
             ).also {
                 it.logicalAddress = 0x1010
                 it.gid = GID(6)
                 it.eid = EID(6)
                 it.vin = "01234567890123456"
-                it.localAddress = "127.0.0.1"
                 it.functionalAddress = 0x3030
                 it.requests.add(
                     RequestMatcher(
@@ -63,15 +61,14 @@ class SimGatewayTest {
     @OptIn(ExperimentalDoipDslApi::class)
     @Test
     fun `test hard reset`() {
-        val doipEntity = SimGateway(
-            GatewayData(
+        val doipEntity = SimDoipEntity(
+            DoipEntityData(
                 name = "TEST"
             ).also {
                 it.logicalAddress = 0x1010
                 it.gid = GID(6)
                 it.eid = EID(6)
                 it.vin = "01234567890123456"
-                it.localAddress = "127.0.0.1"
                 it.functionalAddress = 0x3030
                 it.requests.add(
                     RequestMatcher(

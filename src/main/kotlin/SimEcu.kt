@@ -33,7 +33,6 @@ internal fun EcuData.toEcuConfig(): EcuConfig =
         logicalAddress = logicalAddress,
         functionalAddress = functionalAddress,
         pendingNrcSendInterval = pendingNrcSendInterval,
-        additionalVam = additionalVam,
     )
 
 
@@ -389,12 +388,14 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
     /**
      * Resets all the ECUs stored properties, timers, interceptors and requests
      */
-    public fun reset() {
+    public override fun reset() {
         runBlocking(Dispatchers.Default) {
             MDC.put("ecu", name)
 
             launch(MDCContext()) {
                 logger.debug("Resetting interceptors, timers and stored data")
+
+                super.reset()
 
                 inboundInterceptors.clear()
 
