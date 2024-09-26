@@ -22,8 +22,8 @@ public open class GroupDoipTcpConnectionMessageHandler(
             diagMessage: DoipTcpDiagMessage,
             output: ByteWriteChannel
         ) {
-            val handler = list.firstOrNull { it.existsTargetAddress(diagMessage.targetAddress) } ?: list.first()
-            handler.onIncomingDiagMessage(diagMessage, output)
+            val handler = list.filter { it.existsTargetAddress(diagMessage.targetAddress) }
+            handler.forEach { it.onIncomingDiagMessage(diagMessage, output) }
         }
     }
 }

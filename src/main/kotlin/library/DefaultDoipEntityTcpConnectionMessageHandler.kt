@@ -19,12 +19,8 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
     override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
-        runBlocking {
-            MDC.put("ecu", doipEntity.name)
-            launch(MDCContext()) {
-                super.handleTcpMessage(message, output)
-            }
-        }
+        MDC.put("ecu", doipEntity.name)
+        super.handleTcpMessage(message, output)
     }
 
     override suspend fun handleTcpRoutingActivationRequest(

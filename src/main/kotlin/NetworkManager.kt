@@ -13,6 +13,8 @@ public open class NetworkManager(
     public val doipEntities: List<DoipEntity<*>>,
 ) {
     private val log = LoggerFactory.getLogger(NetworkManager::class.java)
+    private val udpNetworkBindings: MutableList<UdpNetworkBinding> = mutableListOf()
+    private val tcpNetworkBindings: MutableList<TcpNetworkBinding> = mutableListOf()
 
     protected open fun findInterfaceByName(): NetworkInterface? {
         var foundInterface: NetworkInterface? = null
@@ -102,17 +104,20 @@ public open class NetworkManager(
         map.forEach { (address, entities) ->
             val unb = createUdpNetworkBinding(address, entities)
             unb.start()
+            udpNetworkBindings.add(unb)
         }
 
         if (config.bindOnAnyForUdpAdditional && !map.containsKey("0.0.0.0")) {
             val unb = createUdpNetworkBindingAny()
             unb.start()
+            udpNetworkBindings.add(unb)
         }
 
         // TCP
         map.forEach { (address, entities) ->
             val tnb = createTcpNetworkBinding(address, entities)
             tnb.start()
+            tcpNetworkBindings.add(tnb)
         }
     }
 
@@ -133,5 +138,11 @@ public open class NetworkManager(
 
     public open fun createTcpConnectionMessageHandler(doipEntities: List<DoipEntity<*>>, socket: DoipTcpSocket, tlsOptions: TlsOptions?): DoipTcpConnectionMessageHandler =
         GroupDoipTcpConnectionMessageHandler(doipEntities, socket, tlsOptions)
+
+    public open suspend fun resendVams(entities: List<DoipEntity<*>>) {
+        udpNetworkBindings.forEach {
+            it.resendVams(entities)
+        }
+    }
 }
 
