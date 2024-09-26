@@ -1,4 +1,8 @@
 import library.DoipEntity
+import library.DoipTcpConnectionMessageHandler
+import library.DoipTcpSocket
+import library.GroupDoipTcpConnectionMessageHandler
+import library.TlsOptions
 import org.slf4j.LoggerFactory
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -126,5 +130,8 @@ public open class NetworkManager(
 
     protected open fun createUdpNetworkBindingAny(): UdpNetworkBinding =
         UdpNetworkBinding("0.0.0.0", config.localPort, config.broadcastEnable, config.broadcastAddress, doipEntities)
+
+    public open fun createTcpConnectionMessageHandler(doipEntities: List<DoipEntity<*>>, socket: DoipTcpSocket, tlsOptions: TlsOptions?): DoipTcpConnectionMessageHandler =
+        GroupDoipTcpConnectionMessageHandler(doipEntities, socket, tlsOptions)
 }
 

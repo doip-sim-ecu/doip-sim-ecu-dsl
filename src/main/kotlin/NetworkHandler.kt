@@ -181,7 +181,7 @@ public open class TcpNetworkBinding(
                     logger.info("Listening on tcp: ${serverSocket.localAddress}")
                     while (!serverSocket.isClosed) {
                         val socket = serverSocket.accept()
-                        val activeConnection = ActiveConnection(this@TcpNetworkBinding, doipEntities)
+                        val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
                         activeConnection.handleTcpSocket(this@withContext, DelegatedKtorSocket(socket), null)
                     }
                 }
@@ -248,7 +248,7 @@ public open class TcpNetworkBinding(
 
                     while (!tlsServerSocket.isClosed) {
                         val socket = tlsServerSocket.accept() as SSLSocket
-                        val activeConnection = ActiveConnection(this@TcpNetworkBinding, doipEntities)
+                        val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
                         activeConnection.handleTcpSocket(this, SSLDoipTcpSocket(socket), null)
                     }
                 }
@@ -257,6 +257,7 @@ public open class TcpNetworkBinding(
     }
 
     public open class ActiveConnection(
+        private val networkManager: NetworkManager,
         private val networkBinding: TcpNetworkBinding,
         private val doipEntities: List<DoipEntity<*>>
     ) {
@@ -268,7 +269,7 @@ public open class TcpNetworkBinding(
             disableServerSocketCallback: ((kotlin.time.Duration) -> Unit)?
         ) {
             scope.launch(Dispatchers.IO) {
-                val handler = GroupDoipTcpConnectionMessageHandler(doipEntities, socket, networkBinding.tlsOptions)
+                val handler = networkManager.createTcpConnectionMessageHandler(doipEntities, socket, networkBinding.tlsOptions)
 
                 val entity = doipEntities.first()
 

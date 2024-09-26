@@ -2,7 +2,7 @@ package library
 
 import io.ktor.utils.io.ByteWriteChannel
 
-public class GroupDoipTcpConnectionMessageHandler(
+public open class GroupDoipTcpConnectionMessageHandler(
     entities: List<DoipEntity<*>>,
     socket: DoipTcpSocket,
     tlsOptions: TlsOptions?,
