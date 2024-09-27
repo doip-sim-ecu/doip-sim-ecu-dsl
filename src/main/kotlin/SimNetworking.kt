@@ -1,4 +1,5 @@
 import library.*
+import org.slf4j.LoggerFactory
 
 public enum class NetworkMode {
     AUTO,
@@ -71,6 +72,8 @@ public open class SimDoipNetworking(data: NetworkingData) : SimNetworking<SimEcu
 }
 
 public abstract class SimNetworking<E : SimulatedEcu, out T : DoipEntity<E>>(public val data: NetworkingData) {
+    private val log = LoggerFactory.getLogger(SimNetworking::class.java)
+
     public val doipEntities: List<T>
         get() {
             if (data.doipEntities.isNotEmpty() && _doipEntities.isEmpty()) {
@@ -83,6 +86,10 @@ public abstract class SimNetworking<E : SimulatedEcu, out T : DoipEntity<E>>(pub
     protected val _vams: MutableList<DoipUdpVehicleAnnouncementMessage> = mutableListOf()
 
     protected fun addEntity(doipEntity: @UnsafeVariance T) {
+        if (_doipEntities.any { it.config.logicalAddress == doipEntity.config.logicalAddress }) {
+            log.error("Can't add '${doipEntity.name}' - entity with same logical address already exists")
+            return
+        }
         _doipEntities.add(doipEntity)
     }
 

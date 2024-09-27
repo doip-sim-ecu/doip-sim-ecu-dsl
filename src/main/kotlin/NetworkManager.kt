@@ -1,3 +1,6 @@
+import io.ktor.network.sockets.SocketAddress
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import library.DoipEntity
 import library.DoipTcpConnectionMessageHandler
 import library.DoipTcpSocket
@@ -110,7 +113,6 @@ public open class NetworkManager(
         if (config.bindOnAnyForUdpAdditional && !map.containsKey("0.0.0.0")) {
             val unb = createUdpNetworkBindingAny()
             unb.start()
-            udpNetworkBindings.add(unb)
         }
 
         // TCP
@@ -133,8 +135,18 @@ public open class NetworkManager(
     ): UdpNetworkBinding =
         UdpNetworkBinding(address, config.localPort, config.broadcastEnable, config.broadcastAddress, entities)
 
-    protected open fun createUdpNetworkBindingAny(): UdpNetworkBinding =
-        UdpNetworkBinding("0.0.0.0", config.localPort, config.broadcastEnable, config.broadcastAddress, doipEntities)
+    protected open fun createUdpNetworkBindingAny(): UdpNetworkBindingAny =
+        UdpNetworkBindingAny(config.localPort, ::sendVirReply)
+
+    protected open fun sendVirReply(socket: SocketAddress) {
+        runBlocking(Dispatchers.IO) {
+            runBlocking {
+                udpNetworkBindings.forEach {
+                    it.sendVirReply(socket)
+                }
+            }
+        }
+    }
 
     public open fun createTcpConnectionMessageHandler(doipEntities: List<DoipEntity<*>>, socket: DoipTcpSocket, tlsOptions: TlsOptions?): DoipTcpConnectionMessageHandler =
         GroupDoipTcpConnectionMessageHandler(doipEntities, socket, tlsOptions)

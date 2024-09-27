@@ -24,6 +24,44 @@ import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
+public open class UdpNetworkBindingAny(private val port: Int = 13400, private val sendVirReply: (target: SocketAddress) -> Unit) {
+    private val logger = LoggerFactory.getLogger(UdpNetworkBindingAny::class.java)
+
+    private lateinit var udpServerSocket: BoundDatagramSocket
+
+    public open fun start() {
+        thread(name = "UDP") {
+            runBlocking {
+                udpServerSocket = aSocket(ActorSelectorManager(Dispatchers.IO))
+                    .udp()
+                    .bind(localAddress = InetSocketAddress(hostname = "0.0.0.0", port = port)) {
+                        broadcast = true
+                        reuseAddress = true
+//                            reusePort = true // not supported on windows
+                        typeOfService = TypeOfService.IPTOS_RELIABILITY
+//                            socket.joinGroup(multicastAddress)
+                    }
+                logger.info("Listening on udp: ${udpServerSocket.localAddress}")
+
+                while (!udpServerSocket.isClosed) {
+                    val datagram = udpServerSocket.receive()
+                    try {
+                        val message = DoipUdpMessageParser.parseUDP(datagram.packet)
+                        if (message is DoipUdpVehicleInformationRequest ||
+                            message is DoipUdpVehicleInformationRequestWithEid ||
+                            message is DoipUdpVehicleInformationRequestWithVIN
+                            ) {
+                            sendVirReply(datagram.address)
+                        }
+                    } catch (e: Exception) {
+                        logger.error("Unknown error while processing message", e)
+                    }
+                }
+            }
+        }
+    }
+}
+
 public open class UdpNetworkBinding(
     private val localAddress: String,
     private val port: Int = 13400,
@@ -37,39 +75,51 @@ public open class UdpNetworkBinding(
 
     private val udpMessageHandlers = doipEntities.associateWith { it.createDoipUdpMessageHandler() }
 
-    protected open suspend fun startVamTimer(socket: BoundDatagramSocket, doipEntitiesFilter: List<DoipEntity<*>>? = null) {
+    public open suspend fun sendVirReply(address: SocketAddress) {
+        internalSendVams(address, null)
+    }
+
+    protected open suspend fun startVamTimer(doipEntitiesFilter: List<DoipEntity<*>>? = null) {
         if (broadcastEnabled) {
-            sendVams(socket, doipEntitiesFilter)
+            sendVams(doipEntitiesFilter)
         }
     }
 
-    protected open suspend fun sendVams(socket: BoundDatagramSocket, doipEntitiesFilter: List<DoipEntity<*>>? = null) {
-        var vamSentCounter = 0
-
+    protected open suspend fun internalSendVams(
+        address: SocketAddress,
+        doipEntitiesFilter: List<DoipEntity<*>>? = null
+    ) {
         val entries = doipEntities.associateWith { it.generateVehicleAnnouncementMessages() }
+
+        entries.forEach { (doipEntity, vams) ->
+            MDC.put("ecu", doipEntity.name)
+            vams.forEach { vam ->
+                if (doipEntitiesFilter != null && doipEntitiesFilter.none { vam.logicalAddress == it.config.logicalAddress }) {
+                    return@forEach
+                }
+                logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()} as broadcast")
+                udpServerSocket.send(
+                    Datagram(
+                        packet = ByteReadPacket(vam.asByteArray),
+                        address = address
+                    )
+                )
+            }
+        }
+    }
+
+    protected open fun sendVams(doipEntitiesFilter: List<DoipEntity<*>>? = null) {
+        var vamSentCounter = 0
 
         fixedRateTimer("VAM", daemon = true, initialDelay = 500, period = 500) {
             if (vamSentCounter >= 3) {
                 this.cancel()
                 return@fixedRateTimer
             }
-            entries.forEach { (doipEntity, vams) ->
-                MDC.put("ecu", doipEntity.name)
-                vams.forEach { vam ->
-                    if (doipEntitiesFilter != null && doipEntitiesFilter.none { vam.logicalAddress == it.config.logicalAddress }) {
-                        return@forEach
-                    }
-                    logger.info("Sending VAM for ${vam.logicalAddress.toByteArray().toHexString()} as broadcast")
-                    runBlocking(Dispatchers.IO) {
-                        launch(MDCContext()) {
-                            socket.send(
-                                Datagram(
-                                    packet = ByteReadPacket(vam.asByteArray),
-                                    address = InetSocketAddress(broadcastAddress, port)
-                                )
-                            )
-                        }
-                    }
+
+            runBlocking(Dispatchers.IO) {
+                launch(MDCContext()) {
+                    internalSendVams(InetSocketAddress(broadcastAddress, port), doipEntitiesFilter)
                 }
             }
 
@@ -78,7 +128,7 @@ public open class UdpNetworkBinding(
     }
 
     public suspend fun resendVams(doipEntitiesFilter: List<DoipEntity<*>>? = null) {
-        startVamTimer(udpServerSocket, doipEntitiesFilter)
+        startVamTimer(doipEntitiesFilter)
     }
 
     public fun start() {
@@ -94,7 +144,7 @@ public open class UdpNetworkBinding(
 //                            socket.joinGroup(multicastAddress)
                     }
                 logger.info("Listening on udp: ${udpServerSocket.localAddress}")
-                startVamTimer(udpServerSocket)
+                startVamTimer()
 
                 while (!udpServerSocket.isClosed) {
                     val datagram = udpServerSocket.receive()
@@ -159,7 +209,11 @@ public open class TcpNetworkBinding(
     public fun isEcuHardResetting(targetAddress: Short): Boolean =
         hardResettingEcus.contains(targetAddress)
 
-    public fun hardResetEcuFor(activeConnection: ActiveConnection, logicalAddress: Short, duration: kotlin.time.Duration) {
+    public fun hardResetEcuFor(
+        activeConnection: ActiveConnection,
+        logicalAddress: Short,
+        duration: kotlin.time.Duration
+    ) {
         val isDoipEntity = doipEntities.any { it.config.logicalAddress == logicalAddress }
 
         if (isDoipEntity) {
@@ -319,7 +373,8 @@ public open class TcpNetworkBinding(
             this.socket = socket
 
             scope.launch(Dispatchers.IO) {
-                val handler = networkManager.createTcpConnectionMessageHandler(doipEntities, socket, networkBinding.tlsOptions)
+                val handler =
+                    networkManager.createTcpConnectionMessageHandler(doipEntities, socket, networkBinding.tlsOptions)
 
                 val entity = doipEntities.first()
 
@@ -330,7 +385,6 @@ public open class TcpNetworkBinding(
                     val parser = DoipTcpMessageParser(doipEntities.first().config.maxDataSize - 8)
                     while (!socket.isClosed && !closed) {
                         val message = parser.parseDoipTcpMessage(input)
-
                         try {
                             MDC.put("ecu", entity.name)
                             if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {
@@ -370,7 +424,11 @@ public open class TcpNetworkBinding(
                             output.flush()
                             socket.close()
 
-                            networkBinding.hardResetEcuFor(this@ActiveConnection, e.ecu.config.logicalAddress, e.duration)
+                            networkBinding.hardResetEcuFor(
+                                this@ActiveConnection,
+                                e.ecu.config.logicalAddress,
+                                e.duration
+                            )
                         } catch (e: Exception) {
                             if (!socket.isClosed) {
                                 logger.error(
@@ -387,6 +445,8 @@ public open class TcpNetworkBinding(
                             }
                         }
                     }
+                } catch (_: ClosedReceiveChannelException) {
+                    logger.info("Connection closed by remote ${socket.remoteAddress}")
                 } catch (e: Throwable) {
                     logger.error("Unknown error inside socket processing loop, closing socket", e)
                 } finally {
