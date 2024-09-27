@@ -446,8 +446,10 @@ public open class TcpNetworkBinding(
                         }
                     }
                 } catch (_: ClosedReceiveChannelException) {
+                    MDC.put("ecu", doipEntities.firstOrNull()?.name)
                     logger.info("Connection closed by remote ${socket.remoteAddress}")
                 } catch (e: Throwable) {
+                    MDC.put("ecu", doipEntities.firstOrNull()?.name)
                     logger.error("Unknown error inside socket processing loop, closing socket", e)
                 } finally {
                     try {
