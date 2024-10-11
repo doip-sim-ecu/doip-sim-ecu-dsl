@@ -1,5 +1,5 @@
 plugins {
-    val kotlinVersion = "2.0.20"
+    val kotlinVersion = "2.0.21"
 
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
@@ -14,14 +14,14 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.15.1"
+version = "0.16.0"
 
 repositories {
     gradlePluginPortal()
     mavenCentral()
 }
 
-val ktorVersion = "2.3.12"
+val ktorVersion = "3.0.0"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0

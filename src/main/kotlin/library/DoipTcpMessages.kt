@@ -79,8 +79,13 @@ public class DoipTcpMessageParser(private val maxPayloadLength: Int) {
                 val sourceAddress = brc.readShort()
                 val targetAddress = brc.readShort()
                 val ackCode = brc.readByte()
-                val payload = ByteArray(payloadLength - 5)
-                brc.readFully(payload, 0, payload.size)
+                val payload = if (payloadLength > 5) {
+                    val payload = ByteArray(payloadLength - 5)
+                    brc.readFully(payload, 0, payload.size)
+                    payload
+                } else {
+                    ByteArray(0)
+                }
                 return DoipTcpDiagMessagePosAck(
                     sourceAddress = sourceAddress,
                     targetAddress = targetAddress,
@@ -93,8 +98,13 @@ public class DoipTcpMessageParser(private val maxPayloadLength: Int) {
                 val sourceAddress = brc.readShort()
                 val targetAddress = brc.readShort()
                 val ackCode = brc.readByte()
-                val payload = ByteArray(payloadLength - 5)
-                brc.readFully(payload, 0, payload.size)
+                val payload = if (payloadLength > 5) {
+                    val payload = ByteArray(payloadLength - 5)
+                    brc.readFully(payload, 0, payload.size)
+                    payload
+                } else {
+                    ByteArray(0)
+                }
                 return DoipTcpDiagMessageNegAck(
                     sourceAddress = sourceAddress,
                     targetAddress = targetAddress,

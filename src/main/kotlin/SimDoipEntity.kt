@@ -7,7 +7,7 @@ import org.slf4j.MDC
 @Suppress("unused")
 public open class DoipEntityData(name: String, public val nodeType: DoipNodeType = DoipNodeType.GATEWAY) : EcuData(name) {
     /**
-     * Vehicle identifier, 17 chars, will be filled with '0`, or if left null, set to 0xFF
+     * Vehicle identifier, 17 chars, will be filled with '0', or if left null, set to 0xFF
      */
     public var vin: String? = null // 17 byte VIN
 

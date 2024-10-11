@@ -1,6 +1,10 @@
 import assertk.assertThat
 import assertk.assertions.*
 import io.ktor.utils.io.*
+import io.ktor.utils.io.core.*
+import kotlinx.io.Buffer
+import kotlinx.io.InternalIoApi
+import kotlinx.io.Sink
 import library.DoipEntityHardResetException
 import library.ExperimentalDoipDslApi
 import library.UdsMessage
@@ -10,6 +14,7 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
 import org.mockito.kotlin.*
 import java.lang.Thread.sleep
+import java.nio.ByteBuffer
 import kotlin.concurrent.thread
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -501,6 +506,7 @@ class SimEcuTest {
             pendingNrcSendInterval = pendingNrcSendInterval,
         )
 
+    @OptIn(InternalAPI::class, InternalIoApi::class)
     private fun req(
         data: ByteArray,
         sourceAddress: Short = 0x0000,
@@ -513,6 +519,10 @@ class SimEcuTest {
             targetAddressType = targetAddressType,
             targetAddressPhysical = targetAddress,
             message = data,
-            output = Mockito.mock(ByteWriteChannel::class.java)
+            output = Mockito.mock(ByteWriteChannel::class.java).also {
+                val m = mock<Sink>()
+                whenever(m.buffer).thenReturn(Buffer())
+                whenever(it.writeBuffer).thenReturn(m)
+            }
         )
 }
