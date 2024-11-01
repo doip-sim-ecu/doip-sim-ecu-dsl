@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
-    id("org.cyclonedx.bom") version "1.8.2"
+    id("org.cyclonedx.bom") version "1.10.0"
     id("net.researchgate.release") version "3.0.2"
     signing
     `maven-publish`
