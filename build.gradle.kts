@@ -29,7 +29,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")  // Apache-2.0
     implementation("org.slf4j:slf4j-api:2.0.16") // MIT
 
-    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:8.3.0") // Apache-2.0
+    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:9.1.0") // Apache-2.0
     implementation("org.bouncycastle:bctls-jdk18on:1.79") // Bouncy Castle License (~MIT)
 
     testImplementation(kotlin("test"))
