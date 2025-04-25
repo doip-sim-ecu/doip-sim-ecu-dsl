@@ -1,8 +1,8 @@
 import assertk.assertThat
 import assertk.assertions.*
-import io.ktor.utils.io.*
 import library.DoipEntityHardResetException
 import library.ExperimentalDoipDslApi
+import library.OutputChannel
 import library.UdsMessage
 import library.decodeHex
 import org.junit.jupiter.api.Test
@@ -513,6 +513,6 @@ class SimEcuTest {
             targetAddressType = targetAddressType,
             targetAddressPhysical = targetAddress,
             message = data,
-            output = Mockito.mock(ByteWriteChannel::class.java)
+            output = Mockito.mock(OutputChannel::class.java)
         )
 }

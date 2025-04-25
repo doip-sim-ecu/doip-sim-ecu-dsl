@@ -1,9 +1,5 @@
 package library
 
-import io.ktor.utils.io.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.slf4j.MDCContext
 import networkInstances
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -18,14 +14,14 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
 ) : DoipTcpConnectionMessageHandler(socket) {
     private val logger: Logger = LoggerFactory.getLogger(DefaultDoipEntityTcpConnectionMessageHandler::class.java)
 
-    override suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
+    override suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputChannel) {
         MDC.put("ecu", doipEntity.name)
         super.handleTcpMessage(message, output)
     }
 
     override suspend fun handleTcpRoutingActivationRequest(
         message: DoipTcpRoutingActivationRequest,
-        output: ByteWriteChannel
+        output: OutputChannel
     ) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         if (message.activationType != 0x00.toByte() && message.activationType != 0x01.toByte()) {
@@ -89,12 +85,12 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
         }
     }
 
-    override suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: ByteWriteChannel) {
+    override suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: OutputChannel) {
         logger.traceIf { "# handleTcpAliveCheckRequest $message" }
         output.writeFully(DoipTcpAliveCheckResponse(logicalAddress).asByteArray)
     }
 
-    override suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
+    override suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: OutputChannel) {
         if (registeredSourceAddress != message.sourceAddress) {
             val reject = DoipTcpDiagMessageNegAck(
                 message.targetAddress,
@@ -139,7 +135,7 @@ public open class DefaultDoipEntityTcpConnectionMessageHandler(
 
 public interface DiagnosticMessageHandler {
     public fun existsTargetAddress(targetAddress: Short): Boolean
-    public suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel)
+    public suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputChannel)
 }
 
 public fun DoipEntity<*>.hasAlreadyActiveConnection(

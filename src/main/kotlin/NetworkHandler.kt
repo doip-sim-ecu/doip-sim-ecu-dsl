@@ -357,7 +357,7 @@ public open class TcpNetworkBinding(
             closed = true
         }
 
-        protected open suspend fun sendDoipAck(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
+        protected open suspend fun sendDoipAck(message: DoipTcpDiagMessage, output: OutputChannel) {
             val ack = DoipTcpDiagMessagePosAck(
                 message.targetAddress,
                 message.sourceAddress,
@@ -380,7 +380,7 @@ public open class TcpNetworkBinding(
 
                 logger.debugIf { "New incoming data connection from ${socket.remoteAddress}" }
                 val input = socket.openReadChannel()
-                val output = socket.openWriteChannel()
+                val output = OutputChannelImpl(socket.openWriteChannel())
                 try {
                     val parser = DoipTcpMessageParser(doipEntities.first().config.maxDataSize - 8)
                     while (!socket.isClosed && !closed) {
@@ -390,7 +390,9 @@ public open class TcpNetworkBinding(
                             if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {
                                 sendDoipAck(message, output)
                             } else {
-                                handler.handleTcpMessage(message, output)
+                                launch(Dispatchers.IO) {
+                                    handler.handleTcpMessage(message, output)
+                                }
                             }
                         } catch (e: ClosedReceiveChannelException) {
                             // ignore - socket was closed

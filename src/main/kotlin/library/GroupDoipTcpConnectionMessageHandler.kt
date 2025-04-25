@@ -1,7 +1,5 @@
 package library
 
-import io.ktor.utils.io.ByteWriteChannel
-
 public open class GroupDoipTcpConnectionMessageHandler(
     entities: List<DoipEntity<*>>,
     socket: DoipTcpSocket,
@@ -20,7 +18,7 @@ public open class GroupDoipTcpConnectionMessageHandler(
 
         override suspend fun onIncomingDiagMessage(
             diagMessage: DoipTcpDiagMessage,
-            output: ByteWriteChannel
+            output: OutputChannel
         ) {
             val handler = list.filter { it.existsTargetAddress(diagMessage.targetAddress) }
             handler.forEach { it.onIncomingDiagMessage(diagMessage, output) }

@@ -121,7 +121,7 @@ public open class DoipTcpConnectionMessageHandler(
         }
 
 
-    public open suspend fun handleTcpMessage(message: DoipTcpMessage, output: ByteWriteChannel) {
+    public open suspend fun handleTcpMessage(message: DoipTcpMessage, output: OutputChannel) {
         logger.traceIf { "# handleTcpMessage $message" }
         when (message) {
             is DoipTcpHeaderNegAck -> handleTcpHeaderNegAck(message, output)
@@ -135,13 +135,13 @@ public open class DoipTcpConnectionMessageHandler(
         }
     }
 
-    protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpHeaderNegAck(message: DoipTcpHeaderNegAck, output: OutputChannel) {
         logger.traceIf { "# handleTcpHeaderNegAck $message" }
     }
 
     protected open suspend fun handleTcpRoutingActivationRequest(
         message: DoipTcpRoutingActivationRequest,
-        output: ByteWriteChannel
+        output: OutputChannel
     ) {
         logger.traceIf { "# handleTcpRoutingActivationRequest $message" }
         registeredSourceAddress = message.sourceAddress
@@ -149,28 +149,28 @@ public open class DoipTcpConnectionMessageHandler(
 
     protected open suspend fun handleTcpRoutingActivationResponse(
         message: DoipTcpRoutingActivationResponse,
-        output: ByteWriteChannel
+        output: OutputChannel
     ) {
         logger.traceIf { "# handleTcpRoutingActivationResponse $message" }
     }
 
-    protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpAliveCheckRequest(message: DoipTcpAliveCheckRequest, output: OutputChannel) {
         logger.traceIf { "# handleTcpAliveCheckRequest $message" }
     }
 
-    protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpAliveCheckResponse(message: DoipTcpAliveCheckResponse, output: OutputChannel) {
         logger.traceIf { "# handleTcpAliveCheckResponse $message" }
     }
 
-    protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpDiagMessage(message: DoipTcpDiagMessage, output: OutputChannel) {
         logger.traceIf { "# handleTcpDiagMessage $message for ${message.targetAddress}" }
     }
 
-    protected open suspend fun handleTcpDiagMessagePosAck(message: DoipTcpDiagMessagePosAck, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpDiagMessagePosAck(message: DoipTcpDiagMessagePosAck, output: OutputChannel) {
         logger.traceIf { "# handleTcpDiagMessagePosAck $message for ${message.targetAddress}" }
     }
 
-    protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: ByteWriteChannel) {
+    protected open suspend fun handleTcpDiagMessageNegAck(message: DoipTcpDiagMessageNegAck, output: OutputChannel) {
         logger.traceIf { "# handleTcpDiagMessageNegAck $message for ${message.targetAddress}" }
     }
 

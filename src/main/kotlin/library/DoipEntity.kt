@@ -1,8 +1,6 @@
 package library
 
 import io.ktor.utils.io.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.slf4j.MDCContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -124,7 +122,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
         output.writeFully(response.asByteArray)
     }
 
-    override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: ByteWriteChannel) {
+    override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputChannel) {
         val ecu = targetEcusByLogical[diagMessage.targetAddress]
         ecu?.run {
             MDC.put("ecu", ecu.name)

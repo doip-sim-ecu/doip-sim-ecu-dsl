@@ -13,7 +13,7 @@ class DoipTcpConnectionMessageHandlerTest {
     fun `test tcp message handler`() {
         val tcpMessageHandler = DoipTcpConnectionMessageHandler(mock())
         val data = Random.nextBytes(10)
-        val out = mock<ByteWriteChannel>()
+        val out = mock<OutputChannel>()
         runBlocking {
             tcpMessageHandler.handleTcpMessage(DoipTcpHeaderNegAck(0x11), out)
             tcpMessageHandler.handleTcpMessage(DoipTcpAliveCheckRequest(), out)

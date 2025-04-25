@@ -2,10 +2,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import io.ktor.utils.io.*
-import library.EcuAdditionalVamData
+import library.OutputChannel
 import library.UdsMessage
-import library.decodeHex
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -85,7 +83,7 @@ class SimDslTest {
             UdsMessage.PHYSICAL,
             0x2,
             byteArrayOf(0x22, 0x10, 0x20),
-            Mockito.mock(ByteWriteChannel::class.java)
+            Mockito.mock(OutputChannel::class.java)
         )
         val simEcu = SimEcu(ecuData)
         val responseData = RequestResponseData(ecuData.requests[0], msg, simEcu)
