@@ -390,7 +390,7 @@ public open class TcpNetworkBinding(
                             if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {
                                 sendDoipAck(message, output)
                             } else {
-                                launch(Dispatchers.IO) {
+                                launch(MDCContext()) {
                                     handler.handleTcpMessage(message, output)
                                 }
                             }
