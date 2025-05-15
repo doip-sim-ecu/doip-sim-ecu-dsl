@@ -139,12 +139,15 @@ public class RequestList(
         for (maskedBytes in 0..4) {
             // since the request definition may be shorter than the actual request, we start with
             // the highest amount possibly matching bytes, and mask out more and more bytes
-            index[searchPattern and mask[maskedBytes]]?.forEach {
-                val wasHandled = handlerOnMatch.invoke(it)
-                if (wasHandled) {
-                    return true
+            index[searchPattern and mask[maskedBytes]]
+                ?.filter {
+                    it.onlyStartsWith && message.startsWith(it.requestBytes) || message.contentEquals(it.requestBytes)
+                }?.forEach {
+                    val wasHandled = handlerOnMatch.invoke(it)
+                    if (wasHandled) {
+                        return true
+                    }
                 }
-            }
         }
 
         return false
