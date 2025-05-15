@@ -1,7 +1,8 @@
 package library
 
-import io.ktor.utils.io.ByteWriteChannel
-import kotlinx.coroutines.runBlocking
+import io.ktor.utils.io.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 public interface OutputChannel {
     public suspend fun writeFully(data: ByteArray)
@@ -9,16 +10,16 @@ public interface OutputChannel {
 }
 
 public class OutputChannelImpl(private val writeChannel: ByteWriteChannel) : OutputChannel {
+    private val mutex = Mutex()
+
     override suspend fun writeFully(data: ByteArray) {
-        synchronized<Unit>(writeChannel) {
-            runBlocking {
-                writeChannel.writeFully(data, 0, data.size)
-            }
+        mutex.withLock {
+            writeChannel.writeFully(data, 0, data.size)
         }
     }
 
     override suspend fun flush() {
-        synchronized(writeChannel) {
+        mutex.withLock {
             writeChannel.flush()
         }
     }

@@ -3,6 +3,7 @@ package library
 import io.ktor.utils.io.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.runBlocking
+import kotlinx.io.EOFException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.mock
@@ -39,7 +40,7 @@ class DoipTcpConnectionMessageHandlerTest {
             parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpDiagMessagePosAck(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
             parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpRoutingActivationResponse(0x11.toShort(), 0x22.toShort(), 0x11).asByteArray))
             parser.parseDoipTcpMessage(ByteReadChannel(DoipTcpRoutingActivationRequest(0x11.toShort()).asByteArray))
-            assertThrows<ClosedReceiveChannelException> { parser.parseDoipTcpMessage(ByteReadChannel(byteArrayOf(0x0))) }
+            assertThrows<EOFException> { parser.parseDoipTcpMessage(ByteReadChannel(byteArrayOf(0x0))) }
             assertThrows<UnknownPayloadType> { parser.parseDoipTcpMessage(ByteReadChannel(doipMessage(0xffff.toShort()))) }
         }
     }

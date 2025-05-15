@@ -1,17 +1,15 @@
 package library
 
 import io.ktor.network.sockets.*
-import io.ktor.util.*
 import io.ktor.util.network.*
 import io.ktor.utils.io.*
-import io.ktor.utils.io.bits.*
-import io.ktor.utils.io.core.*
-import io.ktor.utils.io.core.internal.*
 import io.ktor.utils.io.jvm.javaio.*
+import io.ktor.utils.io.streams.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.io.Sink
 import java.io.Closeable
-import java.io.OutputStream
-import java.nio.ByteBuffer
 import javax.net.ssl.SSLSocket
 
 public enum class SocketType {
@@ -68,7 +66,7 @@ internal class SSLDoipTcpSocket(private val socket: SSLSocket) : DoipTcpSocket {
         socket.inputStream.toByteReadChannel()
 
     override fun openWriteChannel(): ByteWriteChannel =
-        OutputStreamByteWriteChannel(socket.outputStream)
+        socket.outputStream.asByteWriteChannel()
 
     override fun close() =
         socket.close()
@@ -77,112 +75,36 @@ internal class SSLDoipTcpSocket(private val socket: SSLSocket) : DoipTcpSocket {
         get() = SocketType.TLS_DATA
 }
 
-internal class OutputStreamByteWriteChannel(private val outputStream: OutputStream) : ByteWriteChannel {
+internal class OutputStreamByteWriteChannel(private val sink: Sink) : ByteWriteChannel {
     private var closed = false
-    private var exception: Throwable? = null
-    private var _totalBytesWritten: Long = 0
-    override val autoFlush: Boolean
-        get() = true
-    override val availableForWrite: Int
-        get() = Integer.MAX_VALUE
-    override val closedCause: Throwable?
-        get() = exception
+    private var cancelCause: Throwable? = null
+
+    @InternalAPI
+    override val writeBuffer: Sink
+        get() = sink
+
+    override suspend fun flush() {
+        withContext(Dispatchers.IO) {
+            sink.flush()
+        }
+    }
+
     override val isClosedForWrite: Boolean
         get() = closed
-    override val totalBytesWritten: Long
-        get() = _totalBytesWritten
 
-    override suspend fun awaitFreeSpace() {
+    override val closedCause: Throwable
+        get() = closedCause
+
+    override suspend fun flushAndClose() {
+        sink.flush()
+        sink.close()
+        closed = true
     }
 
-    override fun close(cause: Throwable?): Boolean {
-        exception = cause
-        outputStream.close()
-        return true
-    }
-
-    override fun flush() {
-        outputStream.flush()
-    }
-
-    override suspend fun write(min: Int, block: (ByteBuffer) -> Unit) {
-        val bb = ByteBuffer.allocate(min)
-        block.invoke(bb)
+    override fun cancel(cause: Throwable?) {
+        cancelCause = cause
         runBlocking {
-            outputStream.write(bb.moveToByteArray())
+            flushAndClose()
         }
-    }
-
-    @Suppress("DEPRECATION")
-    override suspend fun writeAvailable(src: ChunkBuffer): Int {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeAvailable(src: ByteBuffer): Int {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeAvailable(src: ByteArray, offset: Int, length: Int): Int {
-        TODO("Not yet implemented")
-    }
-
-    override fun writeAvailable(min: Int, block: (ByteBuffer) -> Unit): Int {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeByte(b: Byte) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeDouble(d: Double) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeFloat(f: Float) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeFully(memory: Memory, startIndex: Int, endIndex: Int) {
-        TODO("Not yet implemented")
-    }
-
-    @Suppress("DEPRECATION")
-    override suspend fun writeFully(src: Buffer) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeFully(src: ByteBuffer) {
-        runBlocking {
-            outputStream.write(src.moveToByteArray())
-        }
-    }
-
-    override suspend fun writeFully(src: ByteArray, offset: Int, length: Int) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeInt(i: Int) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeLong(l: Long) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writePacket(packet: ByteReadPacket) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeShort(s: Short) {
-        TODO("Not yet implemented")
-    }
-
-    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
-    override suspend fun writeSuspendSession(visitor: suspend WriterSuspendSession.() -> Unit) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun writeWhile(block: (ByteBuffer) -> Boolean) {
-        TODO("Not yet implemented")
     }
 }

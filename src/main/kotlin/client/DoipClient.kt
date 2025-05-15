@@ -4,8 +4,10 @@ package client
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
 import library.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -84,15 +86,15 @@ public class DoipClient(
     }
 
     private fun startListening() {
-        udpServerSocket = aSocket(ActorSelectorManager(Dispatchers.IO))
-            .udp()
-            .bind {
-                broadcast = true
-                reuseAddress = true
-            }
-
         thread(name = "UDP_RECV", isDaemon = true) {
             runBlocking {
+                udpServerSocket = aSocket(ActorSelectorManager(Dispatchers.IO))
+                    .udp()
+                    .bind {
+                        broadcast = true
+                        reuseAddress = true
+                    }
+
                 while (!udpServerSocket.isClosed) {
                     try {
                         val datagram = udpServerSocket.receive()
