@@ -1,13 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    val kotlinVersion = "2.1.20"
-
-    kotlin("jvm") version kotlinVersion
-    kotlin("plugin.allopen") version kotlinVersion
+    kotlin("jvm") version libs.versions.kotlinVersion
+    kotlin("plugin.allopen") version libs.versions.kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
-    id("org.cyclonedx.bom") version "1.8.2"
-    id("net.researchgate.release") version "3.0.2"
+    id("org.cyclonedx.bom") version libs.versions.cyclonedx.bom
+    id("net.researchgate.release") version libs.versions.researchgate.release
     signing
     `maven-publish`
     `java-library`
@@ -16,30 +14,28 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.20.0"
+version = "0.20.0-beta"
 
 repositories {
     gradlePluginPortal()
     mavenCentral()
 }
 
-val ktorVersion = "3.1.0"
-
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
-    api("io.ktor:ktor-network-jvm:$ktorVersion") // Apache-2.0
+    api(libs.ktor.network.jvm) // Apache-2.0
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")  // Apache-2.0
-    implementation("org.slf4j:slf4j-api:2.0.16") // MIT
+    implementation(libs.slf4j.api) // MIT
 
-    implementation("io.github.hakky54:sslcontext-kickstart-for-pem:9.1.0") // Apache-2.0
-    implementation("org.bouncycastle:bctls-jdk18on:1.79") // Bouncy Castle License (~MIT)
+    implementation(libs.sslcontext.kickstart.pem) // Apache-2.0
+    implementation(libs.bctls.jdk18) // Bouncy Castle License (~MIT)
 
     testImplementation(kotlin("test"))
-    testRuntimeOnly("ch.qos.logback:logback-classic:1.3.14") // EPL-1.0
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly(libs.logback.classic) // EPL-1.0
+    testImplementation(libs.junit.jupiter)
     // version 5.x requires jdk 11
-    testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
-    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.assertk.jvm)
 }
 
 tasks.test {
@@ -137,7 +133,7 @@ signing {
         val data = if (file.exists()) {
             file.readText()
         } else {
-            signingKey.replace(" ", "\n")
+            signingKey // .replace(" ", "\n")
         }
         useInMemoryPgpKeys(data, signingPassword)
         sign(publishing.publications)
