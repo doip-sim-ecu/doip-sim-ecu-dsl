@@ -1,5 +1,7 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    val kotlinVersion = "2.0.21"
+    val kotlinVersion = "2.1.20"
 
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
@@ -21,7 +23,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "2.3.12"
+val ktorVersion = "2.3.13"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
@@ -64,8 +66,10 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_1_8)
+        freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
+    }
 }
 
 publishing {
