@@ -16,14 +16,14 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.16.1"
+version = "0.20.0"
 
 repositories {
     gradlePluginPortal()
     mavenCentral()
 }
 
-val ktorVersion = "2.3.13"
+val ktorVersion = "3.1.0"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0

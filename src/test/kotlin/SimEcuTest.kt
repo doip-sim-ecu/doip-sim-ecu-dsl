@@ -1,5 +1,9 @@
 import assertk.assertThat
 import assertk.assertions.*
+import io.ktor.utils.io.*
+import kotlinx.io.Buffer
+import kotlinx.io.InternalIoApi
+import kotlinx.io.Sink
 import library.DoipEntityHardResetException
 import library.ExperimentalDoipDslApi
 import library.OutputChannel
@@ -501,6 +505,7 @@ class SimEcuTest {
             pendingNrcSendInterval = pendingNrcSendInterval,
         )
 
+    @OptIn(InternalAPI::class, InternalIoApi::class)
     private fun req(
         data: ByteArray,
         sourceAddress: Short = 0x0000,
@@ -513,6 +518,9 @@ class SimEcuTest {
             targetAddressType = targetAddressType,
             targetAddressPhysical = targetAddress,
             message = data,
-            output = Mockito.mock(OutputChannel::class.java)
+            output = Mockito.mock(OutputChannel::class.java).also {
+                val m = mock<Sink>()
+                whenever(m.buffer).thenReturn(Buffer())
+            }
         )
 }

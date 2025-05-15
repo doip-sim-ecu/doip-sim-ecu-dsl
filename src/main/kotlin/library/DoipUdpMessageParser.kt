@@ -1,6 +1,10 @@
 package library
 
 import io.ktor.utils.io.core.*
+import kotlinx.io.Source
+import kotlinx.io.asSource
+import kotlinx.io.buffered
+import kotlinx.io.readByteArray
 import kotlin.experimental.inv
 
 public open class HeaderNegAckException(message: String) : RuntimeException(message)
@@ -18,7 +22,7 @@ public object DoipUdpMessageParser {
     private inline fun <T> checkPayloadLength(
         expectedLength: Int,
         payloadLength: Int,
-        brp: ByteReadPacket,
+        brp: Source,
         block: () -> T
     ): DoipUdpMessage {
         if (brp.remaining.toInt() != payloadLength || expectedLength != payloadLength) {
@@ -28,11 +32,11 @@ public object DoipUdpMessageParser {
     }
 
     public fun parseUDP(ba: ByteArray): DoipUdpMessage =
-        parseUDP(ByteReadPacket(ba))
+        parseUDP(ba.inputStream().asSource().buffered())
 
-    public fun parseUDP(brp: ByteReadPacket): DoipUdpMessage {
+    public fun parseUDP(brp: Source): DoipUdpMessage {
         // Check header length
-        if (brp.remaining < 8) {
+        if (brp.exhausted()) {
             throw HeaderTooShort("DoIP UDP message too short for interpretation")
         }
 
@@ -56,14 +60,14 @@ public object DoipUdpMessageParser {
                     6,
                     payloadLength,
                     brp,
-                ) { DoipUdpVehicleInformationRequestWithEid(brp.readBytes(6)) }
+                ) { DoipUdpVehicleInformationRequestWithEid(brp.readByteArray(6)) }
 
             TYPE_UDP_VIR_VIN ->
                 checkPayloadLength(
                     17,
                     payloadLength,
                     brp
-                ) { DoipUdpVehicleInformationRequestWithVIN(brp.readBytes(17)) }
+                ) { DoipUdpVehicleInformationRequestWithVIN(brp.readByteArray(17)) }
 
             TYPE_UDP_VAM ->
                 checkPayloadLength(
@@ -72,10 +76,10 @@ public object DoipUdpMessageParser {
                     brp
                 ) {
                     DoipUdpVehicleAnnouncementMessage(
-                        vin = brp.readBytes(17),
+                        vin = brp.readByteArray(17),
                         logicalAddress = brp.readShort(),
-                        eid = brp.readBytes(6),
-                        gid = brp.readBytes(6),
+                        eid = brp.readByteArray(6),
+                        gid = brp.readByteArray(6),
                         furtherActionRequired = brp.readByte(),
                         syncStatus = brp.readByte()
                     )

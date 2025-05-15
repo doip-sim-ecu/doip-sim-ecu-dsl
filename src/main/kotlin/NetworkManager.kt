@@ -36,7 +36,7 @@ public open class NetworkManager(
                                 true
                             )
                         ) {
-                            foundInterface = entry;
+                            foundInterface = entry
                             break
                         }
                     }
