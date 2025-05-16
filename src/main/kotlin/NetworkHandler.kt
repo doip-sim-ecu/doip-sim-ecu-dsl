@@ -1,25 +1,21 @@
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
-import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.slf4j.MDCContext
 import library.*
-import library.DelegatedKtorSocket
-import library.SSLDoipTcpSocket
 import nl.altindag.ssl.SSLFactory
 import nl.altindag.ssl.pem.util.PemUtils
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.io.EOFException
 import java.net.InetAddress
 import java.net.SocketException
 import java.nio.file.Paths
-import java.util.Collections
+import java.util.*
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -449,7 +445,10 @@ public open class TcpNetworkBinding(
                     }
                 } catch (_: ClosedReceiveChannelException) {
                     MDC.put("ecu", doipEntities.firstOrNull()?.name)
-                    logger.info("Connection closed by remote ${socket.remoteAddress}")
+                    logger.info("Connection closed by remote through ClosedChannel ${socket.remoteAddress}")
+                } catch (_: EOFException) {
+                    MDC.put("ecu", doipEntities.firstOrNull()?.name)
+                    logger.info("Connection closed by remote through EOF ${socket.remoteAddress}")
                 } catch (e: Throwable) {
                     MDC.put("ecu", doipEntities.firstOrNull()?.name)
                     logger.error("Unknown error inside socket processing loop, closing socket", e)
