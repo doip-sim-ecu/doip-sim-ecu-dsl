@@ -10,7 +10,7 @@ dependencyResolutionManagement {
             version("researchgate.release", "3.0.2")
 
             library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.1.3")
-            library("slf4j-api", "org.slf4j:slf4j-api:2.0.16")
+            library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
             library("sslcontext-kickstart-pem", "io.github.hakky54:sslcontext-kickstart-for-pem:9.1.0")
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.79")
 
