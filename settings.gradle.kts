@@ -12,7 +12,7 @@ dependencyResolutionManagement {
             library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.1.3")
             library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
             library("sslcontext-kickstart-pem", "io.github.hakky54:sslcontext-kickstart-for-pem:9.1.0")
-            library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.79")
+            library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.80")
 
             library("logback-classic", "ch.qos.logback:logback-classic:1.3.14")
             library("junit-jupiter", "org.junit.jupiter:junit-jupiter:5.12.2")
