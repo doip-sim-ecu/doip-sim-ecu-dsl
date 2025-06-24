@@ -31,7 +31,7 @@ public open class UdpNetworkBindingAny(
     public open fun start() {
         thread(name = "UDP") {
             runBlocking {
-                MDC.put("ecu", "ALL")
+                MDC.put("ecu", "ANY")
                 udpServerSocket = aSocket(ActorSelectorManager(Dispatchers.IO))
                     .udp()
                     .bind(localAddress = InetSocketAddress(hostname = "0.0.0.0", port = port)) {
