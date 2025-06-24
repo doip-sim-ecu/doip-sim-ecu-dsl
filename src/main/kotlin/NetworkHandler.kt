@@ -20,7 +20,10 @@ import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
-public open class UdpNetworkBindingAny(private val port: Int = 13400, private val sendVirReply: (target: SocketAddress) -> Unit) {
+public open class UdpNetworkBindingAny(
+    private val port: Int = 13400,
+    private val sendVirReply: (target: SocketAddress) -> Unit
+) {
     private val logger = LoggerFactory.getLogger(UdpNetworkBindingAny::class.java)
 
     private lateinit var udpServerSocket: BoundDatagramSocket
@@ -46,7 +49,7 @@ public open class UdpNetworkBindingAny(private val port: Int = 13400, private va
                         if (message is DoipUdpVehicleInformationRequest ||
                             message is DoipUdpVehicleInformationRequestWithEid ||
                             message is DoipUdpVehicleInformationRequestWithVIN
-                            ) {
+                        ) {
                             sendVirReply(datagram.address)
                         }
                     } catch (e: Exception) {
@@ -200,7 +203,7 @@ public open class TcpNetworkBinding(
 
     private val serverSockets: MutableList<ServerSocket> = mutableListOf()
     private val activeConnections: MutableMap<ActiveConnection, DoipEntity<*>> = mutableMapOf()
-    private val hardResettingEcus: MutableSet<Short> = Collections.synchronizedSet<Short>(mutableSetOf())
+    private val hardResettingEcus: MutableSet<Short> = Collections.synchronizedSet(mutableSetOf())
 
     public fun isEcuHardResetting(targetAddress: Short): Boolean =
         hardResettingEcus.contains(targetAddress)
@@ -213,6 +216,7 @@ public open class TcpNetworkBinding(
         val isDoipEntity = doipEntities.any { it.config.logicalAddress == logicalAddress }
 
         if (isDoipEntity) {
+            activeConnection.close()
             logger.info("Closing serversockets")
             serverSockets.forEach {
                 try {
@@ -238,9 +242,9 @@ public open class TcpNetworkBinding(
         Thread.sleep(duration.inWholeMilliseconds)
 
         hardResettingEcus.remove(logicalAddress)
+        logger.info("Reactivating server sockets after ${duration.inWholeMilliseconds} ms")
 
         if (isDoipEntity) {
-            logger.warn("Restarting server sockets after ${duration.inWholeMilliseconds} ms")
             runBlocking {
                 launch {
                     start()
@@ -380,65 +384,64 @@ public open class TcpNetworkBinding(
                 try {
                     val parser = DoipTcpMessageParser(doipEntities.first().config.maxDataSize - 8)
                     while (!socket.isClosed && !closed) {
+                        MDC.put("ecu", entity.name)
                         val message = parser.parseDoipTcpMessage(input)
-                        try {
-                            MDC.put("ecu", entity.name)
-                            if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {
-                                sendDoipAck(message, output)
-                            } else {
-                                launch(MDCContext()) {
+                        launch(MDCContext()) {
+                            try {
+                                if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {
+                                    sendDoipAck(message, output)
+                                } else {
                                     handler.handleTcpMessage(message, output)
                                 }
-                            }
-                        } catch (e: ClosedReceiveChannelException) {
-                            // ignore - socket was closed
-                            logger.debugIf { "Socket was closed by remote ${socket.remoteAddress}" }
-                            withContext(Dispatchers.IO) {
-                                handler.connectionClosed(e)
-                                socket.runCatching { this.close() }
-                            }
-                        } catch (e: SocketException) {
-                            logger.error("Socket error: ${e.message} -> closing socket")
-                            withContext(Dispatchers.IO) {
-                                handler.connectionClosed(e)
-                                socket.runCatching { this.close() }
-                            }
-                        } catch (e: HeaderNegAckException) {
-                            if (!socket.isClosed) {
-                                logger.debug(
-                                    "Error in Header while parsing message, sending negative acknowledgment",
-                                    e
-                                )
-                                val response =
-                                    DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
-                                output.writeFully(response)
+                            } catch (e: ClosedReceiveChannelException) {
+                                // ignore - socket was closed
+                                logger.debugIf { "Socket was closed by remote ${socket.remoteAddress}" }
                                 withContext(Dispatchers.IO) {
                                     handler.connectionClosed(e)
                                     socket.runCatching { this.close() }
                                 }
-                            }
-                        } catch (e: DoipEntityHardResetException) {
-                            logger.warn("Simulating Hard Reset on ${e.ecu.name} for ${e.duration.inWholeMilliseconds} ms")
-                            output.flush()
-                            socket.close()
-
-                            networkBinding.hardResetEcuFor(
-                                this@ActiveConnection,
-                                e.ecu.config.logicalAddress,
-                                e.duration
-                            )
-                        } catch (e: Exception) {
-                            if (!socket.isClosed) {
-                                logger.error(
-                                    "Unknown error parsing/handling message, sending negative acknowledgment",
-                                    e
-                                )
-                                val response =
-                                    DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
-                                output.writeFully(response)
+                            } catch (e: SocketException) {
+                                logger.error("Socket error: ${e.message} -> closing socket")
                                 withContext(Dispatchers.IO) {
                                     handler.connectionClosed(e)
                                     socket.runCatching { this.close() }
+                                }
+                            } catch (e: HeaderNegAckException) {
+                                if (!socket.isClosed) {
+                                    logger.debug(
+                                        "Error in Header while parsing message, sending negative acknowledgment",
+                                        e
+                                    )
+                                    val response =
+                                        DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
+                                    output.writeFully(response)
+                                    withContext(Dispatchers.IO) {
+                                        handler.connectionClosed(e)
+                                        socket.runCatching { this.close() }
+                                    }
+                                }
+                            } catch (e: DoipEntityHardResetException) {
+                                logger.warn("Simulating Hard Reset on ${e.ecu.name} for ${e.duration.inWholeMilliseconds} ms")
+                                output.flush()
+
+                                networkBinding.hardResetEcuFor(
+                                    this@ActiveConnection,
+                                    e.ecu.config.logicalAddress,
+                                    e.duration
+                                )
+                            } catch (e: Exception) {
+                                if (!socket.isClosed) {
+                                    logger.error(
+                                        "Unknown error parsing/handling message, sending negative acknowledgment",
+                                        e
+                                    )
+                                    val response =
+                                        DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
+                                    output.writeFully(response)
+                                    withContext(Dispatchers.IO) {
+                                        handler.connectionClosed(e)
+                                        socket.runCatching { this.close() }
+                                    }
                                 }
                             }
                         }
