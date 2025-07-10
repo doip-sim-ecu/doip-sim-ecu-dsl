@@ -7,6 +7,7 @@ import library.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.nio.BufferUnderflowException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
@@ -24,8 +25,8 @@ public class RequestInterceptorData(
     isExpired: () -> Boolean
 ) : InterceptorData<InterceptorRequestHandler>(name, interceptor, isExpired)
 
-public class ResponseInterceptorData(name: String, interceptor: InterceptorResponseHandler, isExpired: () -> Boolean)
-    : InterceptorData<InterceptorResponseHandler>(name, interceptor, isExpired)
+public class ResponseInterceptorData(name: String, interceptor: InterceptorResponseHandler, isExpired: () -> Boolean) :
+    InterceptorData<InterceptorResponseHandler>(name, interceptor, isExpired)
 
 internal fun EcuData.toEcuConfig(): EcuConfig =
     EcuConfig(
@@ -72,7 +73,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
         var hasExpiredEntries = false
 
-        synchronized (this.outboundInterceptors) {
+        synchronized(this.outboundInterceptors) {
             this.outboundInterceptors.forEach {
                 if (!it.value.isExpired()) {
                     try {
@@ -97,7 +98,19 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                             return true
                         }
                     } catch (e: Exception) {
-                        logger.error("Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' -> Error while processing outbound interceptors for response '${response.toHexString(limit = 10, limitExceededByteCount = true)}'")
+                        logger.error(
+                            "Request for $name: '${
+                                request.message.toHexString(
+                                    limit = 10,
+                                    limitExceededByteCount = true
+                                )
+                            }' -> Error while processing outbound interceptors for response '${
+                                response.toHexString(
+                                    limit = 10,
+                                    limitExceededByteCount = true
+                                )
+                            }'"
+                        )
                     }
                 } else {
                     hasExpiredEntries = true
@@ -118,16 +131,31 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
     private fun handlePending(request: UdsMessage, responseData: ResponseData<RequestMatcher>) {
         val pendingFor = responseData.pendingFor ?: return
-        val pendingForInterval = responseData.pendingForInterval?.inWholeMilliseconds ?: config.pendingNrcSendInterval.inWholeMilliseconds
+        val pendingForInterval =
+            responseData.pendingForInterval?.inWholeMilliseconds ?: config.pendingNrcSendInterval.inWholeMilliseconds
         // this code will send pending nrcs every `config.pendingNrcSendInterval`, until
         // the pendingFor duration is reached. Afterward the `pendingForCallback` is invoked,
         // which may again change the final response in ResponseData
-        val pending = byteArrayOf(0x7f, request.message[0],
-            responseData.pendingForNrc ?: NrcError.RequestCorrectlyReceivedButResponseIsPending)
+        val pending = byteArrayOf(
+            0x7f, request.message[0],
+            responseData.pendingForNrc ?: NrcError.RequestCorrectlyReceivedButResponseIsPending
+        )
         val end = System.currentTimeMillis() + pendingFor.inWholeMilliseconds
         while (System.currentTimeMillis() < end) {
             sendResponse(request, pending)
-            logger.logForRequest(responseData.caller) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '${responseData.caller}' -> Pending '${pending.toHexString(limit = 10, limitExceededByteCount = true)}'" }
+            logger.logForRequest(responseData.caller) {
+                "Request for $name: '${
+                    request.message.toHexString(
+                        limit = 10,
+                        limitExceededByteCount = true
+                    )
+                }' matched '${responseData.caller}' -> Pending '${
+                    pending.toHexString(
+                        limit = 10,
+                        limitExceededByteCount = true
+                    )
+                }'"
+            }
             if (end - System.currentTimeMillis() <= pendingForInterval) {
                 Thread.sleep(end - System.currentTimeMillis())
             } else {
@@ -137,7 +165,14 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         try {
             responseData.pendingForCallback.invoke()
         } catch (e: Exception) {
-            logger.error("Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '${responseData.caller}' -> Error while invoking pending-callback-handler", e)
+            logger.error(
+                "Request for $name: '${
+                    request.message.toHexString(
+                        limit = 10,
+                        limitExceededByteCount = true
+                    )
+                }' matched '${responseData.caller}' -> Error while invoking pending-callback-handler", e
+            )
         }
     }
 
@@ -148,7 +183,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
         var hasExpiredEntries = false
 
-        synchronized (this.inboundInterceptors) {
+        synchronized(this.inboundInterceptors) {
             this.inboundInterceptors.forEach {
                 if (!it.value.isExpired()) {
                     if (!busy || it.value.alsoCallWhenEcuIsBusy) {
@@ -160,10 +195,24 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                         try {
                             if (it.value.interceptor.invoke(responseData, RequestMessage(request, busy))) {
                                 if (responseData.continueMatching) {
-                                    logger.traceIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' handled by interceptor -> Continue matching" }
+                                    logger.traceIf {
+                                        "Request for $name: '${
+                                            request.message.toHexString(
+                                                limit = 10,
+                                                limitExceededByteCount = true
+                                            )
+                                        }' handled by interceptor -> Continue matching"
+                                    }
                                     return@forEach
                                 } else if (responseData.response.isNotEmpty()) {
-                                    logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' handled by interceptor -> ${responseData.response.toHexString(limit = 10)}" }
+                                    logger.debugIf {
+                                        "Request for $name: '${
+                                            request.message.toHexString(
+                                                limit = 10,
+                                                limitExceededByteCount = true
+                                            )
+                                        }' handled by interceptor -> ${responseData.response.toHexString(limit = 10)}"
+                                    }
                                     runBlocking {
                                         sendResponse(request, responseData.response)
                                     }
@@ -171,7 +220,14 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                                 return true
                             }
                         } catch (e: NrcException) {
-                            logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' handled by interceptor -> NRC ${e.code.toString(16)}" }
+                            logger.debugIf {
+                                "Request for $name: '${
+                                    request.message.toHexString(
+                                        limit = 10,
+                                        limitExceededByteCount = true
+                                    )
+                                }' handled by interceptor -> NRC ${e.code.toString(16)}"
+                            }
                             sendResponse(request, byteArrayOf(0x7F, request.message[0], e.code))
                             return true
                         } catch (e: Exception) {
@@ -224,26 +280,77 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                 matcher.responseHandler.invoke(responseData)
                 handlePending(request, responseData)
                 if (responseData.continueMatching) {
-                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Continue matching" }
+                    logger.logForRequest(matcher) {
+                        "Request for $name: '${
+                            request.message.toHexString(
+                                limit = 10,
+                                limitExceededByteCount = true
+                            )
+                        }' matched '$matcher' -> Continue matching"
+                    }
                     return@findMessageAndHandle false
                 } else if (responseData.response.isNotEmpty()) {
-                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Send response '${responseData.response.toHexString(limit = 10, limitExceededByteCount = true)}'" }
+                    logger.logForRequest(matcher) {
+                        "Request for $name: '${
+                            request.message.toHexString(
+                                limit = 10,
+                                limitExceededByteCount = true
+                            )
+                        }' matched '$matcher' -> Send response '${
+                            responseData.response.toHexString(
+                                limit = 10,
+                                limitExceededByteCount = true
+                            )
+                        }'"
+                    }
                     sendResponse(request, responseData.response)
                 } else {
-                    logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> No response" }
+                    logger.logForRequest(matcher) {
+                        "Request for $name: '${
+                            request.message.toHexString(
+                                limit = 10,
+                                limitExceededByteCount = true
+                            )
+                        }' matched '$matcher' -> No response"
+                    }
                 }
 
                 throwDoipEntityExceptionsIfNecessary(matcher, request, responseData)
+            } catch (e: BufferUnderflowException) {
+                val response = byteArrayOf(0x7F, request.message[0], NrcError.IncorrectMessageLengthOrInvalidFormat)
+                logger.errorIf(e) {
+                    "An error occurred while processing a request for $name: '${
+                        request.message.toHexString(
+                            limit = 10,
+                            limitExceededByteCount = true
+                        )
+                    }' -> Sending NRC response '${response.toHexString(limit = 10)}'"
+                }
+                sendResponse(request, response)
             } catch (e: NrcException) {
                 handlePending(request, responseData)
                 val response = byteArrayOf(0x7F, request.message[0], e.code)
-                logger.logForRequest(matcher) { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' matched '$matcher' -> Send NRC response '${response.toHexString(limit = 10)}'" }
+                logger.logForRequest(matcher) {
+                    "Request for $name: '${
+                        request.message.toHexString(
+                            limit = 10,
+                            limitExceededByteCount = true
+                        )
+                    }' matched '$matcher' -> Send NRC response '${response.toHexString(limit = 10)}'"
+                }
                 sendResponse(request, response)
             } catch (e: DoipEntityHardResetException) {
                 // handled outside
                 throw e
             } catch (e: Exception) {
-                logger.errorIf(e) { "An error occurred while processing a request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}'  -> Sending NRC" }
+                logger.errorIf(e) {
+                    "An error occurred while processing a request for $name: '${
+                        request.message.toHexString(
+                            limit = 10,
+                            limitExceededByteCount = true
+                        )
+                    }' -> Sending NRC"
+                }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.GeneralProgrammingFailure))
             }
             return@findMessageAndHandle true
@@ -251,10 +358,24 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
 
         if (!handled) {
             if (this.data.nrcOnNoMatch) {
-                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' no matching request found -> Sending NRC" }
+                logger.debugIf {
+                    "Request for $name: '${
+                        request.message.toHexString(
+                            limit = 10,
+                            limitExceededByteCount = true
+                        )
+                    }' no matching request found -> Sending NRC"
+                }
                 sendResponse(request, byteArrayOf(0x7F, request.message[0], NrcError.RequestOutOfRange))
             } else {
-                logger.debugIf { "Request for $name: '${request.message.toHexString(limit = 10, limitExceededByteCount = true)}' no matching request found -> Ignore (nrcOnNoMatch = false)" }
+                logger.debugIf {
+                    "Request for $name: '${
+                        request.message.toHexString(
+                            limit = 10,
+                            limitExceededByteCount = true
+                        )
+                    }' no matching request found -> Ignore (nrcOnNoMatch = false)"
+                }
             }
         }
     }
@@ -267,7 +388,11 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         if (responseData.hardResetEntityFor != null) {
             logger.logForRequest(matcher) { "Simulating hard reset for ${matcher.name}" }
             val duration = responseData.hardResetEntityFor!!
-            throw DoipEntityHardResetException(this, duration, "Simulating Hard Reset for ${duration.inWholeMilliseconds} ms")
+            throw DoipEntityHardResetException(
+                this,
+                duration,
+                "Simulating Hard Reset for ${duration.inWholeMilliseconds} ms"
+            )
         }
 
     }
@@ -286,12 +411,13 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         alsoCallWhenEcuIsBusy: Boolean = false,
         interceptor: InterceptorRequestHandler
     ): String {
-        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy) in ecu ${this.name}"}
+        logger.traceIf { "Adding interceptor '$name' for $duration (busy: $alsoCallWhenEcuIsBusy) in ecu ${this.name}" }
 
         // expires at expirationTime
-        val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
+        val expirationTime =
+            if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
 
-        synchronized (inboundInterceptors) {
+        synchronized(inboundInterceptors) {
             inboundInterceptors[name] = RequestInterceptorData(
                 name = name,
                 interceptor = interceptor,
@@ -318,12 +444,13 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         duration: Duration = Duration.INFINITE,
         interceptor: InterceptorResponseHandler
     ): String {
-        logger.traceIf { "Adding outbound interceptor '$name' for $duration in ecu ${this.name}"}
+        logger.traceIf { "Adding outbound interceptor '$name' for $duration in ecu ${this.name}" }
 
         // expires at expirationTime
-        val expirationTime = if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
+        val expirationTime =
+            if (duration == Duration.INFINITE) Long.MAX_VALUE else System.nanoTime() + duration.inWholeNanoseconds
 
-        synchronized (outboundInterceptors) {
+        synchronized(outboundInterceptors) {
             outboundInterceptors[name] = ResponseInterceptorData(
                 name = name,
                 interceptor = interceptor,
@@ -344,7 +471,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
      * Please note that the internal resolution for delay is milliseconds
      */
     public fun addOrReplaceTimer(name: String, delay: Duration, handler: TimerTask.() -> Unit) {
-        logger.traceIf { "Adding or replacing timer '$name' for ${this.name} to be executed after $delay"}
+        logger.traceIf { "Adding or replacing timer '$name' for ${this.name} to be executed after $delay" }
 
         synchronized(mainTimer) {
             timers[name]?.cancel()
