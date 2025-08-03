@@ -25,7 +25,7 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8")) // Apache-2.0
     api(libs.ktor.network.jvm) // Apache-2.0
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")  // Apache-2.0
+    implementation(libs.kotlinx.coroutines.slf4j)  // Apache-2.0
     implementation(libs.slf4j.api) // MIT
 
     implementation(libs.sslcontext.kickstart.pem) // Apache-2.0

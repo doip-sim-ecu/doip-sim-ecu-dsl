@@ -10,6 +10,7 @@ dependencyResolutionManagement {
             version("jreleaser", "1.13.1")
 
             library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.2.3")
+            library("kotlinx-coroutines-slf4j", "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.10.2")
             library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
             library("sslcontext-kickstart-pem", "io.github.hakky54:sslcontext-kickstart-for-pem:9.1.0")
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.81")
