@@ -1,12 +1,13 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jreleaser.model.Active
+import org.jreleaser.model.Http
 
 plugins {
     kotlin("jvm") version libs.versions.kotlinVersion
     kotlin("plugin.allopen") version libs.versions.kotlinVersion
 //    id("com.github.jk1.dependency-license-report") version "2.1"
     id("org.cyclonedx.bom") version libs.versions.cyclonedx.bom
-    id("net.researchgate.release") version libs.versions.researchgate.release
-    signing
+    id("org.jreleaser") version libs.versions.jreleaser
     `maven-publish`
     `java-library`
 }
@@ -100,18 +101,11 @@ publishing {
 
     repositories {
         maven {
-            val publishSnapshotUrl: String? by project
-            val publishReleaseUrl: String? by project
-            url = uri((if (version.toString().endsWith("SNAPSHOT")) publishSnapshotUrl else publishReleaseUrl) ?: "invalid")
-            credentials {
-                val ossrhUsername: String? = System.getenv("OSSRH_USERNAME")
-                val ossrhPassword: String? = System.getenv("OSSRH_PASSWORD")
-                username = ossrhUsername
-                password = ossrhPassword
-            }
+            setUrl(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
+
 
 //tasks.cyclonedxBom {
 //    setIncludeConfigs(listOf("runtimeClasspath"))
@@ -125,25 +119,29 @@ allOpen {
     annotation("helper.Open")
 }
 
-signing {
-    val signingKey: String? = System.getenv("SIGNING_KEY")
-    val signingPassword: String? = System.getenv("SIGNING_PASSWORD")
-    if (signingKey != null) {
-        val file = File(signingKey)
-        val data = if (file.exists()) {
-            file.readText()
-        } else {
-            signingKey // .replace(" ", "\n")
+jreleaser {
+    release {
+        github {
+            skipRelease = true
+            skipTag = true
         }
-        useInMemoryPgpKeys(data, signingPassword)
-        sign(publishing.publications)
-    } else {
-        println("Jar file isn't signed")
     }
-}
 
-configure<NexusReleaseExtension> {
-    username.set(System.getenv("OSSRH_USERNAME"))
-    password.set(System.getenv("OSSRH_PASSWORD"))
-    stagingUserName.set(System.getenv("OSSRH_STAGING_USERNAME"))
+    signing {
+        active = Active.ALWAYS
+        armored = true
+        verify = false
+    }
+
+    deploy {
+        maven {
+            mavenCentral.create("sonatype") {
+                active = Active.ALWAYS
+                username = System.getenv("JRELEASER_MAVENCENTRAL_USERNAME")
+                url = "https://central.sonatype.com/api/v1/publisher"
+                authorization = Http.Authorization.BEARER
+                stagingRepository(layout.buildDirectory.dir("staging-deploy").get().toString())
+            }
+        }
+    }
 }

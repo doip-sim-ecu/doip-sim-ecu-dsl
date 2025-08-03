@@ -5,11 +5,11 @@ rootProject.name = "doip-sim-ecu-dsl"
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
-            version("kotlinVersion", "2.1.20")
+            version("kotlinVersion", "2.2.0")
             version("cyclonedx.bom", "1.8.2")
-            version("researchgate.release", "3.0.2")
+            version("jreleaser", "1.13.1")
 
-            library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.2.1")
+            library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.2.3")
             library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
             library("sslcontext-kickstart-pem", "io.github.hakky54:sslcontext-kickstart-for-pem:9.1.0")
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.81")
