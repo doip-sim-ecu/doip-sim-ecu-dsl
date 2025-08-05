@@ -16,7 +16,7 @@ dependencyResolutionManagement {
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.81")
 
             library("logback-classic", "ch.qos.logback:logback-classic:1.3.14")
-            library("junit-jupiter", "org.junit.jupiter:junit-jupiter:5.13.3")
+            library("junit-jupiter", "org.junit.jupiter:junit-jupiter:5.13.4")
             library("mockito-kotlin", "org.mockito.kotlin:mockito-kotlin:4.1.0")
             library("assertk-jvm", "com.willowtreeapps.assertk:assertk-jvm:0.28.1")
         }
