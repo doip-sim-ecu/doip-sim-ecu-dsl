@@ -58,13 +58,13 @@ kotlin {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    targetCompatibility = "1.8"
-    sourceCompatibility = "1.8"
+    targetCompatibility = "11"
+    sourceCompatibility = "11"
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_1_8)
+        jvmTarget.set(JvmTarget.JVM_11)
         freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
     }
 }
@@ -136,10 +136,10 @@ jreleaser {
     deploy {
         maven {
             mavenCentral.create("sonatype") {
-                active = Active.ALWAYS
-                username = System.getenv("JRELEASER_MAVENCENTRAL_USERNAME")
-                url = "https://central.sonatype.com/api/v1/publisher"
-                authorization = Http.Authorization.BEARER
+                active.set(Active.ALWAYS)
+                username.set(System.getenv("JRELEASER_MAVENCENTRAL_USERNAME"))
+                url.set("https://central.sonatype.com/api/v1/publisher")
+                authorization.set(Http.Authorization.BEARER)
                 stagingRepository(layout.buildDirectory.dir("staging-deploy").get().toString())
             }
         }
