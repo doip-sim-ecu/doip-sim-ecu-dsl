@@ -28,7 +28,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.slf4j)  // Apache-2.0
     implementation(libs.slf4j.api) // MIT
 
-    implementation(libs.sslcontext.kickstart.pem) // Apache-2.0
+    implementation(libs.ayza.pem) // Apache-2.0
     implementation(libs.bctls.jdk18) // Bouncy Castle License (~MIT)
 
     testImplementation(kotlin("test"))
