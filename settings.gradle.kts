@@ -17,7 +17,7 @@ dependencyResolutionManagement {
 
             library("logback-classic", "ch.qos.logback:logback-classic:1.5.18")
             library("junit-jupiter", "org.junit.jupiter:junit-jupiter:5.13.4")
-            library("mockito-kotlin", "org.mockito.kotlin:mockito-kotlin:6.0.0")
+            library("mockito-kotlin", "org.mockito.kotlin:mockito-kotlin:6.1.0")
             library("assertk-jvm", "com.willowtreeapps.assertk:assertk-jvm:0.28.1")
         }
     }
