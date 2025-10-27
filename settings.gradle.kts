@@ -12,7 +12,7 @@ dependencyResolutionManagement {
             library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.3.0")
             library("kotlinx-coroutines-slf4j", "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.10.2")
             library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
-            library("ayza-pem", "io.github.hakky54:ayza-for-pem:10.0.0")
+            library("ayza-pem", "io.github.hakky54:ayza-for-pem:10.0.1")
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.81")
 
             library("logback-classic", "ch.qos.logback:logback-classic:1.5.18")
