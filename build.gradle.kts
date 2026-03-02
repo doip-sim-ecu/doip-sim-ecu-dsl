@@ -33,8 +33,10 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testRuntimeOnly(libs.logback.classic) // EPL-1.0
+
+    // version 6.x requires jdk 17
     testImplementation(libs.junit.jupiter)
-    // version 5.x requires jdk 11
+
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.assertk.jvm)
 }
@@ -58,13 +60,13 @@ kotlin {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    targetCompatibility = "11"
-    sourceCompatibility = "11"
+    targetCompatibility = "21"
+    sourceCompatibility = "21"
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_11)
+        jvmTarget.set(JvmTarget.JVM_21)
         freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
     }
 }

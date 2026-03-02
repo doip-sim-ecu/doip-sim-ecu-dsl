@@ -4,7 +4,13 @@ public open class GroupDoipTcpConnectionMessageHandler(
     entities: List<DoipEntity<*>>,
     socket: DoipTcpSocket,
     tlsOptions: TlsOptions?,
-) : DefaultDoipEntityTcpConnectionMessageHandler(entities.first(), socket, entities.first().config.logicalAddress.toShort(), entities.first(), tlsOptions) {
+) : DefaultDoipEntityTcpConnectionMessageHandler(
+    doipEntity = entities.first(),
+    socket = socket,
+    logicalAddress = entities.first().config.logicalAddress,
+    diagMessageHandler = entities.first(),
+    tlsOptions = tlsOptions
+) {
 
     private val diagnosticMessageHandler: List<DiagnosticMessageHandler> = entities.map { it }
 

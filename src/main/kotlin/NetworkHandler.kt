@@ -388,6 +388,7 @@ public open class TcpNetworkBinding(
                     while (!socket.isClosed && !closed) {
                         MDC.put("ecu", entity.name)
                         val message = parser.parseDoipTcpMessage(input)
+
                         launch(MDCContext()) {
                             try {
                                 if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {

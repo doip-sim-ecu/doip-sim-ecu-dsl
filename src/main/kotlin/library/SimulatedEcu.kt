@@ -45,7 +45,7 @@ public open class SimulatedEcu(public val config: EcuConfig) {
      * Called on incoming diagnostic messages for this ECU
      */
     public open fun onIncomingUdsMessage(request: UdsMessage) {
-        return if (isBusy.compareAndSet(false, true)) {
+        if (isBusy.compareAndSet(false, true)) {
             try {
                 handleRequest(request)
             } finally {
