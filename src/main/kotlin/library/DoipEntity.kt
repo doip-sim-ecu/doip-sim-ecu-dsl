@@ -124,9 +124,9 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
 
     override suspend fun onIncomingDiagMessage(diagMessage: DoipTcpDiagMessage, output: OutputChannel) {
         val ecu = targetEcusByLogical[diagMessage.targetAddress]
-        ecu?.run {
+        ecu?.let { ecu ->
             MDC.put("ecu", ecu.name)
-            onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output, ecu.config.logicalAddress))
+            ecu.onIncomingUdsMessage(diagMessage.toUdsMessage(UdsMessage.PHYSICAL, output, ecu.config.logicalAddress))
             // Exit if the target ecu was found by physical
             return
         }
