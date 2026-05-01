@@ -5,6 +5,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration.Companion.seconds
 
 public typealias GID = ByteArray
@@ -77,7 +78,7 @@ public abstract class DoipEntity<out T : SimulatedEcu>(
     protected var targetEcusByLogical: Map<Short, @UnsafeVariance T> = emptyMap()
     protected var targetEcusByFunctional: MutableMap<Short, MutableList<@UnsafeVariance T>> = mutableMapOf()
 
-    public val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = mutableListOf()
+    public val connectionHandlers: MutableList<DoipTcpConnectionMessageHandler> = CopyOnWriteArrayList()
 
     private val _ecus: MutableList<T> = mutableListOf()
 
