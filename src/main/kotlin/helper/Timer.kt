@@ -6,6 +6,7 @@ import java.util.*
 private val logger = LoggerFactory.getLogger(EcuTimerTask::class.java)
 
 internal class EcuTimerTask(private val action: TimerTask.() -> Unit) : TimerTask() {
+    @Volatile
     private var _canBeRemoved = false
 
     override fun run() {

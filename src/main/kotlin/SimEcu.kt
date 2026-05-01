@@ -525,6 +525,7 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
                 super.reset()
 
                 inboundInterceptors.clear()
+                outboundInterceptors.clear()
 
                 synchronized(mainTimer) {
                     timers.forEach { it.value.cancel() }

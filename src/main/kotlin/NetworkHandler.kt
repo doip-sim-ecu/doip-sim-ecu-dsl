@@ -14,6 +14,8 @@ import java.net.InetAddress
 import java.net.SocketException
 import java.nio.file.Paths
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
 import kotlin.concurrent.fixedRateTimer
@@ -203,8 +205,8 @@ public open class TcpNetworkBinding(
 ) {
     private val logger = LoggerFactory.getLogger(TcpNetworkBinding::class.java)
 
-    private val serverSockets: MutableList<ServerSocket> = mutableListOf()
-    private val activeConnections: MutableMap<ActiveConnection, DoipEntity<*>> = mutableMapOf()
+    private val serverSockets: MutableList<ServerSocket> = CopyOnWriteArrayList()
+    private val activeConnections: MutableMap<ActiveConnection, Socket> = ConcurrentHashMap()
     private val hardResettingEcus: MutableSet<Short> = Collections.synchronizedSet(mutableSetOf())
 
     public fun isEcuHardResetting(targetAddress: Short): Boolean =
@@ -271,6 +273,7 @@ public open class TcpNetworkBinding(
                     while (!serverSocket.isClosed) {
                         val socket = serverSocket.accept()
                         val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
+                        activeConnections[activeConnection] = socket
                         activeConnection.handleTcpSocket(this@withContext, DelegatedKtorSocket(socket))
                     }
                 }
@@ -338,6 +341,7 @@ public open class TcpNetworkBinding(
                     while (!tlsServerSocket.isClosed) {
                         val socket = tlsServerSocket.accept() as SSLSocket
                         val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
+                        activeConnections[activeConnection] = socket as Socket
                         activeConnection.handleTcpSocket(this, SSLDoipTcpSocket(socket))
                     }
                 }
@@ -377,6 +381,7 @@ public open class TcpNetworkBinding(
             scope.launch(Dispatchers.IO) {
                 val handler =
                     networkManager.createTcpConnectionMessageHandler(doipEntities, socket, networkBinding.tlsOptions)
+                doipEntities.forEach { it.connectionHandlers.add(handler) }
 
                 val entity = doipEntities.first()
 
@@ -460,6 +465,7 @@ public open class TcpNetworkBinding(
                     logger.error("Unknown error inside socket processing loop, closing socket", e)
                 } finally {
                     try {
+                        doipEntities.forEach { it.connectionHandlers.remove(handler) }
                         socket.close()
                     } finally {
                         networkBinding.activeConnections.remove(this@ActiveConnection)
