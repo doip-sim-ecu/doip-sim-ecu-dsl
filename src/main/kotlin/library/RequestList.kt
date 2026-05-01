@@ -15,10 +15,17 @@ public class RequestList(
         )
     }
 
+    private val writeLock = Any()
     private val _requests: MutableList<RequestMatcher> = mutableListOf(*requests.toTypedArray())
     private val _runtimeAddedRequests: MutableList<RequestMatcher> = mutableListOf()
 
+    // Volatile snapshot, lazily built on first read. Mutations cheaply invalidate by setting null
+    // (so a startup batch of N adds costs O(N), not O(N²)). The next read rebuilds once.
+    // The rebuild itself happens under writeLock so it can't race a concurrent mutator.
+    @Volatile
     private var index: Map<Int, List<RequestMatcher>>? = null
+
+    @Volatile
     private var isRuntime: Boolean = false
 
     override val size: Int
@@ -45,37 +52,37 @@ public class RequestList(
     override fun lastIndexOf(element: RequestMatcher): Int =
         _requests.lastIndexOf(element)
 
-    override fun add(element: RequestMatcher): Boolean {
+    override fun add(element: RequestMatcher): Boolean = synchronized(writeLock) {
         val result = _requests.add(element)
         addToRuntime(element)
-        updateIndex()
-        return result
+        invalidateIndex()
+        result
     }
 
-    override fun add(index: Int, element: RequestMatcher) {
+    override fun add(index: Int, element: RequestMatcher): Unit = synchronized(writeLock) {
         _requests.add(index, element)
         addToRuntime(element)
-        updateIndex()
+        invalidateIndex()
     }
 
-    override fun addAll(index: Int, elements: Collection<RequestMatcher>): Boolean {
+    override fun addAll(index: Int, elements: Collection<RequestMatcher>): Boolean = synchronized(writeLock) {
         val result = _requests.addAll(index, elements)
         addToRuntime(elements)
-        updateIndex()
-        return result
+        invalidateIndex()
+        result
     }
 
-    override fun addAll(elements: Collection<RequestMatcher>): Boolean {
+    override fun addAll(elements: Collection<RequestMatcher>): Boolean = synchronized(writeLock) {
         val result = _requests.addAll(elements)
         addToRuntime(elements)
-        updateIndex()
-        return result
+        invalidateIndex()
+        result
     }
 
-    override fun clear() {
+    override fun clear(): Unit = synchronized(writeLock) {
         _requests.clear()
         _runtimeAddedRequests.clear()
-        updateIndex()
+        invalidateIndex()
     }
 
     override fun listIterator(): MutableListIterator<RequestMatcher> =
@@ -84,25 +91,25 @@ public class RequestList(
     override fun listIterator(index: Int): MutableListIterator<RequestMatcher> =
         _requests.listIterator(index)
 
-    override fun remove(element: RequestMatcher): Boolean {
+    override fun remove(element: RequestMatcher): Boolean = synchronized(writeLock) {
         val result = _requests.remove(element)
         _runtimeAddedRequests.remove(element)
-        updateIndex()
-        return result
+        invalidateIndex()
+        result
     }
 
-    override fun removeAll(elements: Collection<RequestMatcher>): Boolean {
+    override fun removeAll(elements: Collection<RequestMatcher>): Boolean = synchronized(writeLock) {
         val result = _requests.removeAll(elements)
         _runtimeAddedRequests.removeAll(elements)
-        updateIndex()
-        return result
+        invalidateIndex()
+        result
     }
 
-    override fun removeAt(index: Int): RequestMatcher {
+    override fun removeAt(index: Int): RequestMatcher = synchronized(writeLock) {
         val result = _requests.removeAt(index)
         _runtimeAddedRequests.remove(result)
-        updateIndex()
-        return result
+        invalidateIndex()
+        result
     }
 
     override fun retainAll(elements: Collection<RequestMatcher>): Boolean =
@@ -126,26 +133,23 @@ public class RequestList(
          *  We create an index based on (up to) the first 4 bytes of the request definition, and put it into a map<int, list<request>>.
          *  Since most request definitions should be only for the uds services with their did/rid without large payloads,
          *  this should scale fairly well for not having to iterate through long lists of requests.
+         *
+         *  Hot path: a single volatile read of [index] gives an immutable snapshot. The index is built lazily on the
+         *  first read after construction or invalidation (so a startup batch of N adds costs O(N), with one rebuild
+         *  on the first match). The rebuild itself runs under [writeLock] to exclude concurrent mutators.
+         *  Mutations only invalidate the snapshot; in-flight reads continue against the prior reference.
          */
-        var index = this.index
-        if (index == null) {
-            // create the index, if none exists
-            index = _requests.groupBy { it.requestBytes.toIntWithZeroForEmpty() }
-            this.index = index
+        val idx = index ?: synchronized(writeLock) {
+            index ?: _requests.groupBy { it.requestBytes.toIntWithZeroForEmpty() }.also { index = it }
         }
-
-        // convert the request message into the search pattern for the index
         val searchPattern = message.toIntWithZeroForEmpty()
         for (maskedBytes in 0..4) {
-            // since the request definition may be shorter than the actual request, we start with
-            // the highest amount possibly matching bytes, and mask out more and more bytes
-            index[searchPattern and mask[maskedBytes]]
-                ?.filter {
-                    it.onlyStartsWith && message.startsWith(it.requestBytes) || message.contentEquals(it.requestBytes)
-                }?.forEach {
-                    val wasHandled = handlerOnMatch.invoke(it)
-                    if (wasHandled) {
-                        return true
+            idx[searchPattern and mask[maskedBytes]]
+                ?.forEach {
+                    if (it.onlyStartsWith && message.startsWith(it.requestBytes) || message.contentEquals(it.requestBytes)) {
+                        if (handlerOnMatch.invoke(it)) {
+                            return true
+                        }
                     }
                 }
         }
@@ -160,13 +164,13 @@ public class RequestList(
     /**
      * Removes requests which were added at runtime
      */
-    public fun reset() {
+    public fun reset(): Unit = synchronized(writeLock) {
         _requests.removeAll(_runtimeAddedRequests)
         _runtimeAddedRequests.clear()
-        updateIndex()
+        invalidateIndex()
     }
 
-    private fun updateIndex() {
+    private fun invalidateIndex() {
         index = null
     }
 
