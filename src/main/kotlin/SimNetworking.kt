@@ -77,11 +77,16 @@ public abstract class SimNetworking<E : SimulatedEcu, out T : DoipEntity<E>>(pub
     public val doipEntities: List<T>
         get() {
             if (data.doipEntities.isNotEmpty() && _doipEntities.isEmpty()) {
-                start()
+                synchronized(startLock) {
+                    if (data.doipEntities.isNotEmpty() && _doipEntities.isEmpty()) {
+                        start()
+                    }
+                }
             }
             return _doipEntities
         }
 
+    private val startLock = Any()
     private val _doipEntities: MutableList<T> = mutableListOf()
     protected val _vams: MutableList<DoipUdpVehicleAnnouncementMessage> = mutableListOf()
 
@@ -95,7 +100,7 @@ public abstract class SimNetworking<E : SimulatedEcu, out T : DoipEntity<E>>(pub
 
     protected abstract fun createDoipEntity(data: DoipEntityData): T
 
-    public open fun start() {
+    public open fun start(): Unit = synchronized(startLock) {
         _doipEntities.clear()
 
         data._doipEntities.map { createDoipEntity(it) }.forEach {
