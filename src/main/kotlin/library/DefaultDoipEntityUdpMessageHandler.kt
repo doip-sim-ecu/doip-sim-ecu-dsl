@@ -5,7 +5,7 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.SendChannel
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.math.max
+import kotlin.math.min
 
 public open class DefaultDoipEntityUdpMessageHandler(
     public val doipEntity: DoipEntity<*>,
@@ -74,7 +74,7 @@ public open class DefaultDoipEntityUdpMessageHandler(
                     DoipUdpEntityStatusResponse(
                         config.nodeType.value,
                         255.toByte(),
-                        max(doipEntity.connectionHandlers.size, 255).toByte(),
+                        min(doipEntity.connectionHandlers.size, 255).toByte(),
                         config.maxDataSize
                     )
                         .asByteArray
