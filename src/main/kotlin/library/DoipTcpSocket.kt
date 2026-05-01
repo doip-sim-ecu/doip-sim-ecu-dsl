@@ -92,8 +92,8 @@ internal class OutputStreamByteWriteChannel(private val sink: Sink) : ByteWriteC
     override val isClosedForWrite: Boolean
         get() = closed
 
-    override val closedCause: Throwable
-        get() = closedCause
+    override val closedCause: Throwable?
+        get() = cancelCause
 
     override suspend fun flushAndClose() {
         sink.flush()
