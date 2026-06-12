@@ -9,3 +9,5 @@ bin
 *.key
 *.der
 *.srl
+.junie
+.claude

@@ -569,7 +569,7 @@ public fun reset() {
 public fun start() {
     networkInstances.addAll(networks.map { SimDoipNetworking(it) })
 
-    val networkManager = networkInstances.map { NetworkManager(it.data, it.doipEntities) }
+    val networkManager = networkInstances.map { NetworkManager(it.data, it.doipEntities, it.canBusBindings) }
 
     networkManager.forEach {
         it.start()

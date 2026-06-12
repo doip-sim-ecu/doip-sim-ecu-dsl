@@ -31,7 +31,13 @@ dependencies {
     implementation(libs.ayza.pem) // Apache-2.0
     implementation(libs.bctls.jdk18) // Bouncy Castle License (~MIT)
 
+    // optional - only required for SocketCAN transports; users add it (plus the
+    // architecture classifier jar with the natives) to their own dependencies
+    compileOnly(libs.javacan.core) // MIT
+
     testImplementation(kotlin("test"))
+    testImplementation(libs.javacan.core)
+    testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly(libs.logback.classic) // EPL-1.0
 
     // version 6.x requires jdk 17
@@ -42,7 +48,12 @@ dependencies {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        // tests requiring a linux CAN stack (vcan) are opt-in via -PcanIntegrationTests
+        if (!project.hasProperty("canIntegrationTests")) {
+            excludeTags("linux-can")
+        }
+    }
 }
 
 java {

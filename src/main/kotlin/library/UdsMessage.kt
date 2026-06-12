@@ -15,7 +15,7 @@ public open class UdsMessage(
         public const val FUNCTIONAL: Int = 1
     }
 
-    public fun respond(data: ByteArray) {
+    public open fun respond(data: ByteArray) {
         val response = DoipTcpDiagMessage(targetAddressPhysical, sourceAddress, data)
 
         runBlocking {
