@@ -14,6 +14,7 @@ import java.net.NetworkInterface
 public open class NetworkManager(
     public val config: NetworkingData,
     public val doipEntities: List<DoipEntity<*>>,
+    public val canBusBindings: List<CanBusBinding> = emptyList(),
 ) {
     private val log = LoggerFactory.getLogger(NetworkManager::class.java)
     private val udpNetworkBindings: MutableList<UdpNetworkBinding> = mutableListOf()
@@ -101,6 +102,15 @@ public open class NetworkManager(
     }
 
     public fun start() {
+        // CAN buses are independent of the ip-based startup map
+        canBusBindings.forEach {
+            it.startNetworking()
+        }
+
+        if (doipEntities.isEmpty()) {
+            return
+        }
+
         val map = buildStartupMap()
 
         // UDP

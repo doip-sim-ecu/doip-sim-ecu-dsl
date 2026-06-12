@@ -5,7 +5,7 @@ import library.*
 import org.slf4j.MDC
 
 @Suppress("unused")
-public open class DoipEntityData(name: String, public val nodeType: DoipNodeType = DoipNodeType.GATEWAY) : EcuData(name) {
+public open class DoipEntityData(name: String, public val nodeType: DoipNodeType = DoipNodeType.GATEWAY) : EcuData(name), MultiTransportTarget {
     /**
      * Vehicle identifier, 17 chars, will be filled with '0', or if left null, set to 0xFF
      */
@@ -39,6 +39,10 @@ public open class DoipEntityData(name: String, public val nodeType: DoipNodeType
         receiver.invoke(ecuData)
         _ecus.add(ecuData)
     }
+
+    internal fun addEcu(ecuData: EcuData) {
+        _ecus.add(ecuData)
+    }
 }
 
 private fun DoipEntityData.toDoipEntityConfig(): DoipEntityConfig {
@@ -69,7 +73,14 @@ private fun DoipEntityData.toDoipEntityConfig(): DoipEntityConfig {
 }
 
 @Suppress("MemberVisibilityCanBePrivate")
-public open class SimDoipEntity(private val data: DoipEntityData) : DoipEntity<SimEcu>(data.toDoipEntityConfig()) {
+public open class SimDoipEntity(
+    private val data: DoipEntityData,
+    /**
+     * ECU instances shared with other transports (e.g. a CAN bus via multiTransport),
+     * keyed by the identity of their [EcuData]
+     */
+    private val sharedEcuInstances: MutableMap<EcuData, SimEcu> = mutableMapOf(),
+) : DoipEntity<SimEcu>(data.toDoipEntityConfig()) {
     public val requests: RequestList
         get() = data.requests
 
@@ -92,7 +103,9 @@ public open class SimDoipEntity(private val data: DoipEntityData) : DoipEntity<S
         // Match the other ecus by name, and create an SimDslEcu for them, since StandardEcu can't handle our
         // requirements for handling requests
         val ecuData = data.ecus.first { it.name == config.name }
-        return SimEcu(ecuData)
+        // register the instance, so transports sharing the same EcuData (multiTransport)
+        // adopt it instead of creating a second one
+        return sharedEcuInstances.getOrPut(ecuData) { SimEcu(ecuData) }
     }
 
     public override fun reset(recursiveEcus: Boolean) {
