@@ -95,8 +95,9 @@ class IsoTpEndpointTest {
         tester.send(payload)
         val (request, _) = ecu.received.receive()
         assertThat(request.toList()).isEqualTo(payload.toList())
-        // 94 bytes after the first frame = 14 consecutive frames, 10 ms separation each
-        assertThat(currentTime - start >= 140).isTrue()
+        // 94 bytes after the first frame = 14 consecutive frames; STmin separates
+        // them, so 13 gaps of 10 ms each (no separation before the first frame)
+        assertThat(currentTime - start >= 130).isTrue()
     }
 
     @Test

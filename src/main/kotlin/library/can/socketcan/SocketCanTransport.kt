@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import library.can.CanFrame
 import library.can.CanTransport
@@ -38,6 +40,7 @@ public class SocketCanTransport(
     override val incomingFrames: SharedFlow<CanFrame> = _incomingFrames
 
     private val closed = AtomicBoolean(false)
+    private val writeMutex = Mutex()
 
     @Volatile
     private var channel: RawCanChannel? = null
@@ -71,7 +74,9 @@ public class SocketCanTransport(
             JavaCanFrame.create(frame.id, flags, frame.data)
         }
         withContext(Dispatchers.IO) {
-            channel.write(javaCanFrame)
+            writeMutex.withLock {
+                channel.write(javaCanFrame)
+            }
         }
     }
 

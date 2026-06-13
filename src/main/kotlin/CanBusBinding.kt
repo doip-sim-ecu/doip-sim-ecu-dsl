@@ -14,7 +14,6 @@ import library.can.isotp.IsoTpEndpoint
 import library.can.isotp.IsoTpOptions
 import library.toHexString
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 
 /**
  * Runtime instance for a [CanBusData]: owns the [CanTransport], one [SimEcu] and
@@ -136,8 +135,7 @@ public open class CanBusBinding(
             requestCanId = if (functional) data.functionalRequestId!! else ecuData.requestId,
             responseCanId = ecuData.responseId,
         )
-        MDC.put("ecu", simEcu.name)
-        scope.launch(MDCContext()) {
+        scope.launch(MDCContext(mapOf("ecu" to simEcu.name))) {
             try {
                 simEcu.onIncomingUdsMessage(request)
             } catch (e: DoipEntityHardResetException) {
@@ -197,6 +195,6 @@ public open class CanBusBinding(
                 busName = config.busName,
                 reconnect = config.reconnect,
             )
-            is SocketCanConfig -> library.can.socketcan.SocketCanTransport(config.interfaceName)
+            is SocketCanConfig -> library.can.socketcan.SocketCanTransport(config.interfaceName, enableFd = data.fd)
         }
 }

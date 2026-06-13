@@ -106,6 +106,8 @@ public class IsoTpEndpoint(
         var offset = ffPayloadSize
         var sequenceNumber = 1
         var waitCount = 0
+        // STmin separates consecutive frames; it doesn't apply before the very first one
+        var consecutiveFramesSent = false
         while (offset < payload.size) {
             val fc = withTimeoutOrNull(options.nBsTimeout) { flowControls.receive() }
                 ?: throw IsoTpException("Timeout waiting for flow control while sending on 0x${txId.toString(16)} (N_Bs)")
@@ -115,7 +117,7 @@ public class IsoTpEndpoint(
                     val stMinMillis = IsoTpFraming.stMinToMillis(fc.stMin)
                     var framesInBlock = 0
                     while (offset < payload.size && (fc.blockSize == 0 || framesInBlock < fc.blockSize)) {
-                        if (stMinMillis > 0) {
+                        if (stMinMillis > 0 && consecutiveFramesSent) {
                             delay(stMinMillis)
                         }
                         val chunk = payload.copyOfRange(offset, minOf(offset + cfPayloadSize, payload.size))
@@ -123,6 +125,7 @@ public class IsoTpEndpoint(
                         sequenceNumber = (sequenceNumber + 1) and 0x0F
                         offset += chunk.size
                         framesInBlock++
+                        consecutiveFramesSent = true
                     }
                 }
                 WAIT -> {
@@ -139,19 +142,32 @@ public class IsoTpEndpoint(
 
     private class ReceivedPdu(val pdu: IsoTpPdu, val functional: Boolean)
 
-    private suspend fun receivePdu(timeout: kotlin.time.Duration? = null): ReceivedPdu? {
-        val frame = if (timeout == null) {
-            frames.receive()
-        } else {
-            withTimeoutOrNull(timeout) { frames.receive() } ?: return null
+    /**
+     * Suspends until a decodable ISO-TP frame arrives, skipping (and logging)
+     * undecodable frames so a single corrupt frame doesn't abort a reception
+     */
+    private suspend fun receiveDecodablePdu(): ReceivedPdu {
+        while (true) {
+            val frame = frames.receive()
+            val pdu = IsoTpFraming.decode(frame.data)
+            if (pdu == null) {
+                logger.warn("Ignoring invalid ISO-TP frame on 0x${frame.id.toString(16)}: ${frame.data.toHexString(limit = 10)}")
+                continue
+            }
+            return ReceivedPdu(pdu, functional = functionalRxId != null && frame.id == functionalRxId && frame.id != physicalRxId)
         }
-        val pdu = IsoTpFraming.decode(frame.data)
-        if (pdu == null) {
-            logger.warn("Ignoring invalid ISO-TP frame on 0x${frame.id.toString(16)}: ${frame.data.toHexString(limit = 10)}")
-            return null
-        }
-        return ReceivedPdu(pdu, functional = functionalRxId != null && frame.id == functionalRxId && frame.id != physicalRxId)
     }
+
+    /**
+     * Returns the next decodable PDU, or null only when [timeout] elapses first
+     * (a null result always means a timeout, never a malformed frame)
+     */
+    private suspend fun receivePdu(timeout: kotlin.time.Duration? = null): ReceivedPdu? =
+        if (timeout == null) {
+            receiveDecodablePdu()
+        } else {
+            withTimeoutOrNull(timeout) { receiveDecodablePdu() }
+        }
 
     private suspend fun processPdu(received: ReceivedPdu) {
         val pdu = received.pdu
