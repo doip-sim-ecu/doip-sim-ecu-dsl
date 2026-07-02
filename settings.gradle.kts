@@ -20,7 +20,7 @@ dependencyResolutionManagement {
             library("logback-classic", "ch.qos.logback:logback-classic:1.5.32")
             library("kotlinx-coroutines-test", "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
             library("junit-jupiter", "org.junit.jupiter:junit-jupiter:6.0.3")
-            library("mockito-kotlin", "org.mockito.kotlin:mockito-kotlin:6.2.3")
+            library("mockito-kotlin", "org.mockito.kotlin:mockito-kotlin:6.3.0")
             library("assertk-jvm", "com.willowtreeapps.assertk:assertk-jvm:0.28.1")
         }
     }
