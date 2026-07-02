@@ -14,7 +14,7 @@ dependencyResolutionManagement {
             // optional dependency for SocketCAN support (linux only)
             library("javacan-core", "tel.schich:javacan-core:3.5.2")
             library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
-            library("ayza-pem", "io.github.hakky54:ayza-for-pem:10.0.3")
+            library("ayza-pem", "io.github.hakky54:ayza-for-pem:10.0.5")
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.83")
 
             library("logback-classic", "ch.qos.logback:logback-classic:1.5.32")
