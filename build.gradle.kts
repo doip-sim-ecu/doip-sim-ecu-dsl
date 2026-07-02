@@ -1,6 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jreleaser.model.Active
-import org.jreleaser.model.Http
 
 plugins {
     kotlin("jvm") version libs.versions.kotlinVersion
@@ -151,9 +150,7 @@ jreleaser {
         maven {
             mavenCentral.create("sonatype") {
                 active.set(Active.ALWAYS)
-                username.set(System.getenv("JRELEASER_MAVENCENTRAL_USERNAME"))
                 url.set("https://central.sonatype.com/api/v1/publisher")
-                authorization.set(Http.Authorization.BEARER)
                 stagingRepository(layout.buildDirectory.dir("staging-deploy").get().toString())
             }
         }

@@ -7,7 +7,7 @@ dependencyResolutionManagement {
         create("libs") {
             version("kotlinVersion", "2.3.10")
             version("cyclonedx.bom", "1.8.2")
-            version("jreleaser", "1.19.0")
+            version("jreleaser", "1.25.0")
 
             library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.5.1")
             library("kotlinx-coroutines-slf4j", "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.10.2")
