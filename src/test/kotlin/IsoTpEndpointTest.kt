@@ -6,9 +6,11 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import library.can.CanFrame
+import library.can.CanTransport
 import library.can.LoopbackCanTransport
 import library.can.isotp.IsoTpEndpoint
 import library.can.isotp.IsoTpException
@@ -183,6 +185,38 @@ class IsoTpEndpointTest {
         val received = listOf(tester.received.receive().first, tester.received.receive().first)
         sendJobs.forEach { it.join() }
         assertThat(received.map { it.toList() }.toSet()).isEqualTo(setOf(first.toList(), second.toList()))
+    }
+
+    @Test
+    fun `failing transport send does not kill the frame processing loop`() = runTest {
+        // a transport whose sends fail, like socketcand while disconnected/reconnecting
+        val incoming = MutableSharedFlow<CanFrame>(extraBufferCapacity = 16)
+        val transport = object : CanTransport {
+            override val name = "failing"
+            override val supportsFd = false
+            override val incomingFrames = incoming
+            override suspend fun start(scope: CoroutineScope) {}
+            override suspend fun sendFrame(frame: CanFrame) {
+                throw IllegalStateException("Not connected")
+            }
+
+            override fun close() {}
+        }
+        val received = Channel<ByteArray>(Channel.UNLIMITED)
+        val endpoint = IsoTpEndpoint(transport, 0x712, null, 0x7A2, IsoTpOptions()) { payload, _ ->
+            received.trySend(payload)
+        }
+        endpoint.start(backgroundScope)
+
+        val options = IsoTpOptions()
+        // the first frame provokes a flow control response, whose send fails
+        incoming.emit(CanFrame(0x712, IsoTpFraming.encodeFirstFrame(20, ByteArray(6), options)))
+        testScheduler.advanceUntilIdle()
+        assertThat(received.tryReceive().isSuccess).isFalse()
+
+        // the endpoint must still process frames afterwards
+        incoming.emit(CanFrame(0x712, IsoTpFraming.encodeSingleFrame(byteArrayOf(0x3E, 0x00), options)))
+        assertThat(received.receive().toList()).isEqualTo(listOf<Byte>(0x3E, 0x00))
     }
 
     @Test
