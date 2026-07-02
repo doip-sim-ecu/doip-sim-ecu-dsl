@@ -15,7 +15,8 @@ plugins {
 apply<NexusReleasePlugin>()
 
 group = "io.github.doip-sim-ecu"
-version = "0.22.0"
+// releases are versioned by the git tag that triggered the workflow (see publish_on_tag.yml)
+version = (findProperty("releaseVersion") as String?)?.removePrefix("v") ?: "0.23.0-SNAPSHOT"
 
 repositories {
     gradlePluginPortal()
