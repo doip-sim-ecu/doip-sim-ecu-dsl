@@ -1,5 +1,6 @@
 package library.can.isotp
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -64,7 +65,17 @@ public class IsoTpEndpoint(
         }
         jobs += scope.launch {
             while (currentCoroutineContext().isActive) {
-                processPdu(receivePdu() ?: continue)
+                val received = receivePdu() ?: continue
+                try {
+                    processPdu(received)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // a failing transport send (e.g. flow control while socketcand is
+                    // reconnecting) must not kill the processing loop - the endpoint has
+                    // to keep serving frames once the transport is available again
+                    logger.error("Error while processing an ISO-TP frame on 0x${physicalRxId.toString(16)}", e)
+                }
             }
         }
     }
