@@ -385,10 +385,24 @@ public open class TcpNetworkBinding(
 
                 val entity = doipEntities.first()
 
-                logger.debugIf { "New incoming data connection from ${socket.remoteAddress}" }
-                val input = socket.openReadChannel()
-                val output = OutputChannelImpl(socket.openWriteChannel())
+                // Capture the remote address once while the socket is still open.
+                // As of ktor 3.5, reading socket.remoteAddress on a closed socket
+                // throws ClosedChannelException (earlier versions did not). The
+                // error and cleanup paths below log the remote address, and if
+                // that throw escapes this per-connection coroutine it cancels the
+                // whole server scope, taking the DoIP entity permanently offline.
+                // A value cached here is stable and safe to read from those paths.
+                val remoteAddress = runCatching { socket.remoteAddress }.getOrNull()
+                logger.debugIf { "New incoming data connection from $remoteAddress" }
                 try {
+                    // Opening the read/write channels is inside the try: since
+                    // ktor 3.5 openWriteChannel()/openReadChannel() throw
+                    // (e.g. IOException "Socket closed") if the peer already
+                    // disconnected. Leaving them outside would let that throw
+                    // escape this per-connection coroutine and cancel the whole
+                    // server scope, taking the DoIP entity permanently offline.
+                    val input = socket.openReadChannel()
+                    val output = OutputChannelImpl(socket.openWriteChannel())
                     val parser = DoipTcpMessageParser(doipEntities.first().config.maxDataSize - 8)
                     while (!socket.isClosed && !closed) {
                         MDC.put("ecu", entity.name)
@@ -403,7 +417,7 @@ public open class TcpNetworkBinding(
                                 }
                             } catch (e: ClosedReceiveChannelException) {
                                 // ignore - socket was closed
-                                logger.debugIf { "Socket was closed by remote ${socket.remoteAddress}" }
+                                logger.debugIf { "Socket was closed by remote $remoteAddress" }
                                 withContext(Dispatchers.IO) {
                                     handler.connectionClosed(e)
                                     socket.runCatching { this.close() }
@@ -454,12 +468,17 @@ public open class TcpNetworkBinding(
                             }
                         }
                     }
+                } catch (e: CancellationException) {
+                    // Never swallow cancellation: this connection coroutine is a
+                    // child of the server scope, so cooperative cancellation
+                    // (e.g. server shutdown) must be allowed to propagate.
+                    throw e
                 } catch (_: ClosedReceiveChannelException) {
                     MDC.put("ecu", doipEntities.firstOrNull()?.name)
-                    logger.info("Connection closed by remote through ClosedChannel ${socket.remoteAddress}")
+                    logger.info("Connection closed by remote through ClosedChannel $remoteAddress")
                 } catch (_: EOFException) {
                     MDC.put("ecu", doipEntities.firstOrNull()?.name)
-                    logger.info("Connection closed by remote through EOF ${socket.remoteAddress}")
+                    logger.info("Connection closed by remote through EOF $remoteAddress")
                 } catch (e: Throwable) {
                     MDC.put("ecu", doipEntities.firstOrNull()?.name)
                     logger.error("Unknown error inside socket processing loop, closing socket", e)
