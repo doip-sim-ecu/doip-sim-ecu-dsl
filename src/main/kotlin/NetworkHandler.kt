@@ -1,5 +1,6 @@
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
+import io.ktor.utils.io.ClosedWriteChannelException
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
@@ -422,6 +423,15 @@ public open class TcpNetworkBinding(
                                     handler.connectionClosed(e)
                                     socket.runCatching { this.close() }
                                 }
+                            } catch (e: ClosedWriteChannelException) {
+                                // As of ktor 3.5, writing to a channel whose peer already
+                                // disconnected throws eagerly. Not an error: the connection
+                                // is simply gone, so clean up quietly.
+                                logger.debugIf { "Write channel closed by remote $remoteAddress" }
+                                withContext(Dispatchers.IO) {
+                                    handler.connectionClosed(e)
+                                    socket.runCatching { this.close() }
+                                }
                             } catch (e: SocketException) {
                                 logger.error("Socket error: ${e.message} -> closing socket")
                                 withContext(Dispatchers.IO) {
@@ -436,7 +446,10 @@ public open class TcpNetworkBinding(
                                     )
                                     val response =
                                         DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
-                                    output.writeFully(response)
+                                    // Best effort: the peer may have disconnected in the
+                                    // meantime, and as of ktor 3.5 writing to a closed
+                                    // channel throws; the socket is torn down either way.
+                                    output.runCatching { writeFully(response) }
                                     withContext(Dispatchers.IO) {
                                         handler.connectionClosed(e)
                                         socket.runCatching { this.close() }
@@ -444,14 +457,23 @@ public open class TcpNetworkBinding(
                                 }
                             } catch (e: DoipEntityHardResetException) {
                                 logger.warn("Simulating Hard Reset on ${e.ecu.name} for ${e.duration.inWholeMilliseconds} ms")
-                                output.flush()
+                                output.runCatching { flush() }
 
                                 networkBinding.hardResetEcuFor(
                                     this@ActiveConnection,
                                     e.ecu.config.logicalAddress,
                                     e.duration
                                 )
-                            } catch (e: Exception) {
+                            } catch (e: CancellationException) {
+                                // Never swallow cancellation: this message coroutine is a
+                                // child of the server scope, so cooperative cancellation
+                                // must be allowed to propagate.
+                                throw e
+                            } catch (e: Throwable) {
+                                // Last-resort guard: anything escaping this coroutine
+                                // cancels the whole server scope and takes the DoIP
+                                // entity permanently offline, so handle every failure
+                                // here (Throwable, not Exception).
                                 if (!socket.isClosed) {
                                     logger.error(
                                         "Unknown error parsing/handling message, sending negative acknowledgment",
@@ -459,9 +481,10 @@ public open class TcpNetworkBinding(
                                     )
                                     val response =
                                         DoipTcpHeaderNegAck(DoipTcpDiagMessageNegAck.NACK_CODE_TRANSPORT_PROTOCOL_ERROR).asByteArray
-                                    output.writeFully(response)
+                                    // Best effort, see the HeaderNegAckException catch above.
+                                    output.runCatching { writeFully(response) }
                                     withContext(Dispatchers.IO) {
-                                        handler.connectionClosed(e)
+                                        handler.connectionClosed(e as? Exception ?: RuntimeException(e))
                                         socket.runCatching { this.close() }
                                     }
                                 }
