@@ -10,7 +10,7 @@ dependencyResolutionManagement {
             version("jreleaser", "1.25.0")
 
             library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.5.1")
-            library("kotlinx-coroutines-slf4j", "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.10.2")
+            library("kotlinx-coroutines-slf4j", "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.11.0")
             // optional dependency for SocketCAN support (linux only)
             library("javacan-core", "tel.schich:javacan-core:3.5.2")
             library("slf4j-api", "org.slf4j:slf4j-api:2.0.17")
@@ -18,7 +18,7 @@ dependencyResolutionManagement {
             library("bctls-jdk18", "org.bouncycastle:bctls-jdk18on:1.84")
 
             library("logback-classic", "ch.qos.logback:logback-classic:1.5.32")
-            library("kotlinx-coroutines-test", "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+            library("kotlinx-coroutines-test", "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
             library("junit-jupiter", "org.junit.jupiter:junit-jupiter:6.1.1")
             library("mockito-kotlin", "org.mockito.kotlin:mockito-kotlin:6.3.0")
             library("assertk-jvm", "com.willowtreeapps.assertk:assertk-jvm:0.28.1")
