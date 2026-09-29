@@ -13,6 +13,7 @@ import org.slf4j.MDC
 import java.io.EOFException
 import java.net.InetAddress
 import java.net.SocketException
+import java.nio.channels.ClosedChannelException
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -210,19 +211,48 @@ public open class TcpNetworkBinding(
     private val activeConnections: MutableMap<ActiveConnection, Socket> = ConcurrentHashMap()
     private val hardResettingEcus: MutableSet<Short> = Collections.synchronizedSet(mutableSetOf())
 
+    // Binding-owned scope for the delayed part of a hard reset. It must not be a
+    // child of the connection/message coroutine that triggered the reset - that
+    // connection is closed as part of the reset and its scope gets cancelled,
+    // while the timer still has to fire and re-enable the addresses.
+    private val resetScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     public fun isEcuHardResetting(targetAddress: Short): Boolean =
         hardResettingEcus.contains(targetAddress)
+
+    private fun Short.toHexAddress(): String = "0x${toByteArray().toHexString()}"
 
     public fun hardResetEcuFor(
         activeConnection: ActiveConnection,
         logicalAddress: Short,
         duration: kotlin.time.Duration
     ) {
-        val isDoipEntity = doipEntities.any { it.config.logicalAddress == logicalAddress }
+        val entity = doipEntities.firstOrNull { it.config.logicalAddress == logicalAddress }
+        val durationMs = duration.inWholeMilliseconds
 
-        if (isDoipEntity) {
+        if (entity == null) {
+            // Ecu behind a gateway, not a DoipEntity of this binding: suppress
+            // UDS responses for its logical address, without touching sockets
+            // or connections
+            logger.warn("Hard reset of ecu ${logicalAddress.toHexAddress()} for $durationMs ms: suppressing responses")
+            hardResettingEcus.add(logicalAddress)
+            resetScope.launch {
+                delay(duration)
+                hardResettingEcus.remove(logicalAddress)
+                logger.info("Hard reset of ecu ${logicalAddress.toHexAddress()} finished: responses re-enabled")
+            }
+            return
+        }
+
+        // All addresses that belong to the entity: the entity itself plus its ecus
+        val resetAddresses = setOf(entity.config.logicalAddress) + entity.ecus.map { it.config.logicalAddress }
+        val exclusiveBinding = doipEntities.all { it === entity }
+        val entityDescription = "entity ${entity.name} (${entity.config.logicalAddress.toHexAddress()})"
+
+        hardResettingEcus.addAll(resetAddresses)
+
+        if (exclusiveBinding) {
             activeConnection.close()
-            logger.info("Closing serversockets")
             serverSockets.forEach {
                 try {
                     it.close()
@@ -230,34 +260,49 @@ public open class TcpNetworkBinding(
                     // ignored
                 }
             }
-            logger.info("Closing active connections")
-            activeConnections.forEach {
+            serverSockets.clear()
+            val connectionsToClose = activeConnections.keys.toList()
+            logger.warn(
+                "Hard reset of $entityDescription for $durationMs ms: " +
+                    "closing all ${connectionsToClose.size} connections and all server sockets (exclusive binding)"
+            )
+            connectionsToClose.forEach {
                 try {
-                    it.key.close()
+                    it.close()
                 } catch (_: Exception) {
                     // ignored
                 }
             }
-            serverSockets.clear()
-        }
-
-        hardResettingEcus.add(logicalAddress)
-
-        logger.warn("Pausing server sockets for ${duration.inWholeMilliseconds} ms")
-        Thread.sleep(duration.inWholeMilliseconds)
-
-        hardResettingEcus.remove(logicalAddress)
-        logger.info("Reactivating server sockets after ${duration.inWholeMilliseconds} ms")
-
-        if (isDoipEntity) {
-            runBlocking {
-                launch {
-                    start()
-                }
-                launch {
-                    networkManager.resendVams(doipEntities)
+        } else {
+            activeConnection.close()
+            // Shared binding: only connections that actually talked to the
+            // entity (or its ecus) are dropped - other entities stay reachable
+            val connectionsToClose = activeConnections.keys.filter {
+                it === activeConnection || it.hasAddressedAny(resetAddresses)
+            }
+            logger.warn(
+                "Hard reset of $entityDescription for $durationMs ms: " +
+                    "closing ${connectionsToClose.size} of ${activeConnections.size} connections (shared binding)"
+            )
+            connectionsToClose.forEach {
+                try {
+                    it.close()
+                } catch (_: Exception) {
+                    // ignored
                 }
             }
+        }
+
+        resetScope.launch {
+            delay(duration)
+            hardResettingEcus.removeAll(resetAddresses)
+            if (exclusiveBinding) {
+                logger.info("Hard reset of $entityDescription finished: entity back online, restarting server sockets and resending VAM")
+                start()
+            } else {
+                logger.info("Hard reset of $entityDescription finished: entity back online, resending VAM")
+            }
+            networkManager.resendVams(listOf(entity))
         }
     }
 
@@ -272,7 +317,19 @@ public open class TcpNetworkBinding(
                     serverSockets.add(serverSocket)
                     logger.info("Listening on tcp: ${serverSocket.localAddress}")
                     while (!serverSocket.isClosed) {
-                        val socket = serverSocket.accept()
+                        val socket = try {
+                            serverSocket.accept()
+                        } catch (e: ClosedChannelException) {
+                            // The server socket was closed intentionally (hard
+                            // reset / shutdown) - end the accept loop quietly
+                            if (!serverSocket.isClosed) throw e
+                            logger.debugIf { "TCP accept loop ended: server socket was closed" }
+                            null
+                        } catch (e: SocketException) {
+                            if (!serverSocket.isClosed) throw e
+                            logger.debugIf { "TCP accept loop ended: server socket was closed" }
+                            null
+                        } ?: break
                         val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
                         activeConnections[activeConnection] = socket
                         activeConnection.handleTcpSocket(this@withContext, DelegatedKtorSocket(socket))
@@ -340,7 +397,15 @@ public open class TcpNetworkBinding(
                     logger.info("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
 
                     while (!tlsServerSocket.isClosed) {
-                        val socket = tlsServerSocket.accept() as SSLSocket
+                        val socket = try {
+                            tlsServerSocket.accept() as SSLSocket
+                        } catch (e: SocketException) {
+                            // The server socket was closed intentionally (hard
+                            // reset / shutdown) - end the accept loop quietly
+                            if (!tlsServerSocket.isClosed) throw e
+                            logger.debugIf { "TLS accept loop ended: server socket was closed" }
+                            null
+                        } ?: break
                         val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
                         activeConnections[activeConnection] = socket as Socket
                         activeConnection.handleTcpSocket(this, SSLDoipTcpSocket(socket))
@@ -358,6 +423,13 @@ public open class TcpNetworkBinding(
         private val logger = LoggerFactory.getLogger(ActiveConnection::class.java)
         private var socket: DoipTcpSocket? = null
         private var closed: Boolean = false
+
+        // Target addresses this connection has sent diag messages to, used by
+        // TcpNetworkBinding to decide which connections a scoped hard reset drops
+        private val addressedTargets: MutableSet<Short> = ConcurrentHashMap.newKeySet()
+
+        public open fun hasAddressedAny(addresses: Set<Short>): Boolean =
+            addresses.any { addressedTargets.contains(it) }
 
         public open fun close() {
             socket?.close()
@@ -411,6 +483,9 @@ public open class TcpNetworkBinding(
 
                         launch(MDCContext()) {
                             try {
+                                if (message is DoipTcpDiagMessage) {
+                                    addressedTargets.add(message.targetAddress)
+                                }
                                 if (message is DoipTcpDiagMessage && networkBinding.isEcuHardResetting(message.targetAddress)) {
                                     sendDoipAck(message, output)
                                 } else {
