@@ -1,5 +1,7 @@
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.doesNotContain
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import client.DoipClient
 import io.ktor.network.sockets.*
@@ -10,6 +12,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.EOFException
 import java.lang.Thread.sleep
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.SocketTimeoutException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -29,6 +34,32 @@ class HardResetTest {
         assertThat(
             e is ClosedReceiveChannelException || e is EOFException || e is ClosedWriteChannelException
         ).isEqualTo(true)
+    }
+
+    /**
+     * Sends [request] as a udp datagram to localhost:[port] and collects every
+     * parseable reply that arrives within [windowMs] (the window is always
+     * waited out, also when nothing arrives).
+     */
+    private fun collectUdpReplies(request: ByteArray, port: Int, windowMs: Long = 600): List<DoipUdpMessage> {
+        val replies = mutableListOf<DoipUdpMessage>()
+        DatagramSocket().use { socket ->
+            socket.soTimeout = 150
+            socket.send(DatagramPacket(request, request.size, java.net.InetSocketAddress("localhost", port)))
+            val deadline = System.nanoTime() + windowMs * 1_000_000
+            while (System.nanoTime() < deadline) {
+                val packet = DatagramPacket(ByteArray(2048), 2048)
+                try {
+                    socket.receive(packet)
+                    replies.add(DoipUdpMessageParser.parseUDP(packet.data.copyOf(packet.length)))
+                } catch (_: SocketTimeoutException) {
+                    // keep listening until the window is over
+                } catch (_: Exception) {
+                    // ignore unparseable packets
+                }
+            }
+        }
+        return replies
     }
 
     private fun networkingData(localPort: Int): NetworkingData =
@@ -134,6 +165,19 @@ class HardResetTest {
             connEcuA.sendDiagnosticMessage(0x2010, byteArrayOf(0x22, 0xF1.toByte(), 0x91.toByte()), true) {}
         }
 
+        // the entity stays silent on udp while resetting: a VIR is only
+        // answered with vams from B
+        val vamsDuringReset = collectUdpReplies(DoipUdpVehicleInformationRequest().asByteArray, 13401)
+            .filterIsInstance<DoipUdpVehicleAnnouncementMessage>()
+            .map { it.logicalAddress }
+        assertThat(vamsDuringReset).contains(0x1020.toShort())
+        assertThat(vamsDuringReset).doesNotContain(0x1010.toShort())
+
+        // entity status requests are also only answered by the still-running entity
+        val statusReplies = collectUdpReplies(DoipUdpEntityStatusRequest().asByteArray, 13401)
+            .count { it is DoipUdpEntityStatusResponse }
+        assertThat(statusReplies).isEqualTo(1)
+
         // connB only ever talked to B - it stays usable while A resets
         connB.sendDiagnosticMessage(0x1020, byteArrayOf(0x22, 0xF1.toByte(), 0x90.toByte()), true) {
             assertThat(it[0]).isEqualTo(0x62)
@@ -148,7 +192,7 @@ class HardResetTest {
                 0x1010,
                 byteArrayOf(0x22, 0xF1.toByte(), 0x98.toByte()),
                 true,
-                waitTimeout = 500.milliseconds
+                waitTimeout = 300.milliseconds
             ) {}
         }
         assertThat(e.message ?: "").contains("No response")
@@ -160,6 +204,13 @@ class HardResetTest {
         connAfter.sendDiagnosticMessage(0x1010, byteArrayOf(0x22, 0xF1.toByte(), 0x98.toByte()), true) {
             assertThat(it[0]).isEqualTo(0x62)
         }
+
+        // after the reset a VIR gets vams from both entities again
+        val vamsAfterReset = collectUdpReplies(DoipUdpVehicleInformationRequest().asByteArray, 13401)
+            .filterIsInstance<DoipUdpVehicleAnnouncementMessage>()
+            .map { it.logicalAddress }
+        assertThat(vamsAfterReset).contains(0x1010.toShort())
+        assertThat(vamsAfterReset).contains(0x1020.toShort())
     }
 
     @Test
@@ -185,6 +236,12 @@ class HardResetTest {
             con.sendDiagnosticMessage(0x1030, byteArrayOf(0x22, 0xF1.toByte(), 0x98.toByte()), true) {}
         }
 
+        // the entity is also silent on udp: a VIR gets no reply while it resets
+        val vamsDuringReset = collectUdpReplies(DoipUdpVehicleInformationRequest().asByteArray, 13402)
+            .filterIsInstance<DoipUdpVehicleAnnouncementMessage>()
+            .map { it.logicalAddress }
+        assertThat(vamsDuringReset).isEmpty()
+
         // new connections are refused while the server sockets are down
         assertThrows<java.net.ConnectException> {
             val c2 = DoipClient()
@@ -198,5 +255,11 @@ class HardResetTest {
         con3.sendDiagnosticMessage(0x1030, byteArrayOf(0x22, 0xF1.toByte(), 0x98.toByte()), true) {
             assertThat(it[0]).isEqualTo(0x62)
         }
+
+        // a VIR is answered again once the reset is over
+        val vamsAfterReset = collectUdpReplies(DoipUdpVehicleInformationRequest().asByteArray, 13402)
+            .filterIsInstance<DoipUdpVehicleAnnouncementMessage>()
+            .map { it.logicalAddress }
+        assertThat(vamsAfterReset).contains(0x1030.toShort())
     }
 }
