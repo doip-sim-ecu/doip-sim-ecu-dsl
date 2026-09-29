@@ -72,6 +72,7 @@ public open class UdpNetworkBinding(
     private val broadcastEnabled: Boolean = true,
     private val broadcastAddress: String = "255.255.255.255",
     private val doipEntities: List<DoipEntity<*>>,
+    private val isEntityHardResetting: (DoipEntity<*>) -> Boolean = { false },
 ) {
     private val logger = LoggerFactory.getLogger(UdpNetworkBinding::class.java)
 
@@ -96,6 +97,10 @@ public open class UdpNetworkBinding(
         val entries = doipEntities.associateWith { it.generateVehicleAnnouncementMessages() }
 
         entries.forEach { (doipEntity, vams) ->
+            if (isEntityHardResetting(doipEntity)) {
+                logger.debugIf { "Not sending VAM for ${doipEntity.name}: hard reset in progress" }
+                return@forEach
+            }
             MDC.put("ecu", doipEntity.name)
             vams.forEach { vam ->
                 if (doipEntitiesFilter != null && doipEntitiesFilter.none { vam.logicalAddress == it.config.logicalAddress }) {
@@ -168,6 +173,10 @@ public open class UdpNetworkBinding(
     ) {
         val message = DoipUdpMessageParser.parseUDP(datagram.packet)
         udpMessageHandlers.forEach { (doipEntity, datagramHandler) ->
+            if (isEntityHardResetting(doipEntity)) {
+                logger.debugIf { "Ignoring UDP message for ${doipEntity.name}: hard reset in progress" }
+                return@forEach
+            }
             runBlocking {
                 MDC.put("ecu", doipEntity.name)
                 try {
@@ -250,6 +259,7 @@ public open class TcpNetworkBinding(
         val entityDescription = "entity ${entity.name} (${entity.config.logicalAddress.toHexAddress()})"
 
         hardResettingEcus.addAll(resetAddresses)
+        networkManager.setEntityHardResetting(entity, true)
 
         if (exclusiveBinding) {
             activeConnection.close()
@@ -302,6 +312,7 @@ public open class TcpNetworkBinding(
             } else {
                 logger.info("Hard reset of $entityDescription finished: entity back online, resending VAM")
             }
+            networkManager.setEntityHardResetting(entity, false)
             networkManager.resendVams(listOf(entity))
         }
     }

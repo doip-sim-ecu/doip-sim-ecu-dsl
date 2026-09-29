@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
+import java.util.concurrent.ConcurrentHashMap
 
 public open class NetworkManager(
     public val config: NetworkingData,
@@ -19,6 +20,18 @@ public open class NetworkManager(
     private val log = LoggerFactory.getLogger(NetworkManager::class.java)
     private val udpNetworkBindings: MutableList<UdpNetworkBinding> = mutableListOf()
     private val tcpNetworkBindings: MutableList<TcpNetworkBinding> = mutableListOf()
+    private val hardResettingEntities: MutableSet<Short> = ConcurrentHashMap.newKeySet()
+
+    public fun isEntityHardResetting(entity: DoipEntity<*>): Boolean =
+        hardResettingEntities.contains(entity.config.logicalAddress)
+
+    internal fun setEntityHardResetting(entity: DoipEntity<*>, resetting: Boolean) {
+        if (resetting) {
+            hardResettingEntities.add(entity.config.logicalAddress)
+        } else {
+            hardResettingEntities.remove(entity.config.logicalAddress)
+        }
+    }
 
     protected open fun findInterfaceByName(): NetworkInterface? {
         var foundInterface: NetworkInterface? = null
@@ -143,7 +156,7 @@ public open class NetworkManager(
         address: String,
         entities: List<DoipEntity<*>>
     ): UdpNetworkBinding =
-        UdpNetworkBinding(address, config.localPort, config.broadcastEnable, config.broadcastAddress, entities)
+        UdpNetworkBinding(address, config.localPort, config.broadcastEnable, config.broadcastAddress, entities, ::isEntityHardResetting)
 
     protected open fun createUdpNetworkBindingAny(): UdpNetworkBindingAny =
         UdpNetworkBindingAny(config.localPort, ::sendVirReply)
