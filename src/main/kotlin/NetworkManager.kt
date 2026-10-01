@@ -96,6 +96,9 @@ public open class NetworkManager(
             throw IllegalArgumentException("No network interface with the identifier ${config.networkInterface} could be found")
         }
         log.info("There are ${ipAddresses.size} ip address available, and we have ${doipEntities.size} doip entities")
+        if (doipEntities.size > 1 && ipAddresses.size < doipEntities.size) {
+            logMultipleEntitiesPerIpWarning(ipAddresses.size)
+        }
         val entitiesByIP = mutableMapOf<String, MutableList<DoipEntity<*>>>()
         doipEntities.forEach { entity ->
             val ip = if (ipAddresses.size == 1) {
@@ -112,6 +115,25 @@ public open class NetworkManager(
             entityList.add(entity)
         }
         return entitiesByIP
+    }
+
+    private fun logMultipleEntitiesPerIpWarning(ipCount: Int) {
+        val border = "*".repeat(100)
+        val lines = listOf(
+            border,
+            "*** WARNING: UNSUPPORTED NETWORK CONFIGURATION",
+            "***",
+            "*** ${doipEntities.size} DoIP entities are configured, but only $ipCount ip address(es) are available",
+            "*** (network interface: '${config.networkInterface}', network mode: ${config.networkMode}).",
+            "*** Multiple DoIP entities will share the same ip address.",
+            "***",
+            "*** This is NOT supported by the DoIP specification (ISO 13400) and may lead to errors",
+            "*** with diagnostic testers (e.g. wrong vehicle identification / routing activation behaviour).",
+            "***",
+            "*** Provide at least one ip address per DoIP entity to avoid this.",
+            border,
+        )
+        lines.forEach { log.warn(it) }
     }
 
     public fun start() {
