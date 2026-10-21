@@ -1,5 +1,5 @@
  plugins {
-     val kotlinVersion = "2.4.20"
+     val kotlinVersion = "2.4.21"
      kotlin("jvm") version kotlinVersion
      kotlin("plugin.serialization") version kotlinVersion
 }
@@ -9,5 +9,5 @@
  }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
 }
