@@ -9,7 +9,7 @@ dependencyResolutionManagement {
             version("cyclonedx.bom", "3.5.1")
             version("jreleaser", "1.26.0")
 
-            library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.6.0")
+            library("ktor-network-jvm", "io.ktor:ktor-network-jvm:3.6.1")
             library("kotlinx-coroutines-slf4j", "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.11.0")
             // optional dependency for SocketCAN support (linux only)
             library("javacan-core", "tel.schich:javacan-core:3.5.2")
