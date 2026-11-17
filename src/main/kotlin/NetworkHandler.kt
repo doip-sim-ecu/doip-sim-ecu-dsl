@@ -18,6 +18,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
 import kotlin.concurrent.fixedRateTimer
@@ -219,6 +220,8 @@ public open class TcpNetworkBinding(
     private val serverSockets: MutableList<ServerSocket> = CopyOnWriteArrayList()
     private val activeConnections: MutableMap<ActiveConnection, Socket> = ConcurrentHashMap()
     private val hardResettingEcus: MutableSet<Short> = Collections.synchronizedSet(mutableSetOf())
+    // Serializes listener shutdown with registration of an accepted socket.
+    private val bindingLock = Any()
 
     // Binding-owned scope for the delayed part of a hard reset. It must not be a
     // child of the connection/message coroutine that triggered the reset - that
@@ -258,29 +261,30 @@ public open class TcpNetworkBinding(
         val exclusiveBinding = doipEntities.all { it === entity }
         val entityDescription = "entity ${entity.name} (${entity.config.logicalAddress.toHexAddress()})"
 
-        hardResettingEcus.addAll(resetAddresses)
+        synchronized(hardResettingEcus) {
+            if (hardResettingEcus.contains(entity.config.logicalAddress)) {
+                logger.warn("Hard reset already in progress for $entityDescription")
+                return
+            }
+            hardResettingEcus.addAll(resetAddresses)
+        }
         networkManager.setEntityHardResetting(entity, true)
 
         if (exclusiveBinding) {
-            activeConnection.close()
-            serverSockets.forEach {
-                try {
-                    it.close()
-                } catch (_: Exception) {
-                    // ignored
-                }
-            }
-            serverSockets.clear()
-            val connectionsToClose = activeConnections.keys.toList()
-            logger.warn(
-                "Hard reset of $entityDescription for $durationMs ms: " +
-                    "closing all ${connectionsToClose.size} connections and all server sockets (exclusive binding)"
-            )
-            connectionsToClose.forEach {
-                try {
-                    it.close()
-                } catch (_: Exception) {
-                    // ignored
+            synchronized(bindingLock) {
+                // Close listeners before the triggering connection. A client
+                // reconnecting after its close must not be accepted by the old listener.
+                serverSockets.forEach { it.runCatching { close() } }
+                serverSockets.clear()
+                logger.warn(
+                    "Hard reset of $entityDescription for $durationMs ms: " +
+                        "closing all ${activeConnections.size} connections and all server sockets (exclusive binding)"
+                )
+                activeConnections.forEach { (connection, socket) ->
+                    // The accept loop may have registered the socket before its
+                    // connection handler has assigned it to ActiveConnection.
+                    connection.runCatching { close() }
+                    socket.runCatching { close() }
                 }
             }
         } else {
@@ -305,19 +309,33 @@ public open class TcpNetworkBinding(
 
         resetScope.launch {
             delay(duration)
-            hardResettingEcus.removeAll(resetAddresses)
             if (exclusiveBinding) {
-                logger.info("Hard reset of $entityDescription finished: entity back online, restarting server sockets and resending VAM")
-                start()
+                logger.info("Hard reset of $entityDescription finished: restarting server sockets")
+                start {
+                    resetScope.launch {
+                        hardResettingEcus.removeAll(resetAddresses)
+                        networkManager.setEntityHardResetting(entity, false)
+                        networkManager.resendVams(listOf(entity))
+                    }
+                }
             } else {
                 logger.info("Hard reset of $entityDescription finished: entity back online, resending VAM")
+                hardResettingEcus.removeAll(resetAddresses)
+                networkManager.setEntityHardResetting(entity, false)
+                networkManager.resendVams(listOf(entity))
             }
-            networkManager.setEntityHardResetting(entity, false)
-            networkManager.resendVams(listOf(entity))
         }
     }
 
     public fun start() {
+        start { }
+    }
+
+    private fun start(onReady: () -> Unit) {
+        val remainingListeners = AtomicInteger(if (tlsOptions != null && tlsOptions.tlsMode != TlsMode.DISABLED) 2 else 1)
+        val listenerReady = {
+            if (remainingListeners.decrementAndGet() == 0) onReady()
+        }
         thread(name = "TCP") {
             runBlocking {
                 withContext(Dispatchers.IO) {
@@ -325,8 +343,9 @@ public open class TcpNetworkBinding(
                         aSocket(ActorSelectorManager(Dispatchers.IO))
                             .tcp()
                             .bind(InetSocketAddress(localAddress, localPort))
-                    serverSockets.add(serverSocket)
+                    synchronized(bindingLock) { serverSockets.add(serverSocket) }
                     logger.info("Listening on tcp: ${serverSocket.localAddress}")
+                    listenerReady()
                     while (!serverSocket.isClosed) {
                         val socket = try {
                             serverSocket.accept()
@@ -341,8 +360,16 @@ public open class TcpNetworkBinding(
                             logger.debugIf { "TCP accept loop ended: server socket was closed" }
                             null
                         } ?: break
-                        val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
-                        activeConnections[activeConnection] = socket
+                        val activeConnection = synchronized(bindingLock) {
+                            if (serverSocket.isClosed) {
+                                socket.runCatching { close() }
+                                null
+                            } else {
+                                ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities).also {
+                                    activeConnections[it] = socket
+                                }
+                            }
+                        } ?: continue
                         activeConnection.handleTcpSocket(this@withContext, DelegatedKtorSocket(socket))
                     }
                 }
@@ -386,7 +413,7 @@ public open class TcpNetworkBinding(
                             InetAddress.getByName(localAddress)
                         ))
                     }
-                    serverSockets.add(serverSocket as ServerSocket)
+                    synchronized(bindingLock) { serverSockets.add(serverSocket as ServerSocket) }
                     val tlsServerSocket = serverSocket as SSLServerSocket
                     logger.info("Listening on tls: ${tlsServerSocket.localSocketAddress}")
 
@@ -406,6 +433,7 @@ public open class TcpNetworkBinding(
 
                     logger.info("Enabled TLS protocols: ${tlsServerSocket.enabledProtocols.joinToString(", ")}")
                     logger.info("Enabled TLS cipher suites: ${tlsServerSocket.enabledCipherSuites.joinToString(", ")}")
+                    listenerReady()
 
                     while (!tlsServerSocket.isClosed) {
                         val socket = try {
@@ -417,8 +445,16 @@ public open class TcpNetworkBinding(
                             logger.debugIf { "TLS accept loop ended: server socket was closed" }
                             null
                         } ?: break
-                        val activeConnection = ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities)
-                        activeConnections[activeConnection] = socket as Socket
+                        val activeConnection = synchronized(bindingLock) {
+                            if (tlsServerSocket.isClosed) {
+                                socket.runCatching { close() }
+                                null
+                            } else {
+                                ActiveConnection(networkManager, this@TcpNetworkBinding, doipEntities).also {
+                                    activeConnections[it] = socket as Socket
+                                }
+                            }
+                        } ?: continue
                         activeConnection.handleTcpSocket(this, SSLDoipTcpSocket(socket))
                     }
                 }
