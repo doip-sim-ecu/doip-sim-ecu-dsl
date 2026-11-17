@@ -15,6 +15,8 @@ import java.lang.Thread.sleep
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -261,5 +263,65 @@ class HardResetTest {
             .filterIsInstance<DoipUdpVehicleAnnouncementMessage>()
             .map { it.logicalAddress }
         assertThat(vamsAfterReset).contains(0x1030.toShort())
+    }
+
+    @Test
+    fun `exclusive reset restarts while clients repeatedly reconnect`() {
+        val entity = entity("ENTITY", 0x1040) {
+            addHardResetRequest()
+            addAckRequest("RDBI", byteArrayOf(0x22, 0xF1.toByte(), 0x98.toByte()))
+        }
+        entity.start()
+        val port = 13403
+        val networkManager = NetworkManager(networkingData(port), listOf(entity))
+        networkManager.start()
+        sleep(500)
+
+        // Connect continuously across shutdown, including the interval in which
+        // the reset closes existing connections and the listening socket.
+        val running = AtomicBoolean(true)
+        val hammer = thread(isDaemon = true) {
+            while (running.get()) {
+                try {
+                    java.net.Socket().use { socket ->
+                        socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 100)
+                    }
+                } catch (_: java.io.IOException) {
+                    // The listener is intentionally unavailable during reset.
+                }
+                sleep(1)
+            }
+        }
+        try {
+            val client = DoipClient()
+            repeat(3) { attempt ->
+                val connection = client.connectToEntity(
+                    InetSocketAddress("localhost", port),
+                    testerAddress = (0xe80 + attempt).toShort(),
+                    timeout = 500.milliseconds
+                )
+                connection.sendDiagnosticMessage(0x1040, byteArrayOf(0x11, 0x01), true) {
+                    assertThat(it[0]).isEqualTo(0x51)
+                }
+                val deadline = System.nanoTime() + 8.seconds.inWholeNanoseconds
+                while (!networkManager.isEntityHardResetting(entity) && System.nanoTime() < deadline) sleep(10)
+                assertThat(networkManager.isEntityHardResetting(entity)).isEqualTo(true)
+                while (networkManager.isEntityHardResetting(entity) && System.nanoTime() < deadline) sleep(10)
+                assertThat(networkManager.isEntityHardResetting(entity)).isEqualTo(false)
+
+                // Reset state is cleared only once the restarted listener is bound.
+                val after = client.connectToEntity(
+                    InetSocketAddress("localhost", port),
+                    testerAddress = (0xe90 + attempt).toShort(),
+                    timeout = 500.milliseconds
+                )
+                after.sendDiagnosticMessage(0x1040, byteArrayOf(0x22, 0xF1.toByte(), 0x98.toByte()), true) {
+                    assertThat(it[0]).isEqualTo(0x62)
+                }
+            }
+        } finally {
+            running.set(false)
+            hammer.join(2000)
+        }
     }
 }
