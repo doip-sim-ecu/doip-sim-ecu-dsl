@@ -207,6 +207,58 @@ class SimEcuTest {
     }
 
     @Test
+    fun `test inbound interceptor removing itself while forwarding`() {
+        val ecu = spy(SimEcu(ecuData(name = "TEST")))
+
+        var selfRemovingCalls = 0
+        var removedByOtherCalls = 0
+        var laterCalls = 0
+        ecu.addOrReplaceEcuInterceptor("SELFREMOVE") {
+            selfRemovingCalls++
+            ecu.removeInterceptor("SELFREMOVE")
+            // removing an interceptor that would be called later in the same pass
+            ecu.removeInterceptor("REMOVEDBYOTHER")
+            continueMatching()
+            true
+        }
+        ecu.addOrReplaceEcuInterceptor("REMOVEDBYOTHER") { removedByOtherCalls++; false }
+        ecu.addOrReplaceEcuInterceptor("LATER") { laterCalls++; false }
+
+        // must not throw a ConcurrentModificationException, the request reaches the
+        // regular handling (NRC, as there's no matching request)
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+        verify(ecu, times(1)).sendResponse(any(), any())
+        assertThat(selfRemovingCalls).isEqualTo(1)
+        assertThat(removedByOtherCalls).isEqualTo(0)
+        assertThat(laterCalls).isEqualTo(1)
+
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+        verify(ecu, times(2)).sendResponse(any(), any())
+        assertThat(selfRemovingCalls).isEqualTo(1)
+        assertThat(laterCalls).isEqualTo(2)
+    }
+
+    @Test
+    fun `test outbound interceptor removing itself while forwarding`() {
+        val ecu = spy(SimEcu(ecuData(name = "TEST")))
+
+        var selfRemovingCalls = 0
+        var laterCalls = 0
+        ecu.addOrReplaceEcuOutboundInterceptor("SELFREMOVE") {
+            selfRemovingCalls++
+            ecu.removeOutboundInterceptor("SELFREMOVE")
+            continueMatching()
+            true
+        }
+        ecu.addOrReplaceEcuOutboundInterceptor("LATER") { laterCalls++; false }
+
+        ecu.handleRequest(req(byteArrayOf(0x11, 0x03)))
+        verify(ecu, times(1)).sendResponse(any(), any())
+        assertThat(selfRemovingCalls).isEqualTo(1)
+        assertThat(laterCalls).isEqualTo(1)
+    }
+
+    @Test
     fun `test outbound interceptor`() {
         val ecu = spy(SimEcu(ecuData(name = "TEST")))
         verify(ecu, times(0)).sendResponse(any(), any())

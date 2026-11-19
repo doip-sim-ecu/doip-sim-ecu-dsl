@@ -74,7 +74,13 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         var hasExpiredEntries = false
 
         synchronized(this.outboundInterceptors) {
-            this.outboundInterceptors.forEach {
+            // Iterate over a snapshot: interceptors may add or remove interceptors (e.g. remove
+            // themselves), which would invalidate an iterator over the map itself.
+            this.outboundInterceptors.entries.toList().forEach {
+                if (this.outboundInterceptors[it.key] !== it.value) {
+                    // removed or replaced by an interceptor called earlier in this pass
+                    return@forEach
+                }
                 if (!it.value.isExpired()) {
                     try {
                         val responseData = InterceptorResponseData(
@@ -184,7 +190,14 @@ public class SimEcu(private val data: EcuData) : SimulatedEcu(data.toEcuConfig()
         var hasExpiredEntries = false
 
         synchronized(this.inboundInterceptors) {
-            this.inboundInterceptors.forEach {
+            // Iterate over a snapshot: interceptors may add or remove interceptors (e.g. remove
+            // themselves after forwarding with continueMatching), which would invalidate an
+            // iterator over the map itself and drop the request.
+            this.inboundInterceptors.entries.toList().forEach {
+                if (this.inboundInterceptors[it.key] !== it.value) {
+                    // removed or replaced by an interceptor called earlier in this pass
+                    return@forEach
+                }
                 if (!it.value.isExpired()) {
                     if (!busy || it.value.alsoCallWhenEcuIsBusy) {
                         val responseData = InterceptorRequestData(
